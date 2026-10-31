@@ -2,8 +2,8 @@ import { turretGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * ИС-2 (1944): длинный корпус с выпрямленным лобовым листом, литая вытянутая башня, 122-мм Д-25Т с двухкамерным
- * дульным тормозом.
+ * IS-2 (1944): long hull with a straightened glacis, elongated cast turret, 122 mm D-25T with a double-baffle muzzle
+ * brake.
  */
 export const is2: TankDef = {
 	id: 'is2',

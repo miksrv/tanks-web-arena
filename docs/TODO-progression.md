@@ -1,147 +1,147 @@
-# Прокачка и экономика (TODO)
+# Progression and economy (TODO)
 
-Отложено (обсуждение 2026-10-28). Ничего не реализовано — это заметки по мотивам World of Tanks и план, как сделать у нас.
+Deferred (discussion of 2026-10-28). Nothing is implemented — these are notes inspired by World of Tanks and a plan for how to do it in our game.
 
-## Как устроено в World of Tanks
+## How it works in World of Tanks
 
-### Валюты
+### Currencies
 
-| Валюта                             | Как получить                         | На что тратится                                                                    |
-| ---------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------- |
-| Боевой опыт (на конкретной машине) | за бой: урон, засвет, помощь, победа | исследование модулей и следующих танков ветки                                      |
-| Свободный опыт (~5% от боевого)    | автоматически                        | исследование чего угодно в любой ветке                                             |
-| Кредиты (серебро)                  | за бой                               | покупка танков и модулей, ремонт, снаряды, расходники                              |
-| Золото                             | реальные деньги                      | премиум-аккаунт, премтанки, перевод опыта в свободный, слоты, переобучение экипажа |
+| Currency                          | How it is earned                                  | What it is spent on                                                              |
+| --------------------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Battle XP (on a specific vehicle) | per battle: damage, spotting, assistance, victory | researching modules and the next tanks in the tree                               |
+| Free XP (~5% of battle XP)        | automatically                                     | researching anything in any tree                                                 |
+| Credits (silver)                  | per battle                                        | buying tanks and modules, repairs, shells, consumables                           |
+| Gold                              | real money                                        | premium account, premium tanks, converting XP to free XP, slots, crew retraining |
 
-### Прокачка
+### Progression
 
-- Ветки по уровням I–X. Опыт на танке открывает его модули (орудие, башня, двигатель, ходовая, рация), затем следующий танк ветки.
-- Сток против топа: купленный танк едет со слабыми модулями — хуже орудие, скорость, обзор. Главный «налог на время».
-- Экипаж качается вместе с танком: 100% основной специальности, затем навыки (ремонт, маскировка, шестое чувство).
-- Экономика уровней: чем выше уровень, тем дороже ремонт и снаряды; на VIII–X без према бои часто в минус по кредитам, игроки фармят на средних уровнях или премах.
-- Ремонт и боекомплект по умолчанию автоматические: после боя из дохода вычитаются ремонт (пропорционально потерянной прочности) и докупка израсходованных снарядов и расходников.
+- Research trees by tiers I–X. XP on a tank unlocks its modules (gun, turret, engine, suspension, radio), then the next tank in the tree.
+- Stock vs top: a freshly bought tank drives with weak modules — worse gun, speed, view range. The main "time tax".
+- The crew levels up together with the tank: 100% in the primary specialty, then skills (repair, camouflage, sixth sense).
+- Tier economy: the higher the tier, the more expensive repairs and shells are; at VIII–X without premium, battles are often credit-negative, so players farm on mid tiers or premiums.
+- Repairs and ammunition are automatic by default: after the battle, repairs (proportional to lost hit points) and the restocking of spent shells and consumables are deducted from the income.
 
-### Премиум
+### Premium
 
-- Премиум-аккаунт: +50% опыта и кредитов — чистое ускорение.
-- Премтанки: за золото, сразу топовые, больше кредитов, тренировка экипажа для ветки, у многих льготный уровень боёв (±1 вместо ±2).
-- «Голда» (снаряды с высоким пробитием) сначала только за золото, после критики «pay-to-win» — и за кредиты.
+- Premium account: +50% XP and credits — pure acceleration.
+- Premium tanks: bought for gold, top configuration right away, more credits, crew training for the tree; many have preferential matchmaking (±1 instead of ±2).
+- "Gold ammo" (high-penetration shells) was at first gold-only; after "pay-to-win" criticism it became available for credits too.
 
-### Почему это (в основном) не ломает баланс
+### Why this (mostly) does not break the balance
 
-1. Деньги покупают время, а не силу: всё, что влияет на бой, доступно за кредиты.
-2. Премтанк не сильнее прокачанного аналога, обычно чуть слабее; платишь за доходность и удобство.
-3. Балансировщик по уровню (шаблоны 3/5/7, ±2 уровня).
-4. Слабость стока длится пару десятков боёв.
+1. Money buys time, not power: everything that affects the battle is available for credits.
+2. A premium tank is not stronger than a fully researched counterpart, usually slightly weaker; you pay for income and convenience.
+3. Tier-based matchmaker (3/5/7 templates, ±2 tiers).
+4. Stock weakness lasts a couple dozen battles.
 
-Не всегда получается: «имбовые» премы (Progetto, Defender, Chieftain и т. п.), спам голдой обесценивает броню, льготный уровень даёт премам преимущество.
+It does not always work out: "overpowered" premiums (Progetto, Defender, Chieftain and the like), gold-ammo spam devalues armor, preferential matchmaking gives premiums an advantage.
 
-## Как сделать у нас
+## How to do it in our game
 
-Ключевое отличие: бои с ботами, а балансировщик уже подбирает ботов по `rating` (`src/config/match.ts`: `ratingSpread`, `ratingTolerance`). Прокачка не ломает баланс так, как в PvP.
+Key difference: battles are against bots, and the matchmaker already picks bots by `rating` (`src/config/match.ts`: `ratingSpread`, `ratingTolerance`). Progression does not break the balance the way it does in PvP.
 
-1. **Уровни из `rating`** (сейчас 2…7 → 5–6 уровней). Ветки СССР и Германии: Т-60 → Т-70 → Т-34-76 → Т-34-85 → ИС-2, ветки ПТ и арты, немцы аналогично.
-2. **Валюты: опыт и кредиты.** Боевой опыт на машину, свободный ~5%. Начисление из `src/game/battleReport.ts`: урон, засвет, assist, заблокированный урон, победа, медали.
-3. **Сток/топ модули** (орудие, двигатель, ходовая). Балансировщик учитывает фактический rating с модулями, а не номинальный — стоку достаются чуть более слабые боты.
-4. **Экономика через существующее:** боекомплект уже конечный → расход снарядов и ремонт после боя стоят кредитов.
-   **Решено:** одна валюта, без золота и без «голды» (премиум-снарядов) вообще. Опыт остаётся, но это не валюта, а очки исследования.
-5. **Экипаж:** опыт → навыки (ремонт, маскировка, перезарядка). Осторожно: не отнимать у новичка то, что есть сейчас (например лампу шестого чувства).
-6. **«Премиум» без доната:** премтанки за достижения (серия медалей, мастер на танке). KV-1 (r) у немцев — готовый кандидат: больше кредитов, не сильнее аналога, без прокачки. Премиум-аккаунт не нужен.
+1. **Tiers from `rating`** (currently 2…7 → 5–6 tiers). USSR and German trees: T-60 → T-70 → T-34-76 → T-34-85 → IS-2, TD and artillery trees, Germans likewise.
+2. **Currencies: XP and credits.** Battle XP per vehicle, free XP ~5%. Awarded from `src/game/battleReport.ts`: damage, spotting, assist, blocked damage, victory, medals.
+3. **Stock/top modules** (gun, engine, suspension). The matchmaker uses the actual rating with modules, not the nominal one — a stock tank gets slightly weaker bots.
+4. **Economy through what already exists:** ammunition is already finite → shells spent and post-battle repairs cost credits.
+   **Decided:** a single currency, no gold and no "gold ammo" (premium shells) at all. XP stays, but it is not a currency, it is research points.
+5. **Crew:** XP → skills (repair, camouflage, reloading). Careful: do not take away from a beginner what they have now (e.g. the sixth-sense lamp).
+6. **"Premium" without paying:** premium tanks for achievements (a streak of medals, an Ace Tanker badge on a tank). The German KV-1 (r) is a ready candidate: more credits, not stronger than its counterpart, no progression. A premium account is not needed.
 
-## Прокачка машины (идеи, 2026-10-28)
+## Vehicle progression (ideas, 2026-10-28)
 
-Не переход к следующему танку, а развитие существующего. Технически — поправки к полям `TankDef` (`gun`, `speed`, `accel`, `hullTurn`, `turretTurn`, `viewRange`, `camo`).
+Not moving on to the next tank, but developing the existing one. Technically — adjustments to the `TankDef` fields (`gun`, `speed`, `accel`, `hullTurn`, `turretTurn`, `viewRange`, `camo`).
 
-### 1. Модули: сток → топ (за опыт машины)
+### 1. Modules: stock → top (for vehicle XP)
 
-Исторические варианты:
+Historical variants:
 
-- **Орудие:** Т-34-76 Л-11 → Ф-34, КВ-1 Л-11 → ЗиС-5, Pz.IV H КwK 40 L/43 → L/48, StuG III L/24 → L/48.
-- **Двигатель:** скорость и разгон.
-- **Ходовая:** поворот корпуса, меньше разброс в движении.
-- **Башня:** только где исторично.
+- **Gun:** T-34-76 L-11 → F-34, KV-1 L-11 → ZiS-5, Pz.IV H KwK 40 L/43 → L/48, StuG III L/24 → L/48.
+- **Engine:** speed and acceleration.
+- **Suspension:** hull traverse, less dispersion on the move.
+- **Turret:** only where historical.
 
-### 2. Экипаж (опыт копится сам)
+### 2. Crew (XP accumulates by itself)
 
-- Выучка 75% → 100%: перезарядка, сведение, обзор.
-- Навыки, максимум 2–3: ремонт модулей, маскировка, пожаротушение, плавный ход, «боевое братство» (+небольшой бонус ко всему).
+- Training 75% → 100%: reloading, aiming, view range.
+- Skills, at most 2–3: module repair, camouflage, firefighting, smooth ride, "brothers in arms" (+small bonus to everything).
 
-### 3. Оборудование (3 слота, за снабжение, съёмное)
+### 3. Equipment (3 slots, bought for supplies, removable)
 
-- Досылатель: −10% перезарядки.
-- Стабилизатор: меньше штраф сведения в движении (`Tank.bloom`).
-- Оптика: +10% `viewRange`.
-- Маскировочная сеть: +`camo` на стоянке.
-- Вентиляция: +небольшой бонус ко всему.
-- Мокрая боеукладка: ниже шанс детонации.
-- Огнетушители: ниже шанс пожара.
+- Gun rammer: −10% reload time.
+- Stabilizer: smaller aiming penalty on the move (`Tank.bloom`).
+- Optics: +10% `viewRange`.
+- Camouflage net: +`camo` while stationary.
+- Ventilation: +small bonus to everything.
+- Wet ammo rack: lower chance of ammo-rack detonation.
+- Fire extinguishers: lower chance of fire.
 
-7–8 вариантов на 3 слота — суть в выборе.
+7–8 options for 3 slots — the point is the choice.
 
-### 4. Престиж без силы
+### 4. Prestige without power
 
-- Камуфляжи и надписи — без бонуса к маскировке.
-- Отметки на стволе (средний урон), знак «Мастер» (медали).
+- Camouflages and inscriptions — no camouflage bonus.
+- Marks of excellence on the barrel (average damage), the «Мастер» (Ace Tanker) badge (medals).
 
-### Правила баланса
+### Balance rules
 
-1. **Прокачка снимает штраф, а не даёт силу сверх нормы.** Текущие характеристики танков = топ; сток слабее. Текущий баланс не трогаем.
-2. **Броню и прочность не прокачиваем** (кроме исторической топ-башни).
-3. **Малые проценты и потолок:** бонус 5–10% каждый, суммарно не больше ~15–20% к одному параметру.
-4. **Выбор вместо чистого плюса:** 3 слота на 8 вариантов; возможна полевая модернизация с компромиссом («+скорость, −броня», «+перезарядка, −сведение»).
-5. **Балансировщик видит прокачку:** эффективный rating = базовый − штраф стока + надбавка за оборудование и экипаж. Работает через существующие `rating` / `ratingTolerance`.
-6. **Боты прокачаны так же:** новички — сток и 75% экипаж, ветераны — топ и оборудование. Можно связать со сложностью ботов.
-7. **Прокачку видно в бою** (подсказка над танком или список команд), чтобы бои в стоке не казались несправедливыми.
+1. **Progression removes a penalty rather than giving power above the norm.** The current tank stats = top; stock is weaker. The current balance stays untouched.
+2. **Armor and hit points are not upgraded** (except a historical top turret).
+3. **Small percentages and a cap:** a 5–10% bonus each, no more than ~15–20% in total to a single parameter.
+4. **Choice instead of a pure plus:** 3 slots for 8 options; a field modification with a trade-off is possible ("+speed, −armor", "+reload, −aiming").
+5. **The matchmaker sees progression:** effective rating = base − stock penalty + bonus for equipment and crew. Works through the existing `rating` / `ratingTolerance`.
+6. **Bots are progressed the same way:** rookies — stock and a 75% crew, veterans — top and equipment. Can be tied to bot difficulty.
+7. **Progression is visible in battle** (a hint above the tank or in the team list), so that battles in a stock tank do not feel unfair.
 
-## Ремонт и боекомплект (идеи, 2026-10-28)
+## Repairs and ammunition (ideas, 2026-10-28)
 
-Как в WoT:
+As in WoT:
 
-- **Автопополнение по умолчанию.** После боя из дохода списываются израсходованные снаряды и расходники. Невыпущенные снаряды остаются в танке.
-- **Ремонт пропорционален потерянной прочности.** Вернулся целым — бесплатно, уничтожен — полная цена. Неотремонтированный танк в бой не идёт, нет кредитов — бери другой.
-- **Без «голды».** Снаряды стоят по типу (фугас, бронебойный), премиум-снарядов нет. Сейчас экрана выбора боекомплекта перед боем намеренно нет; добавлять его — отдельное решение.
-- **Отчёт о бое:** доход − ремонт − снаряды − расходники = чистая прибыль (может быть отрицательной). Расширить `battleReport.ts`.
-- **Доходность по уровням:** низкие уровни почти всегда в плюс, на верхних неудачный бой в минус; премтанки с повышенной доходностью — для фарма.
+- **Auto-resupply by default.** After the battle, spent shells and consumables are deducted from the income. Unfired shells stay in the tank.
+- **Repairs are proportional to lost hit points.** Came back intact — free; destroyed — full price. An unrepaired tank does not go into battle; no credits — take another one.
+- **No "gold ammo".** Shells are priced by type (HE, AP); there are no premium shells. Right now there is deliberately no ammo-loadout screen before battle; adding one is a separate decision.
+- **Battle report:** income − repairs − shells − consumables = net profit (can be negative). Extend `battleReport.ts`.
+- **Income by tier:** low tiers are almost always profitable, at the top tiers a bad battle is a loss; premium tanks with increased income — for farming.
 
-### Зачем это нужно
+### Why this is needed
 
-Экономика даёт смысл ездить на разных танках, а не только на самом сильном:
+The economy gives a reason to drive different tanks, not just the strongest one:
 
-- верхние уровни дорогие в содержании, их кредиты зарабатываются на средних машинах и премах;
-- у каждой машины свой опыт и модули: прокачка ветки требует играть именно на ней;
-- танк в ремонте без кредитов — повод взять другой;
-- премтанки за достижения становятся «фармилками», а не просто трофеями.
+- the top tiers are expensive to maintain, their credits are earned on mid-tier vehicles and premiums;
+- each vehicle has its own XP and modules: progressing a tree requires playing that very vehicle;
+- a tank under repair with no credits is a reason to take another one;
+- premium tanks earned for achievements become "credit farmers" rather than mere trophies.
 
-Почти всё уже есть: конечный боекомплект, модули, повреждения, расходники. Нужно только считать кредиты после боя.
+Almost everything already exists: finite ammunition, modules, damage, consumables. All that is needed is to count credits after the battle.
 
-### Если всё сломано и денег нет
+### If everything is broken and there is no money
 
-В WoT тупика нет: танки I уровня ремонтируются бесплатно или за гроши, всегда можно продать танк или модуль, а ежедневные задачи и «первая победа дня» (×2 опыта) дают прирост.
+In WoT there is no dead end: tier I tanks are repaired for free or for pennies, you can always sell a tank or a module, and daily missions and the "first victory of the day" (×2 XP) give a boost.
 
-У нас — гарантия, что игрок никогда не застрянет:
+For us — a guarantee that the player never gets stuck:
 
-- **Стартовые танки** (rating 2: Т-60, Pz.II F, и т. п.) ремонтируются и пополняют боекомплект бесплатно — на них всегда можно заработать.
-- **Страховка:** если денег меньше цены ремонта самого дешёвого своего танка, ремонт первого боя за день бесплатный (или ремонт в долг).
-- **Ежедневное:** первая победа дня ×2 опыта и кредитов; 2–3 ежедневные задачи («нанеси 1000 урона на ПТ», «засвети 5 врагов») — они же подталкивают играть на разных классах.
-- **Продажа** танков и модулей за часть цены.
-- Вариант мягче (как в мобильных играх): сломанный танк чинится бесплатно сам через N минут или N боёв на других машинах.
+- **Starter tanks** (rating 2: T-60, Pz.II F and the like) are repaired and resupplied for free — you can always earn on them.
+- **Insurance:** if the money is less than the repair cost of the player's cheapest tank, the repair after the first battle of the day is free (or repair on credit).
+- **Daily:** first victory of the day ×2 XP and credits; 2–3 daily missions ("deal 1000 damage in a TD", "spot 5 enemies") — they also nudge the player to play different classes.
+- **Selling** tanks and modules for part of the price.
+- A softer option (as in mobile games): a broken tank repairs itself for free after N minutes or N battles on other vehicles.
 
-### Название валюты
+### Currency name
 
-**Решено (пока): «Снабжение».** Другие варианты были: «Кредиты», «Серебро», «Боны», «Трофеи», «Марки». В тексте выше «кредиты» означают снабжение.
+**Decided (for now): «Снабжение» (Supplies).** Other options were: «Кредиты» (Credits), «Серебро» (Silver), «Боны» (Bonds), «Трофеи» (Trophies), «Марки» (Marks). In the text above, "credits" means supplies.
 
-## Хранение
+## Storage
 
-Решено 2026-10-28: сначала всё локально, потом переносим на сервер; офлайн-игра с прогрессом остаётся.
+Decided 2026-10-28: everything local first, then move it to the server; offline play with progression remains.
 
-- **Правила отдельно от хранения.** Начисление опыта и снабжения, цены, модули, эффективный rating — чистые функции в общем коде (`profile/rules`), без DOM и `localStorage`. Их же потом импортирует сервер.
-- **Хранилище за интерфейсом** `ProfileStore` (`load`, `applyBattle`, `buy`, `repair`…): сейчас `LocalProfileStore` (`localStorage`), потом `RemoteProfileStore` (HTTP/WebSocket к серверу).
-- **Версия схемы профиля** с миграциями с первого дня.
-- **Онлайн сервер — источник истины:** сам считает награды по итогам боя, который он симулировал; клиент только показывает. Офлайн клиент считает сам (подделка неважна против ботов).
-- **Два профиля:** офлайн и онлайн раздельно, как одиночная и сетевая игра. Перенос офлайн-прогресса в онлайн — не делать или разово с ограничением, иначе подделанный `localStorage` попадёт в рейтинговую игру.
+- **Rules separate from storage.** Awarding XP and supplies, prices, modules, effective rating — pure functions in shared code (`profile/rules`), with no DOM and no `localStorage`. The server imports the same functions later.
+- **Storage behind an interface** `ProfileStore` (`load`, `applyBattle`, `buy`, `repair`…): now `LocalProfileStore` (`localStorage`), later `RemoteProfileStore` (HTTP/WebSocket to the server).
+- **Profile schema version** with migrations from day one.
+- **The online server is the source of truth:** it computes the rewards itself from the outcome of the battle it simulated; the client only displays them. The offline client computes them on its own (tampering does not matter against bots).
+- **Two profiles:** offline and online kept separate, like single-player and multiplayer. Transferring offline progress to online — do not do it, or do it once with a cap, otherwise a tampered `localStorage` gets into ranked play.
 
-## Открытые вопросы
+## Open questions
 
-- Делать офлайн-прогресс сейчас или ждать сервер?
-- Оставить «свободный режим» со всеми открытыми танками или новичок начинает с Т-60 / Pz.II?
-- Формулы опыта и кредитов, цены танков, модулей, ремонта и снарядов.
+- Build offline progression now or wait for the server?
+- Keep the "free mode" with all tanks unlocked, or does a beginner start with the T-60 / Pz.II?
+- Formulas for XP and credits, prices of tanks, modules, repairs and shells.

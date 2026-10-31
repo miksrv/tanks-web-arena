@@ -2,8 +2,8 @@ import { turretGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Panther D (1943): длинный наклонный лоб и наклонные борта, катки в шахматном порядке, экраны, башня смещена
- * вперёд, закруглённая маска, 75-мм KwK 42 L/70.
+ * Panther D (1943): long sloped glacis and sloped sides, interleaved road wheels, side skirts, turret set forward,
+ * rounded mantlet, 75 mm KwK 42 L/70.
  */
 export const panther: TankDef = {
 	id: 'panther',

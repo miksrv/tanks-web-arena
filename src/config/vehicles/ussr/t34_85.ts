@@ -2,8 +2,8 @@ import { turretGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Т-34-85 (1944): корпус Т-34 с лобовым листом под 60° и наклонными бортами, катки Кристи, литая башня с нишей,
- * 85-мм ЗиС-С-53 без дульного тормоза.
+ * T-34-85 (1944): T-34 hull with a 60° glacis and sloped sides, Christie road wheels, cast turret with a bustle, 85 mm
+ * ZiS-S-53 without a muzzle brake.
  */
 export const t34_85: TankDef = {
 	id: 't34_85',

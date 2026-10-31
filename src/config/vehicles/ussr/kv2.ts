@@ -2,7 +2,7 @@ import { turretGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * КВ-2 (1940): корпус КВ-1 под огромной высокой башней-«сараем» со 152-мм гаубицей М-10Т.
+ * KV-2 (1940): KV-1 hull under a huge, tall "barn" turret with a 152 mm M-10T howitzer.
  */
 export const kv2: TankDef = {
 	id: 'kv2',

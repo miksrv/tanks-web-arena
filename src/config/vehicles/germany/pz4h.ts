@@ -2,8 +2,8 @@ import { turretGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Pz. IV H (1943): ступенчатый лоб с запасными траками, восемь катков на тележках, экраны на корпусе и вокруг
- * башни, 75-мм KwK 40 L/48 с двухкамерным тормозом.
+ * Pz. IV H (1943): stepped front with spare track links, eight road wheels on bogies, side skirts on the hull and
+ * around the turret, 75 mm KwK 40 L/48 with a double-baffle muzzle brake.
  */
 export const pz4h: TankDef = {
 	id: 'pz4h',

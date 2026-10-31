@@ -2,7 +2,7 @@ import { turretGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Т-70 (1942): лёгкий танк ГАЗ, сварная гранёная башня смещена влево, 45-мм пушка, ведущее колесо спереди.
+ * T-70 (1942): GAZ light tank, welded faceted turret offset to the left, 45 mm gun, drive sprocket at the front.
  */
 export const t70: TankDef = {
 	id: 't70',

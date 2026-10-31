@@ -2,8 +2,8 @@ import { autocannon } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Pz. II F (1941): ступенчатый лоб, пять катков на листовых рессорах с четырьмя роликами, маленькая башня с
- * командирской башенкой, 20-мм KwK 30.
+ * Pz. II F (1941): stepped front, five road wheels on leaf springs with four return rollers, small turret with a
+ * commander's cupola, 20 mm KwK 30.
  */
 export const pz2f: TankDef = {
 	id: 'pz2f',

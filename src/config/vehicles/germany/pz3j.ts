@@ -2,8 +2,8 @@ import { turretGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Pz. III J (1942): ступенчатый лоб с запасными траками, шесть катков с тремя роликами, башня с командирской
- * башенкой в корме и ящиком, длинная 50-мм KwK 39 L/60.
+ * Pz. III J (1942): stepped front with spare track links, six road wheels with three return rollers, turret with a
+ * commander's cupola at the rear and a stowage bin, long 50 mm KwK 39 L/60.
  */
 export const pz3j: TankDef = {
 	id: 'pz3j',

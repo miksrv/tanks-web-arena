@@ -2,8 +2,8 @@ import { howitzer } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * СУ-76М (1943): удлинённое шасси Т-70, двигатель спереди, открытая сзади рубка с наклонными стенками, дивизионная
- * ЗиС-3 с дульным тормозом.
+ * SU-76M (1943): lengthened T-70 chassis, engine at the front, rear-open casemate with sloped walls, divisional ZiS-3
+ * with a muzzle brake.
  */
 export const su76: TankDef = {
 	id: 'su76',

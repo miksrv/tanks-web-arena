@@ -2,7 +2,7 @@ import { autocannon } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Т-60 (1941): маленький танк с восьмигранной башней, смещённой влево, и 20-мм пушкой ТНШ.
+ * T-60 (1941): small tank with an octagonal turret offset to the left and a 20 mm TNSh gun.
  */
 export const t60: TankDef = {
 	id: 't60',

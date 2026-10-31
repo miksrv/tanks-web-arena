@@ -1,112 +1,112 @@
 # World
 
-Код: `src/world/terrain/`, `src/world/props/`, `src/world/buildings/`; числа: `WORLD`, `WORLD_HALF`, `TERRAIN_RES`
+Code: `src/world/terrain/`, `src/world/props/`, `src/world/buildings/`; numbers: `WORLD`, `WORLD_HALF`, `TERRAIN_RES`
 
-## Рельеф
+## Terrain
 
-- Мир ±450 м, карта высот 256 × 256 (≈ 3.5 м на ячейку), билинейная выборка; за краем — стена.
-- Базовый рельеф запекается в сетку: `17 · k · fbm(0.0038) + 2 · шум(0.03)` (k = 0.75–1.2 на карту), затем термическая эрозия: грунт ссыпается с любого склона круче `maxSlope` = 0.3 (≈ 17°), пока таких не останется. Высокие холмы превращаются в плато с проходимыми склонами, низины — в плоские котловины; перепад высот при этом сохраняется. Высота = `8 + рельеф`; по периметру (110 м) горы до +70 м с шумом (вне эрозии), снег выше ~50 м.
-- Базы (r 70) и поселения (деревня r 50, город r 95) выравниваются к средней высоте; переход к природному рельефу растянут на 0.55–1.7 r, чтобы на границе не было обрыва.
-- Река есть примерно на половине карт (`riverChance`); без реки — три открытых прохода и город в центре. Меандр `x = 45·sin(0.011 z + φ) + 25·шум`, ширина 18 м, дно −3.9, вода на −1.5; у бродов (z = 0, ±215) дно поднято до −2 — проходимо с замедлением. Берега поднимаются к окружающему рельефу за 60 м, полоса грязи ±16 м.
+- World ±450 m, heightmap 256 × 256 (≈ 3.5 m per cell), bilinear sampling; beyond the edge — a wall.
+- The base terrain is baked into the grid: `17 · k · fbm(0.0038) + 2 · noise(0.03)` (k = 0.75–1.2 per map), then thermal erosion: soil slides off any slope steeper than `maxSlope` = 0.3 (≈ 17°) until none remain. High hills become plateaus with passable slopes, lowlands become flat basins; the height range is preserved. Height = `8 + terrain`; along the perimeter (110 m) mountains up to +70 m with noise (outside erosion), snow above ~50 m.
+- Bases (r 70) and settlements (village r 50, city r 95) are flattened to their mean height; the transition to natural terrain is stretched over 0.55–1.7 r so there is no cliff at the boundary.
+- A river is present on roughly half the maps (`riverChance`); without a river — three open passages and a city in the centre. Meander `x = 45·sin(0.011 z + φ) + 25·noise`, width 18 m, bed −3.9, water at −1.5; at the fords (z = 0, ±215) the bed is raised to −2 — passable with slowdown. The banks rise to the surrounding terrain over 60 m, mud strip ±16 m.
 
-## Архетипы карт (`ARCHETYPES`, `src/world/terrain/style.ts`)
+## Map archetypes (`ARCHETYPES`, `src/world/terrain/style.ts`)
 
-Сначала выбирается тип местности (случайно по весам), он задаёт рельеф, сезоны, число лесов, деревень, озёр, болот, кустов и стогов, шанс реки и железной дороги (архетип, его сезон, капониры, сторона моря и железная дорога бросаются из отдельного ГСЧ, погода и режим — из своих):
+First the terrain type is picked (randomly by weight); it sets the relief, seasons, number of forests, villages, lakes, swamps, bushes and haystacks, and the chance of a river and a railway (the archetype, its season, revetments, the sea side and the railway are rolled from a separate RNG; weather and mode from their own):
 
-| Архетип        | Вес  | Рельеф                                  | Особое                                                                       |
-| -------------- | ---- | --------------------------------------- | ---------------------------------------------------------------------------- |
-| средняя полоса | 44 % | как раньше                              | река 50 %, железная дорога 30 % на сухих картах                              |
-| степь          | 16 % | почти ровно, балки до 6.5 м             | лесов 1–4, поля, 70 стогов, река 30 %, железная дорога 90 %                  |
-| болота         | 14 % | равнина                                 | 11–16 лесов, 5–8 болот (вода 0.5–1 м, проходимо медленно), гати; тёмная вода |
-| перевал        | 12 % | хребет +24 м поперёк оси, три седловины | без реки; гребни каменистые, зимой в снегу                                   |
-| побережье      | 14 % | как средняя полоса                      | один фланг уходит в море с пляжем (песок 0.85), гор с этой стороны нет       |
+| Archetype              | Weight | Relief                                     | Special                                                                                |
+| ---------------------- | ------ | ------------------------------------------ | -------------------------------------------------------------------------------------- |
+| central Russia (mixed) | 44 %   | as before                                  | river 50 %, railway 30 % on dry maps                                                   |
+| steppe                 | 16 %   | almost flat, gullies up to 6.5 m           | 1–4 forests, fields, 70 haystacks, river 30 %, railway 90 %                            |
+| swamps                 | 14 %   | plain                                      | 11–16 forests, 5–8 swamps (water 0.5–1 m, passable slowly), corduroy roads; dark water |
+| mountain pass          | 12 %   | ridge +24 m across the axis, three saddles | no river; crests rocky, snow-covered in winter                                         |
+| coast                  | 14 %   | as central Russia                          | one flank runs into the sea with a beach (sand 0.85), no mountains on that side        |
 
-- Балки: нули низкочастотного шума, вырезанные на 6.5 м; после эрозии — пологие лощины ~45 м шириной.
-- Болота: мелкая чаша с ровным топким берегом (грязь до 1.45 r); в отличие от озёр могут лечь поперёк дороги — дорога идёт по насыпи-гати (`withCauseway`).
-- Перевал: высота хребта спадает от 55 до 210 м от средней линии, седловины шириной 28–85 м ровно на линиях полос (якоря полос без разброса поперёк).
-- Побережье: от 240 м от оси в сторону моря земля опускается к дну −6.5 м к 330 м; плоскость воды в 6 раз шире карты, море уходит к горизонту. Деревни, леса, озёра и болота держатся в стороне от пляжа (центр не дальше 210 м − радиус); переправы на реке сдвинуты от моря.
+- Gullies: zeros of low-frequency noise, cut 6.5 m down; after erosion — gentle hollows ~45 m wide.
+- Swamps: a shallow bowl with a flat boggy shore (mud up to 1.45 r); unlike lakes they can lie across a road — the road then runs on a corduroy-road embankment (`withCauseway`).
+- Mountain pass: the ridge height falls off from 55 to 210 m from the centre line, saddles 28–85 m wide exactly on the lane lines (lane anchors have no lateral scatter).
+- Coast: from 240 m from the axis towards the sea the ground drops to a seabed of −6.5 m by 330 m; the water plane is 6 times wider than the map, the sea runs to the horizon. Villages, forests, lakes and swamps keep away from the beach (centre no farther than 210 m − radius); river crossings are shifted away from the sea.
 
-## Железная дорога (`src/world/terrain/railway.ts`, `RAIL`)
+## Railway (`src/world/terrain/railway.ts`, `RAIL`)
 
-- Прямая по линии, равноудалённой от баз (поперёк оси, через середину), от подножия гор до подножия (на побережье — до пляжа). Головка рельса = сглаженный профиль природного рельефа (окно ±80 м, три прохода) + 1.8 м: насыпь над низинами, выемка в возвышенностях; гребень 7 м, откосы 0.45 (проходимо медленно), на концах насыпь сходит на нет.
-- У дорог (8–22 м) насыпь опускается к земле — переезды; через город (центр) идёт на уровне улиц, руины, церковь и цеха держатся от путей. Деревни, леса и озёра — дальше 18 м + радиус.
-- Шпалы через 1.6 м, рельсы кусками по 6 м по рельефу; 1–2 товарных состава по 3–6 вагонов стоят на путях вне переездов и баз — твёрдое укрытие (коллайдер на всю высоту).
+- Straight along the line equidistant from the bases (across the axis, through the middle), from the foot of the mountains to the foot (on the coast — to the beach). Railhead = smoothed profile of the natural terrain (window ±80 m, three passes) + 1.8 m: an embankment over lowlands, a cutting through high ground; crest 7 m, slopes 0.45 (passable slowly), at the ends the embankment tapers to nothing.
+- At roads (8–22 m) the embankment drops to ground level — level crossings; through the city (centre) it runs at street level, the ruins, church and workshops keep clear of the tracks. Villages, forests and lakes — farther than 18 m + radius.
+- Sleepers every 1.6 m, rails in 6 m pieces following the terrain; 1–2 freight trains of 3–6 wagons stand on the tracks outside crossings and bases — hard cover (full-height collider).
 
-## Капониры (`features.revetments`, 50 % карт, `src/world/buildings/revetments.ts`)
+## Revetments (`features.revetments`, 50 % of maps, `src/world/buildings/revetments.ts`)
 
-- Земляная «П» высотой 1.25 м с мешками сверху, открытая назад: лобовой вал 8.5 м и два боковых по 6 м. 2–3 перед каждой базой лицом к врагу и по два на высотах каждой половины. Ставятся только на ровное открытое место не ближе 30 м от дорог и точек линий (чтобы боты на марше не въезжали в «П»); закрывают корпус, башня стреляет поверх.
+- An earthwork "U" 1.25 m high with sandbags on top, open to the rear: a frontal bank of 8.5 m and two side banks of 6 m. 2–3 in front of each base facing the enemy and two on the high ground of each half. Placed only on flat open ground no closer than 30 m to roads and lane points (so bots on the march do not drive into the "U"); they cover the hull, the turret fires over the top.
 
-## Погода и время суток (`WEATHER`, `src/render/environment.ts`, `src/fx/precipitation.ts`)
+## Weather and time of day (`WEATHER`, `src/render/environment.ts`, `src/fx/precipitation.ts`)
 
-- Бросок из отдельного ГСЧ по сезону: ясно, пасмурно, рассвет, закат, туман, дождь (лето, осень), снегопад (зима). Меняет оттенок неба и тумана, свет (на рассвете и закате низкое солнце со своей стороны и длинные тени), дальность тумана (туман — 22 % обычной) и обзор всех машин (см. обнаружение).
-- Дождь и снег: 2600 / 2200 частиц в коробке вокруг камеры, движение целиком в шейдере (один draw call, без загрузки буферов); в виде сверху скрыты. Дождь шумит (зацикленный фильтрованный шум).
+- Rolled from a separate RNG by season: clear, overcast, dawn, dusk, fog, rain (summer, autumn), snowfall (winter). Changes the tint of the sky and fog, the light (at dawn and dusk a low sun from its own side and long shadows), the fog distance (fog — 22 % of normal) and the view range of all vehicles (see spotting).
+- Rain and snow: 2600 / 2200 particles in a box around the camera, movement entirely in the shader (one draw call, no buffer uploads); hidden in the top-down view. Rain makes noise (looped filtered noise).
 
-## Именные карты (`MAP_PRESETS`)
+## Named maps (`MAP_PRESETS`)
 
-Фиксированный seed с архетипом, сезоном и погодой: Прохоровка, Курская дуга (степь), Полесье (болота, туман), Перевал (зима, снегопад), Керчь (побережье), Ржев, Орёл, Малиновка. Выбираются в гараже; режим — отдельно.
+A fixed seed with archetype, season and weather: «Прохоровка» (Prokhorovka), «Курская дуга» (Kursk Bulge; steppe), «Полесье» (Polesia; swamps, fog), «Перевал» (The Pass; winter, snowfall), «Керчь» (Kerch; coast), «Ржев» (Rzhev), «Орёл» (Oryol), «Малиновка» (Malinovka). Selected in the garage; the mode is chosen separately.
 
-## Стили рельефа и сезоны
+## Terrain styles and seasons
 
-- Стиль (`relief_`): холмы (как выше), равнина (амплитуда ×0.4, более широкие волны), гряды (ridged-шум, растянутый 3:1 в случайном направлении: длинные гребни и ложбины), долина (низина вдоль оси база-база, подъём к флангам +16 м за 110–420 м от оси). Эрозия со склоном ≤ 0.3 применяется ко всем.
-- Сезон (`season`, 50/25/25 %): лето, осень, зима. Палитра земли и миникарты в `PALETTE`, небо, туман и свет в `SKY` (`src/render/environment.ts`). Кроны деревьев красятся через instanceColor по породе: летом зелёные с разбросом (берёза и ива светлее, дуб и ель темнее), осенью лиственные от красного до жёлтого (берёза и тополь жёлтые, дуб бурый), зимой лиственные голые (бурые, меньше), хвойные остаются зелёными. Зимой снег на горах ниже, кусты и стога блёклые, вода тёмная и матовая.
-- Доля полей и лугов на карте случайная (`zoneCut`).
+- Style (`relief_`): hills (as above), plain (amplitude ×0.4, wider waves), ridges (ridged noise stretched 3:1 in a random direction: long crests and troughs), valley (a lowland along the base-to-base axis, rising towards the flanks by +16 m at 110–420 m from the axis). Erosion with slope ≤ 0.3 is applied to all of them.
+- Season (`season`, 50/25/25 %): summer, autumn, winter. The ground and minimap palette is in `PALETTE`; sky, fog and light in `SKY` (`src/render/environment.ts`). Tree crowns are coloured via instanceColor by species: in summer green with variation (birch and willow lighter, oak and spruce darker), in autumn deciduous trees from red to yellow (birch and poplar yellow, oak brown), in winter deciduous trees are bare (brown, smaller), conifers stay green. In winter the snow on the mountains sits lower, bushes and haystacks are faded, water is dark and matte.
+- The share of fields and meadows on the map is random (`zoneCut`).
 
-## Фичи карты (`features`)
+## Map features (`features`)
 
-- Центр: руины города (65 %) или заводской квартал (35 %): до пяти кирпичных цехов с рядами окон (один разрушен, со щебнем), труба 24 м, кирпичная ограда двора с проёмами. Цех подбирает позицию, сдвигаясь от реки и дорог.
-- Деревни: церковь (70 %; на картах с часовнями — часовня) или колодец; каменные ограды (50 %, OBB высотой 1.1 м, укрытие по корпус); сад (45 %, сетка 5×5 низких деревьев рядом).
-- Хутора (65 % карт, 1–3): изба (или кирпичный дом) и сарай друг напротив друга, забор, иногда ограда и сад; выравнивание рельефа как у деревень (r 22).
-- Мельница (45 %): самая высокая открытая точка из 60 кандидатов вдали от реки, дорог, лесов и озёр; башня, крыша, четыре крыла.
-- ДОТы (50 %): бетонные коробки 7×5.5×2.4 м с амбразурой, по одному с каждой стороны линии на полпути к переправе, сдвинуты на 17 м вбок от дороги.
-- Противотанковые заграждения (40 % ежи, 25 % надолбы): ряды по обе стороны дороги на полпути к переправе, сама дорога свободна; для столкновений и снарядов это «камни» r 1.1.
-- Аллеи (50 %): деревья аллейной породы карты через 11 м по обе стороны части дорог, вне поселений и переправ.
+- Centre: city ruins (65 %) or a factory district (35 %): up to five brick workshops with rows of windows (one destroyed, with rubble), a 24 m chimney, a brick yard wall with gaps. A workshop picks its position, shifting away from the river and roads.
+- Villages: a church (70 %; on maps with chapels — a chapel) or a well; stone walls (50 %, OBB 1.1 m high, hull-down cover); an orchard (45 %, a 5×5 grid of low trees nearby).
+- Farmsteads (65 % of maps, 1–3): a log house (or a brick house) and a barn facing each other, a fence, sometimes a wall and an orchard; terrain flattening as for villages (r 22).
+- Windmill (45 %): the highest open point out of 60 candidates away from the river, roads, forests and lakes; tower, roof, four sails.
+- Pillboxes (50 %): concrete boxes 7×5.5×2.4 m with an embrasure, one on each side of the lane halfway to the crossing, offset 17 m sideways from the road.
+- Anti-tank obstacles (40 % Czech hedgehogs, 25 % dragon's teeth): rows on both sides of the road halfway to the crossing, the road itself stays clear; for collisions and shells they are "rocks" of r 1.1.
+- Avenues (50 %): trees of the map's avenue species every 11 m on both sides of some roads, outside settlements and crossings.
 
-## Биомы
+## Biomes
 
-Записываются в сетку: поле (борозды, направление по клетке 90 м), луг, лес, гора, дорога, вода, грязь, деревня, город, база, песок (пляж), железная дорога (балласт). Определяют цвет вершин и коэффициент скорости.
+Written into the grid: field (furrows, direction per 90 m cell), meadow, forest, mountain, road, water, mud, village, city, base, sand (beach), railway (ballast). They determine the vertex colour and the speed factor.
 
-## Дороги и линии
+## Roads and lanes
 
-- Маршрут на каждую переправу (или на каждый из трёх проходов без реки): база → ворота базы → две промежуточные точки → переправа → две точки → ворота → база. Ворота разнесены на 45 м поперёк оси и на 40 м от центра базы, так что дороги не сходятся в одну точку; промежуточные точки сдвинуты вбок на ±35–45 м, так что дороги петляют.
-- Дорога — сплайн Катмулла-Рома через все точки с шагом 12 м (`smoothPath`); участки между фиксированными точками (насыпь и настил моста) остаются прямыми. Ширина дорожного биома 9 м. Поиск ближайшей дороги идёт через сетку 48 м (точный в радиусе 24 м), дальние запросы сканируют все сегменты.
-- Те же маршруты (грубые точки, без сплайна) — линии для ботов.
-- Озёра только в низинах: центр ниже 13 м и кольцо на 2.5 r ниже 15 м; вокруг озера котловина: земля удерживается не выше уровня воды + 4 м до 1.4 r и возвращается к природному рельефу к 2.8 r. Речной берег растягивается, если окружающая земля высокая; боковые откосы насыпей мостов расширяются пропорционально высоте (уклон ≤ 0.33).
+- A route to every crossing (or to each of the three passages when there is no river): base → base gate → two intermediate points → crossing → two points → gate → base. The gates are spread 45 m apart across the axis and 40 m from the base centre, so roads do not converge on a single point; the intermediate points are shifted sideways by ±35–45 m, so roads wind.
+- A road is a Catmull-Rom spline through all points with a 12 m step (`smoothPath`); the sections between fixed points (embankment and bridge deck) stay straight. Road biome width 9 m. The nearest-road lookup goes through a 48 m grid (exact within a 24 m radius), distant queries scan all segments.
+- The same routes (coarse points, no spline) are the lanes for bots.
+- Lakes only in lowlands: centre below 13 m and the ring at 2.5 r below 15 m; a basin around the lake: the ground is held no higher than water level + 4 m out to 1.4 r and returns to natural terrain by 2.8 r. The river bank is stretched if the surrounding ground is high; the side slopes of bridge embankments widen in proportion to the height (gradient ≤ 0.33).
 
-## Поселения
+## Settlements
 
-- 2 деревни: церковь с куполом и крестом (или часовня, или колодец) в центре, 8–11 изб и сараев вдоль двух перекрёстных улиц, окна, трубы, заборы вокруг. В зависимости от набора построек карты (см. ниже) часть изб — кирпичные двухэтажные дома, сараи — колхозные склады, у одной деревни водонапорная башня.
-- Город на центральном броде: сетка кварталов 26 м, разрушенные коробки домов (стены случайной высоты, часть снесена, проёмы окон, кучи щебня), полуразрушенная церковь с башней, главная улица вдоль брода.
-- Каждая постройка — OBB с высотой: не проехать, не прострелить, не видно сквозь.
+- 2 villages: a church with a dome and a cross (or a chapel, or a well) in the centre, 8–11 log houses and barns along two crossing streets, windows, chimneys, fences around. Depending on the map's building kit (see below) some of the log houses are two-storey brick houses, the barns are kolkhoz warehouses, and one village has a water tower.
+- The city at the central ford: a grid of 26 m blocks, ruined shells of houses (walls of random height, some demolished, window openings, piles of rubble), a half-ruined church with a tower, the main street along the ford.
+- Every building is an OBB with height: cannot be driven through, shot through or seen through.
 
-## Породы деревьев и набор построек (`FLORA`, `BUILDING_KIT`, `rollFlora`/`rollKit` в `src/world/terrain/style.ts`)
+## Tree species and building kit (`FLORA`, `BUILDING_KIT`, `rollFlora`/`rollKit` in `src/world/terrain/style.ts`)
 
-Каждая карта берёт из восьми пород и четырёх новых построек только ограниченный набор, поэтому карты отличаются друг от друга. Оба броска идут из своих ГСЧ от seed (`terrain.flora`, `terrain.kit`) и не сдвигают раскладку карты.
+Each map takes only a limited set out of the eight species and four new buildings, so maps differ from one another. Both rolls come from their own seed-based RNGs (`terrain.flora`, `terrain.kit`) and do not shift the map layout.
 
-| Порода | Где               | Вид                                                        |
-| ------ | ----------------- | ---------------------------------------------------------- |
-| сосна  | хвойная           | конус, рыжеватый ствол                                     |
-| ель    | хвойная           | три конуса ярусами, тёмная                                 |
-| липа   | лиственная, аллея | округлая крона (прежнее «лиственное»)                      |
-| берёза | лиственная, аллея | узкая вытянутая крона, белый ствол, осенью жёлтая          |
-| дуб    | лиственная        | широкая низкая крона, толстый короткий ствол, осенью бурый |
-| тополь | аллея             | высокая колонна (≈ 14 м)                                   |
-| ива    | у воды            | купол с ниспадающими ветвями, низкий толстый ствол         |
-| яблоня | сады              | низкая широкая крона                                       |
+| Species | Where             | Look                                                  |
+| ------- | ----------------- | ----------------------------------------------------- |
+| pine    | conifer           | cone, reddish trunk                                   |
+| spruce  | conifer           | three tiered cones, dark                              |
+| linden  | deciduous, avenue | rounded crown (the former "deciduous")                |
+| birch   | deciduous, avenue | narrow elongated crown, white trunk, yellow in autumn |
+| oak     | deciduous         | wide low crown, thick short trunk, brown in autumn    |
+| poplar  | avenue            | tall column (≈ 14 m)                                  |
+| willow  | by water          | dome with drooping branches, low thick trunk          |
+| apple   | orchards          | low wide crown                                        |
 
-- Роли: хвойная порода (сосна / ель), лиственная (липа / берёза / дуб), аллейная (липа / берёза / тополь) и ива у воды — по весам архетипа (`FLORA`): степь — сосна, дуб, тополя; болота — ель, берёза, часто ива; перевал — в основном ель; побережье — сосна, дуб или липа, тополя. Доля хвойных в лесах тоже своя у каждой карты (`coniferShare`).
-- Ива выпадает вместо отдельной аллейной породы (аллеи тогда из лиственной породы карты), так что на карте 2–3 породы плюс яблони в садах. Ивы растут в лесах и среди одиночных деревьев в пределах ~30 м от реки, озера или болота; если их на карте меньше 15, они становятся лиственной породой карты (отдельный меш ради горстки деревьев не нужен).
-- Постройки (`BUILDING_KIT`): часовня вместо деревенской церкви (35 % карт; беленая, с колокольней и шпилем); кирпичные двухэтажные дома (50 % карт, 15–40 % деревенских изб и хуторских домов); колхозные склады вместо деревенских сараев (50 %; 9–10 × 17–21 м, ставятся только если все углы на сухой земле вне дорог); водонапорная башня на краю первой деревни (45 %; кирпичный ствол, деревянный бак, 15 м). Все — OBB с высотой, как остальные дома: не проехать, снаряд попадает в коробку, обзор закрывают.
+- Roles: the conifer species (pine / spruce), deciduous (linden / birch / oak), avenue (linden / birch / poplar) and willow by water — by archetype weights (`FLORA`): steppe — pine, oak, poplars; swamps — spruce, birch, often willow; mountain pass — mostly spruce; coast — pine, oak or linden, poplars. The share of conifers in forests is also specific to each map (`coniferShare`).
+- Willow is rolled instead of a separate avenue species (avenues are then made of the map's deciduous species), so a map has 2–3 species plus apple trees in orchards. Willows grow in forests and among the lone trees within ~30 m of a river, lake or swamp; if there are fewer than 15 of them on the map, they become the map's deciduous species (a separate mesh is not worth a handful of trees).
+- Buildings (`BUILDING_KIT`): a chapel instead of the village church (35 % of maps; whitewashed, with a bell tower and a spire); two-storey brick houses (50 % of maps, 15–40 % of village log houses and farmstead houses); kolkhoz warehouses instead of village barns (50 %; 9–10 × 17–21 m, placed only if all corners are on dry ground off the roads); a water tower at the edge of the first village (45 %; brick shaft, wooden tank, 15 m). All are OBBs with height, like the other houses: cannot be driven through, a shell hits the box, they block view.
 
-## Реквизит (InstancedMesh)
+## Props (InstancedMesh)
 
-- Деревья: в лесах (плотность 0.02/м²) хвойные и лиственные породы карты, 260 одиночных по карте, аллеи, сады. Стволы всех пород — один InstancedMesh (масштаб и цвет коры на экземпляр), кроны — по мешу на породу, и только для пород, которые есть на карте: обычно 3–4 меша крон + стволы (раньше 2 + 2). Танк валит дерево при касании (анимация падения 1.1 с по направлению движения), замедляясь до 0.7. Снаряд деревья не замечает.
-- Кусты: 60 кустарниковых групп по 3–8 у опушек и на лугах; стоять в кусте = +0.35 маскировки.
-- Камни: 70, в горах и на лугах; непроходимы, останавливают снаряды, летящие ниже их верха (камень ~1.1 r, ежи и надолбы 1.5 м): снаряд, пролетающий над камнем, летит дальше.
-- Стога (35, на полях) сминаются; заборы в деревнях ложатся.
+- Trees: in forests (density 0.02/m²) the map's conifer and deciduous species, 260 lone trees across the map, avenues, orchards. The trunks of all species — one InstancedMesh (scale and bark colour per instance), crowns — one mesh per species, and only for the species present on the map: usually 3–4 crown meshes + trunks (previously 2 + 2). A tank fells a tree on contact (1.1 s fall animation in the direction of travel), slowing to 0.7. Shells ignore trees.
+- Bushes: 60 shrub clusters of 3–8 at forest edges and in meadows; standing in a bush = +0.35 camouflage.
+- Rocks: 70, in the mountains and meadows; impassable, they stop shells flying below their top (rock ~1.1 r, hedgehogs and dragon's teeth 1.5 m): a shell passing over a rock flies on.
+- Haystacks (35, in fields) get crushed; fences in villages get knocked down.
 
-## Производительность
+## Performance
 
-- Потолок кадров: 60 в бою, 30 в гараже (`RENDER` в `src/config/render.ts`); кадры идут по расписанию с шагом 1/60 с, поэтому на 75–240 Гц дисплеях выходит ровно 60 fps (`src/render/framePacer.ts`).
-- Разрешение рендера адаптивное: масштаб 0.75–1.25 × devicePixelRatio (не выше 1.25). Если за секунду кадры в среднем на 30 % длиннее цели (1/60 с; на 60 Гц это ≈ 30 % пропущенных vsync) — масштаб снижается на 0.125; если превышение < 5 % — повышается после паузы (6 с, удваивается при каждом откате). Текущий масштаб виден в оверлее `P`. Размер частиц учитывает масштаб рендера и не меняется вместе с ним.
-- Тени PCF 2048², рельеф тени не отбрасывает (только принимает). Следующая карта генерируется во время экрана результата, шейдеры компилируются при запуске.
-- HUD пишет в DOM только изменившиеся значения; миникарта обновляется 20 раз в секунду, таблица (Tab) — 4 раза.
+- Frame cap: 60 in battle, 30 in the garage (`RENDER` in `src/config/render.ts`); frames are scheduled with a 1/60 s step, so on 75–240 Hz displays the result is an even 60 fps (`src/render/framePacer.ts`).
+- Render resolution is adaptive: scale 0.75–1.25 × devicePixelRatio (not above 1.25). If over a second the frames are on average 30 % longer than the target (1/60 s; on 60 Hz that is ≈ 30 % of vsyncs missed) — the scale drops by 0.125; if the overshoot is < 5 % — it rises after a pause (6 s, doubled on every rollback). The current scale is shown in the `P` overlay. Particle size accounts for the render scale and does not change along with it.
+- Shadows PCF 2048², the terrain casts no shadows (only receives them). The next map is generated during the result screen, shaders are compiled at startup.
+- The HUD writes only changed values to the DOM; the minimap updates 20 times a second, the scoreboard (Tab) — 4 times.

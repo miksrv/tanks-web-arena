@@ -2,7 +2,7 @@ import { rockets } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * БМ-13 «Катюша» (1941): трёхосный ЗиС-6 с длинным капотом, кабиной и пакетом из восьми направляющих над ней.
+ * BM-13 Katyusha (1941): three-axle ZiS-6 with a long bonnet, a cab and a pack of eight launch rails above it.
  */
 export const bm13: TankDef = {
 	id: 'bm13',

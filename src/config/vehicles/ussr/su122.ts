@@ -2,7 +2,7 @@ import { howitzer } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * СУ-122 (1943): рубка СУ-85 на корпусе Т-34, короткая 122-мм гаубица М-30С в массивной литой «колокольной» маске.
+ * SU-122 (1943): SU-85 casemate on a T-34 hull, short 122 mm M-30S howitzer in a massive cast "bell" mantlet.
  */
 export const su122: TankDef = {
 	id: 'su122',

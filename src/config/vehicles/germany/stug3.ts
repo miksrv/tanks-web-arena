@@ -2,8 +2,8 @@ import { casemateGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * StuG III G (1943): шасси Pz. III, низкая рубка со скошенной лобовой частью, командирская башенка слева, маска
- * «Saukopf», экраны.
+ * StuG III G (1943): Pz. III chassis, low casemate with a sloped front, commander's cupola on the left, "Saukopf"
+ * mantlet, side skirts.
  */
 export const stug3: TankDef = {
 	id: 'stug3',

@@ -2,8 +2,8 @@ import { turretGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Tiger I (1943): прямоугольный корпус с вертикальным лбом, надстройка над гусеницами, катки в шахматном порядке,
- * подковообразная башня с широкой маской, 88-мм KwK 36.
+ * Tiger I (1943): rectangular hull with a vertical front, superstructure over the tracks, interleaved road wheels,
+ * horseshoe-shaped turret with a wide mantlet, 88 mm KwK 36.
  */
 export const tiger: TankDef = {
 	id: 'tiger',

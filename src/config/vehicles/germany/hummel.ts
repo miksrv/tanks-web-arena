@@ -2,8 +2,8 @@ import { howitzer } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Hummel (1943): шасси GW III/IV с ходовой Pz. IV, высокая открытая рубка в корме, 150-мм sFH 18 без дульного
- * тормоза.
+ * Hummel (1943): GW III/IV chassis with Pz. IV running gear, tall open casemate at the rear, 150 mm sFH 18 without a
+ * muzzle brake.
  */
 export const hummel: TankDef = {
 	id: 'hummel',

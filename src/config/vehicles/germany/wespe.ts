@@ -2,7 +2,7 @@ import { howitzer } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Wespe (1943): удлинённое шасси Pz. II, открытая рубка в корме, 105-мм leFH 18M с дульным тормозом.
+ * Wespe (1943): lengthened Pz. II chassis, open casemate at the rear, 105 mm leFH 18M with a muzzle brake.
  */
 export const wespe: TankDef = {
 	id: 'wespe',

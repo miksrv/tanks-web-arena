@@ -2,7 +2,7 @@ import { turretGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Т-34-76 (1942): шестигранная башня-«гайка» с двумя круглыми люками («Микки-Маус»), 76-мм Ф-34.
+ * T-34-76 (1942): hexagonal "nut" turret with two round hatches ("Mickey Mouse"), 76 mm F-34.
  */
 export const t34_76: TankDef = {
 	id: 't34_76',

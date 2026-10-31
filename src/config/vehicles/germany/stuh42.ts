@@ -2,7 +2,7 @@ import { casemateGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * StuH 42 (1943): рубка StuG III с короткой толстой 105-мм гаубицей с дульным тормозом в маске «Saukopf».
+ * StuH 42 (1943): StuG III casemate with a short, thick 105 mm howitzer with a muzzle brake in a "Saukopf" mantlet.
  */
 export const stuh42: TankDef = {
 	id: 'stuh42',

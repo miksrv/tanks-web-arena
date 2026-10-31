@@ -2,8 +2,8 @@ import { casemateGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Ferdinand (1943): длинный корпус с вертикальным 200-мм лбом, огромная рубка в корме, катки Порше на тележках,
- * ведущее колесо сзади, 88-мм Pak 43/2.
+ * Ferdinand (1943): long hull with a vertical 200 mm front, huge casemate at the rear, Porsche road wheels on bogies,
+ * drive sprocket at the rear, 88 mm Pak 43/2.
  */
 export const ferdinand: TankDef = {
 	id: 'ferdinand',

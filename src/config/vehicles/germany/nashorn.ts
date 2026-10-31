@@ -2,7 +2,7 @@ import { casemateGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Nashorn (1943): шасси GW III/IV, высокая открытая рубка с наклонными бортами, очень длинная 88-мм Pak 43/1 L/71.
+ * Nashorn (1943): GW III/IV chassis, tall open casemate with sloped sides, very long 88 mm Pak 43/1 L/71.
  */
 export const nashorn: TankDef = {
 	id: 'nashorn',

@@ -2,8 +2,8 @@ import { casemateGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * СУ-152 (1943): шасси КВ-1С с большой рубкой, 152-мм МЛ-20С с длинным бронекожухом противооткатных и щелевым
- * дульным тормозом.
+ * SU-152 (1943): KV-1S chassis with a large casemate, 152 mm ML-20S with a long recoil-cylinder armour jacket and a
+ * slotted muzzle brake.
  */
 export const su152: TankDef = {
 	id: 'su152',

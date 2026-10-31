@@ -2,8 +2,8 @@ import { casemateGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * СУ-85 (1943): рубка заодно с лобовым листом и бортами Т-34, командирская башенка слева, 85-мм Д-5С в шаровой
- * маске.
+ * SU-85 (1943): casemate merged with the T-34 glacis and sides, commander's cupola on the left, 85 mm D-5S in a ball
+ * mantlet.
  */
 export const su85: TankDef = {
 	id: 'su85',

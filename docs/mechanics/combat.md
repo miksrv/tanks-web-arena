@@ -1,97 +1,97 @@
 # Combat
 
-Код: `src/combat/armor.ts`, `src/combat/shells.ts`, `src/combat/ballistics.ts`, `Tank.fire`; числа: `COMBAT`, `AMMO`, орудия в `TANKS` (`src/config/`)
+Code: `src/combat/armor.ts`, `src/combat/shells.ts`, `src/combat/ballistics.ts`, `Tank.fire`; numbers: `COMBAT`, `AMMO`, guns in `TANKS` (`src/config/`)
 
-## Выстрел
+## Firing
 
-- Снаряд вылетает из дульного среза по направлению ствола с гауссовым разбросом: радиус прицела (м на 100 м) = `dispersion · (1 + bloom)`, круг = 2σ, обрезка на 2σ.
-- `bloom` растёт от движения (0.12 на м/с), поворота корпуса (0.6 на рад/с), поворота башни (0.3), выстрела (+2.5) и спадает экспоненциально с постоянной `aimTime / 3`.
-- Повреждённое орудие: разброс ×1.5 на 12 с.
-- Возвышение решается аналитически (`solveElevation`) по дальности и перепаду высот до точки прицела: низкая траектория для танков, высокая для гаубиц. Полученное мировое направление переводится в систему башни, так что тангаж и крен корпуса на склоне компенсируются. Снаряд летит с гравитацией 9.8.
+- The shell leaves the muzzle along the barrel direction with Gaussian dispersion: reticle radius (m per 100 m) = `dispersion · (1 + bloom)`, circle = 2σ, clipped at 2σ.
+- `bloom` grows with movement (0.12 per m/s), hull rotation (0.6 per rad/s), turret rotation (0.3), firing (+2.5) and decays exponentially with the time constant `aimTime / 3`.
+- Damaged gun: dispersion ×1.5 for 12 s.
+- Elevation is solved analytically (`solveElevation`) from the range and the height difference to the aim point: low trajectory for tanks, high for howitzers. The resulting world direction is converted into the turret frame, so hull pitch and roll on a slope are compensated. The shell flies with gravity 9.8.
 
-## Снаряды (клавиши 1/2/3)
+## Shells (keys 1/2/3)
 
-| Тип | Пробитие | Урон  | Скорость | Нормализация | Рикошет | Особое                     |
-| --- | -------- | ----- | -------- | ------------ | ------- | -------------------------- |
-| ББ  | ×1.0     | ×1.0  | ×1.0     | 5°           | > 70°   | основной                   |
-| ПК  | ×1.32    | ×0.88 | ×1.25    | 2°           | > 70°   | до 12 штук                 |
-| ОФ  | ×0.3     | ×1.45 | ×0.85    | 0°           | нет     | сплэш, урон при непробитии |
+| Type | Penetration | Damage | Velocity | Normalisation | Ricochet | Special                           |
+| ---- | ----------- | ------ | -------- | ------------- | -------- | --------------------------------- |
+| AP   | ×1.0        | ×1.0   | ×1.0     | 5°            | > 70°    | standard                          |
+| APCR | ×1.32       | ×0.88  | ×1.25    | 2°            | > 70°    | up to 12 rounds                   |
+| HE   | ×0.3        | ×1.45  | ×0.85    | 0°            | none     | splash, damage on non-penetration |
 
-- Смена типа на заряженном орудии стоит до 2.5 с перезарядки.
-- Клик за последние 0.3 с перезарядки запоминается: выстрел уходит в момент, когда орудие зарядилось (смена снаряда сбрасывает его). Конец перезарядки орудий от 2 с отмечается коротким сигналом.
-- Гаубицы (СУ-122, Hummel) заряжены ОФ по умолчанию, сплэш 6–7.5 м.
+- Switching the type on a loaded gun costs up to 2.5 s of reload.
+- A click during the last 0.3 s of the reload is remembered: the shot goes off the moment the gun is loaded (switching the shell cancels it). The end of the reload for guns with a reload of 2 s or more is marked by a short beep.
+- Howitzers (SU-122, Hummel) are loaded with HE by default, splash 6–7.5 m.
 
-## Попадание (`testShell`)
+## Hit (`testShell`)
 
-- Отрезок полёта за кадр проверяется против боксов корпуса и башни (OBB), домов, камней и рельефа. Первый по пути выигрывает. Бокс, внутри которого отрезок начинается, не считается попаданием: ствол, упёртый в стену, стреляет сквозь неё наружу. Подбитые танки — укрытие: снаряд поглощается без урона.
-- Грань по нормали: лоб / борт / корма / крыша; у башни свои значения. Борт корпуса ниже верха ходовой = **гусеница**.
-- Угол встречи θ между снарядом и нормалью плиты. Если калибр ≥ 3 × толщины — без рикошета, нормализация ×1.4. Иначе ББ/ПК рикошетят при θ > 70°.
-- Приведённая броня = номинал / cos(θ − нормализация). Пробитие = `pen · (1 ± 25 %)` ≥ приведённая → урон `dmg · (1 ± 25 %)`.
-- ОФ при непробитии: `dmg · 0.5 − броня · 1.1` (не меньше 0).
+- The flight segment for the frame is tested against the hull and turret boxes (OBB), houses, rocks and terrain. The first along the path wins. A box inside which the segment starts does not count as a hit: a barrel pushed into a wall fires through it outward. Destroyed tanks are cover: the shell is absorbed without damage.
+- The face is chosen by the normal: front / side / rear / roof; the turret has its own values. Hull side below the top of the running gear = **track**.
+- Impact angle θ between the shell and the plate normal. If calibre ≥ 3 × thickness — no ricochet, normalisation ×1.4. Otherwise AP/APCR ricochet at θ > 70°.
+- Effective armour = nominal / cos(θ − normalisation). Penetration = `pen · (1 ± 25 %)` ≥ effective → damage `dmg · (1 ± 25 %)`.
+- HE on non-penetration: `dmg · 0.5 − armour · 1.1` (not less than 0).
 
-## Уязвимые зоны (`ZONES`, `plateAt` в `src/combat/armor.ts`)
+## Weak zones (`ZONES`, `plateAt` in `src/combat/armor.ts`)
 
-Хитбоксы остались прежними (корпус и башня) плюс маленький бокс командирской башенки; зона определяется по точке попадания внутри бокса, поэтому проверка снаряда почти не дорожает.
+The hitboxes stayed the same (hull and turret) plus a small commander's cupola box; the zone is determined by the hit point inside the box, so the shell test gets hardly any more expensive.
 
-| Зона                 | Где                                                                                       | Броня                                                                                  |
-| -------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Нижний лист          | лоб корпуса, нижние 45 % высоты                                                           | `armor.lowerFront` или лоб × 0.75 (у Tiger 100 мм)                                     |
-| Маска орудия         | лоб башни (рубки), по ширине маски (`gunLook.mantletW`, иначе 35 %) и ±30 % высоты у цапф | лоб башни × 1.3; пробитие повреждает орудие с шансом 50 %                              |
-| Командирская башенка | бокс 0.6 × 0.6 × 0.3 м на крыше там, где `turretLook.cupola` (нет у открытых рубок)       | борт башни × 0.7, сверху — крыша; пробитие ранит командира с шансом 60 %               |
-| Экраны               | борт корпуса при `hullLook.skirts`, борт и корма башни при `turretLook.skirts`            | +8 мм против ББ и ПК; фугас рвётся на экране: не пробивает, урон при непробитии × 0.35 |
+| Zone               | Where                                                                                                                               | Armour                                                                                           |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Lower glacis       | hull front, lower 45 % of the height                                                                                                | `armor.lowerFront` or front × 0.75 (100 mm on the Tiger)                                         |
+| Gun mantlet        | turret (casemate) front, across the mantlet width (`gunLook.mantletW`, otherwise 35 %) and ±30 % of the height around the trunnions | turret front × 1.3; a penetration damages the gun with a 50 % chance                             |
+| Commander's cupola | a 0.6 × 0.6 × 0.3 m box on the roof where `turretLook.cupola` is (none on open casemates)                                           | turret side × 0.7, from above — roof; a penetration wounds the commander with a 60 % chance      |
+| Side skirts        | hull side when `hullLook.skirts`, turret side and rear when `turretLook.skirts`                                                     | +8 mm against AP and APCR; HE bursts on the skirt: no penetration, non-penetration damage × 0.35 |
 
-- Прицел окрашивается по плите под ним: линия от дульного среза к точке прицела на танке; в строке под прицелом — приведённая броня этой плиты и зона («нижний лист», «маска», «башенка», «экран») или «рикошет». У гаубиц — прежняя оценка по проекции.
+- The reticle is coloured by the plate under it: a line from the muzzle to the aim point on the tank; the line under the reticle shows the effective armour of that plate and the zone («нижний лист» (lower glacis), «маска» (mantlet), «башенка» (cupola), «экран» (skirt)) or «рикошет» (ricochet). Howitzers keep the old estimate by projection.
 
-## Модули
+## Modules
 
-| Что        | Условие                                                               | Эффект                                                                                                             |
-| ---------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Гусеница   | попадание в ходовую, 60 %                                             | 45 с без хода и поворота; урон корпусу ×0.5                                                                        |
-| Пожар      | пробитие моторного отсека (корма или задние 30 % борта корпуса), 25 % | 25 HP/с 8 с; огнетушитель (F), 1 шт.                                                                               |
-| Двигатель  | то же пробитие без пожара, 40 %                                       | скорость и разгон ×0.5, 15 с                                                                                       |
-| Орудие     | пробитие лба башни, 15 % (через маску 50 %)                           | разброс ×1.5, 12 с                                                                                                 |
-| Погон      | пробитие нижних 30 % башни (не рубки), 35 %                           | поворот башни ×0.4, 15 с                                                                                           |
-| Боеукладка | пробитие борта корпуса, борта или кормы башни                         | 4.5 % — детонация: танк уничтожен, башню срывает и подбрасывает; ещё 18 % — повреждение: перезарядка ×1.35 на 15 с |
+| What        | Condition                                                                        | Effect                                                                                                                 |
+| ----------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Track       | hit on the running gear, 60 %                                                    | 45 s without driving or turning; hull damage ×0.5                                                                      |
+| Fire        | penetration of the engine compartment (rear or rear 30 % of the hull side), 25 % | 25 HP/s for 8 s; fire extinguisher (F), 1 pc.                                                                          |
+| Engine      | the same penetration without fire, 40 %                                          | speed and acceleration ×0.5, 15 s                                                                                      |
+| Gun         | penetration of the turret front, 15 % (through the mantlet 50 %)                 | dispersion ×1.5, 12 s                                                                                                  |
+| Turret ring | penetration of the lower 30 % of the turret (not casemate), 35 %                 | turret rotation ×0.4, 15 s                                                                                             |
+| Ammo rack   | penetration of the hull side, turret side or rear                                | 4.5 % — detonation: tank destroyed, the turret is torn off and thrown up; another 18 % — damage: reload ×1.35 for 15 s |
 
-- Ремкомплект (R), 1 шт., чинит сразу всё: гусеницу, двигатель, погон и орудие. Боты применяют его при сбитой гусенице или повреждённом двигателе.
-- Новые криты идут в ленту «Крит» и в статистику критов.
+- Repair kit (R), 1 pc., repairs everything at once: track, engine, turret ring and gun. Bots use it when a track is knocked off or the engine is damaged.
+- New crits go to the «Крит» (Crit) ribbon and into the crit statistics.
 
-## Боекомплект (`AMMO_LOAD`, `src/tank/ammo.ts`)
+## Ammunition (`AMMO_LOAD`, `src/tank/ammo.ts`)
 
-- Снаряды конечны. Весь боекомплект — на 240 с непрерывной стрельбы (`240 / перезарядка`, от 8 до 250 выстрелов, или `gun.rounds`): Т-34-85 43, Tiger 33, ИС-2 21, КВ-2 12, автопушки 250.
-- Раскладка: подкалиберные 20 % (не больше 12), второй ходовой снаряд 25 % (ОФ у пушек, ББ у гаубиц), остальное — штатный. У гаубиц и «шайтан-труб» подкалиберных нет; реактивная артиллерия везёт только залпы ОФ.
-- Кончился выбранный снаряд — орудие переключается на штатный, а если его нет — на тот, которого больше всего. Совсем пусто — орудие молчит.
-- Пополнение: стоя (до 2 м/с) в 35 м от центра своей базы, каждые 0.5 с прибавляется 5 % полного запаса каждого типа (с нуля до полного — около 10 с). На панели снарядов — счётчики, пустой тип красный, строка «боекомплект на исходе» (меньше 15 %).
-- Там же возвращаются использованные расходники: ремкомплект, аптечка и огнетушитель — все вместе после 5 с на базе (`kitTime`). Строка на панели — «пополнение: снаряды и расходники», по завершении в логе «Пополнение завершено».
-- Боты при запасе меньше 15 % (если не идёт охота на последнего врага) едут на свою базу, набирают 90 % и планируют бой заново оттуда.
+- Shells are finite. The whole load is enough for 240 s of continuous fire (`240 / reload`, from 8 to 250 rounds, or `gun.rounds`): T-34-85 43, Tiger 33, IS-2 21, KV-2 12, autocannons 250.
+- Layout: APCR 20 % (no more than 12), the second running shell 25 % (HE on guns, AP on howitzers), the rest is the standard one. Howitzers and "derp guns" have no APCR; rocket artillery carries only HE salvoes.
+- When the selected shell runs out, the gun switches to the standard one, and if there is none — to the one with the most rounds. Completely empty — the gun is silent.
+- Resupply: standing still (up to 2 m/s) within 35 m of the centre of own base, every 0.5 s adds 5 % of the full stock of each type (from zero to full takes about 10 s). The shell panel shows counters, an empty type is red, plus the line «боекомплект на исходе» (ammunition running low) (below 15 %).
+- Used consumables are returned there too: repair kit, first aid kit and fire extinguisher — all together after 5 s on the base (`kitTime`). The panel line is «пополнение: снаряды и расходники» (resupply: shells and consumables), on completion the log says «Пополнение завершено» (Resupply complete).
+- Bots with less than 15 % of the stock (unless hunting the last enemy) drive to their base, fill up to 90 % and re-plan the battle from there.
 
-## Экипаж (`CREW`, `src/tank/crew.ts`)
+## Crew (`CREW`, `src/tank/crew.ts`)
 
-- Пробитие с шансом 30 % ранит одного члена экипажа из отсека за пробитой плитой: башня — командир, наводчик, заряжающий; лоб корпуса — мехвод; борт корпуса — мехвод или заряжающий; крыша — любой; корма (двигатель) и ходовая — никого. Осколки фугаса через крышу — 12 % × близость к разрыву (×2.5 у открытых рубок).
-- Раненый (до аптечки) ухудшает машину: командир — обзор ×0.85, наводчик — разброс и время сведения ×1.25, мехвод — скорость, разгон и поворот корпуса ×0.85, заряжающий — перезарядка ×1.25.
-- Аптечка (E), 1 шт., лечит всех. Боты применяют её сами через 3–8 с × (1.3 − навык).
-- В статусе — строка экипажа (раненые красным); ведётся счёт критов для лент: ранение, боеукладка, орудие.
+- A penetration wounds, with a 30 % chance, one crew member from the compartment behind the penetrated plate: turret — commander, gunner, loader; hull front — driver; hull side — driver or loader; roof — anyone; rear (engine) and running gear — nobody. HE fragments through the roof — 12 % × proximity to the burst (×2.5 on open casemates).
+- A wounded member (until a first aid kit) degrades the vehicle: commander — view range ×0.85, gunner — dispersion and aim time ×1.25, driver — speed, acceleration and hull rotation ×0.85, loader — reload ×1.25.
+- First aid kit (E), 1 pc., heals everyone. Bots use it on their own after 3–8 s × (1.3 − skill).
+- The status shows a crew line (wounded in red); crit counts are kept for ribbons: wound, ammo rack, gun.
 
-- Таран: сближение > 3 м/с → урон `1.4 · скорость · отношение масс` (масса = прочность). Пара разрешается один раз за кадр (со стороны танка с меньшим uid), обе машины теряют скорость.
-- Реактивная артиллерия (`gun.salvo`): выстрел запускает залп, остальные ракеты сходят сами с интервалом `salvoInterval` (`Tank.salvoTick`, опрашивается игровым циклом), каждая вдоль текущего положения направляющих со своим разбросом; перезарядка считается с первой ракеты. Только ОФ, попытка сменить снаряд отклоняется.
-- Пустая укладка: выстрел не происходит, орудие само переключается на другой снаряд с задержкой смены (см. «Боекомплект»).
-- Сплэш ОФ: всем в радиусе `0.6 · dmg · (1 − d/r)` минус `крыша · 1.1`, 30 % шанс сбить гусеницу.
-- Уничтожение зачитывается нанёсшему последний урон (включая пожар и таран). Подбитый танк становится обломками: тёмный, башня перекошена, дымит. После детонации боеукладки башня улетает (9–13 м/с вверх, 1.5–4 м/с вбок, кувыркаясь) и ложится на крышу корпуса или на землю рядом — тоже укрытие только по корпусу (бокс башни остаётся на месте).
+- Ramming: closing speed > 3 m/s → damage `1.4 · speed · mass ratio` (mass = hit points). A pair is resolved once per frame (from the side of the tank with the smaller uid), both vehicles lose speed.
+- Rocket artillery (`gun.salvo`): a shot launches a salvo, the remaining rockets leave on their own at `salvoInterval` intervals (`Tank.salvoTick`, polled by the game loop), each along the current position of the rails with its own dispersion; the reload counts from the first rocket. HE only, an attempt to switch the shell is rejected.
+- Empty rack: no shot happens, the gun switches to another shell on its own with the switch delay (see "Ammunition").
+- HE splash: everyone within the radius takes `0.6 · dmg · (1 − d/r)` minus `roof · 1.1`, 30 % chance to knock off a track.
+- The kill is credited to whoever dealt the last damage (including fire and ramming). A destroyed tank becomes a wreck: dark, turret askew, smoking. After an ammo rack detonation the turret flies off (9–13 m/s upward, 1.5–4 m/s sideways, tumbling) and lands on the hull roof or on the ground nearby — also cover only by the hull (the turret box stays in place).
 
-## Артиллерийский вид (САУ, Shift)
+## Artillery view (SPG, Shift)
 
-Код: `src/fx/artyView.ts`, `src/fx/groundMarks.ts` (`splashRing`), `src/game/combatFeedback.ts` (метка «Мимо»)
+Code: `src/fx/artyView.ts`, `src/fx/groundMarks.ts` (`splashRing`), `src/game/combatFeedback.ts` (the «Мимо» (Miss) marker)
 
-- Камера-«спутник» смотрит на точку прицела сверху; экранный круг прицела скрыт, вместо него на земле рисуется эллипс разброса: радиус = `reticle · дальность / 100`, вдоль линии огня растянут на `1 / sin(угла падения)`. Цвет: белый, по шансу пробития над целью (зелёный / оранжевый / красный), красный вне досягаемости.
-- Баллистика гаубиц игровая (`HOWITZER` в `ballistics.ts`): время полёта = 2 с + дальность / 150 (300 м → 4 с, 900 м → 8 с), «гравитация» 40 м/с², скорость и угол вычисляются под это время (угол 47–55°, апекс 80–320 м, через любые холмы). Дальность 1150 м — вся карта. Боты и игрок используют один закон.
-- Траектория от среза ствола до точки прицела показывается дугой; в `aimInfo` — время полёта или «ВНЕ ДОСЯГАЕМОСТИ».
-- Камера: высота 90–520 м (колесо), по умолчанию 260; мышь двигает точку прицела 1:1 по земле (экранное «вправо» = (−cos yaw, sin yaw)); туман в этом режиме отодвинут (900–2400 м). Вход: Shift или колесо вперёд из ближайшей аркадной дистанции; выход: Shift или колесо назад с максимальной высоты.
-- Свои снаряды в воздухе отмечены маркером постоянного экранного размера. Любой фугас со сплэшем > 3 м рисует на земле расширяющееся кольцо радиуса сплэша (0.9 с).
-- Если прямое попадание и осколки не нанесли урона, в точке падения всплывает «Мимо»; урон показывают обычные всплывающие числа.
+- A "satellite" camera looks at the aim point from above; the on-screen reticle circle is hidden, instead a dispersion ellipse is drawn on the ground: radius = `reticle · range / 100`, stretched along the line of fire by `1 / sin(angle of fall)`. Colour: white, by the penetration chance over a target (green / orange / red), red when out of range.
+- Howitzer ballistics are gamey (`HOWITZER` in `ballistics.ts`): flight time = 2 s + range / 150 (300 m → 4 s, 900 m → 8 s), "gravity" 40 m/s², velocity and angle are computed for that time (angle 47–55°, apex 80–320 m, over any hills). Range 1150 m — the whole map. Bots and the player use the same law.
+- The trajectory from the muzzle to the aim point is shown as an arc; `aimInfo` shows the flight time or «ВНЕ ДОСЯГАЕМОСТИ» (OUT OF RANGE).
+- Camera: height 90–520 m (wheel), 260 by default; the mouse moves the aim point 1:1 over the ground (screen "right" = (−cos yaw, sin yaw)); fog in this mode is pushed back (900–2400 m). Enter: Shift or wheel forward from the closest arcade distance; exit: Shift or wheel back from the maximum height.
+- Own shells in flight are marked with a marker of constant screen size. Any HE shell with splash > 3 m draws an expanding ring of the splash radius on the ground (0.9 s).
+- If the direct hit and the fragments dealt no damage, «Мимо» (Miss) pops up at the impact point; damage is shown by the usual floating numbers.
 
-## Маркер орудия
+## Gun marker
 
-Код: `src/combat/trace.ts` (`traceShot`), `src/hud/reticle.ts` (`updateGunMarker`), `artyView.ts` (`gunRing`)
+Code: `src/combat/trace.ts` (`traceShot`), `src/hud/reticle.ts` (`updateGunMarker`), `artyView.ts` (`gunRing`)
 
-- Башня доворачивает со скоростью `turretTurn`, ствол поднимается 1.5 рад/с, поэтому орудие отстаёт от прицела. Снаряд всегда вылетает вдоль реального ствола (направление из мировой матрицы орудия в `Tank.fire`).
-- Жёлтый маркер показывает, куда попадёт снаряд при выстреле прямо сейчас: парабола от среза ствола по текущему направлению с настоящей скоростью и гравитацией (у гаубиц — закон `HOWITZER`), отрезками ≈ 7 м против танков, домов и рельефа. В аркадном и снайперском виде — кружок на экране (прижимается к краю, если точка вне кадра), в артиллерийском — кольцо на земле в точке реального падения.
+- The turret traverses at `turretTurn`, the barrel elevates at 1.5 rad/s, so the gun lags behind the reticle. The shell always leaves along the real barrel (direction from the gun's world matrix in `Tank.fire`).
+- A yellow marker shows where the shell would land if fired right now: a parabola from the muzzle along the current direction with the real velocity and gravity (for howitzers — the `HOWITZER` law), in segments of ≈ 7 m against tanks, houses and terrain. In arcade and sniper view it is a small circle on screen (clamped to the edge if the point is off-frame), in artillery view — a ring on the ground at the real impact point.

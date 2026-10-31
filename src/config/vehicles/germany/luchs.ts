@@ -2,8 +2,8 @@ import { turretGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Pz. II Luchs (1943): надгусеничная надстройка во всю ширину, большие катки в шахматном порядке, широкая сварная
- * башня без командирской башенки.
+ * Pz. II Luchs (1943): full-width superstructure over the tracks, large interleaved road wheels, wide welded turret
+ * without a commander's cupola.
  */
 export const luchs: TankDef = {
 	id: 'luchs',

@@ -2,8 +2,8 @@ import { turretGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Pz.Kpfw. KV-1 753(r): трофейный КВ-1 в немецкой службе (1942–43), перевооружённый 75-мм KwK 40 L/48 с дульным
- * тормозом, с командирской башенкой. Корпус и броня — как у советского КВ-1; немецкая оптика чуть дальнозорче.
+ * Pz.Kpfw. KV-1 753(r): captured KV-1 in German service (1942–43), rearmed with a 75 mm KwK 40 L/48 with a muzzle
+ * brake, with a commander's cupola. Hull and armour as on the Soviet KV-1; German optics see slightly farther.
  */
 export const kv1r: TankDef = {
 	id: 'kv1r',

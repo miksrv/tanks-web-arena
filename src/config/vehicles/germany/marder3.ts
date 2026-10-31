@@ -2,8 +2,8 @@ import { casemateGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Marder III (Sd.Kfz. 139, 1942): шасси Pz. 38(t) с четырьмя большими катками, высокая открытая рубка со щитом
- * трофейной 76-мм Pak 36(r).
+ * Marder III (Sd.Kfz. 139, 1942): Pz. 38(t) chassis with four large road wheels, tall open casemate with the shield of
+ * a captured 76 mm Pak 36(r).
  */
 export const marder3: TankDef = {
 	id: 'marder3',

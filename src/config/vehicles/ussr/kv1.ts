@@ -2,8 +2,8 @@ import { turretGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * КВ-1 (1941): высокий коробчатый корпус с клиновидным носом, шесть катков с поддерживающими роликами, сварная
- * башня с нависающей кормой, 76-мм ЗиС-5.
+ * KV-1 (1941): tall box hull with a wedge-shaped nose, six road wheels with return rollers, welded turret with an
+ * overhanging rear, 76 mm ZiS-5.
  */
 export const kv1: TankDef = {
 	id: 'kv1',

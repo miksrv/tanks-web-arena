@@ -2,8 +2,8 @@ import { rockets } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * Panzerwerfer 42 (1943): бронированный полугусеничный Maultier — колёса спереди, гусеница сзади, на крыше
- * десятиствольный Nebelwerfer.
+ * Panzerwerfer 42 (1943): armoured Maultier half-track — wheels at the front, tracks at the rear, a ten-barrel
+ * Nebelwerfer on the roof.
  */
 export const pzwerfer: TankDef = {
 	id: 'pzwerfer',

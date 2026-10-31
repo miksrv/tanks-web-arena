@@ -2,8 +2,8 @@ import { casemateGun } from '../../guns'
 import type { TankDef } from '../../types'
 
 /**
- * СУ-100 (1944): корпус Т-34, рубка продолжает лобовой лист и наклонные борта, справа выступает командирская
- * башенка, 100-мм Д-10С в шаровой маске.
+ * SU-100 (1944): T-34 hull, the casemate continues the glacis and the sloped sides, a commander's cupola protrudes on
+ * the right, 100 mm D-10S in a ball mantlet.
  */
 export const su100: TankDef = {
 	id: 'su100',
