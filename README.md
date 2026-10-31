@@ -1,8 +1,8 @@
-# Стальной фронт — прототип (tanks-web-arena)
+# Steel Front — prototype (tanks-web-arena)
 
-Командный танковый бой 7 × 7 в духе World of Tanks: **СССР против Германии**, 1943 год. Браузер, **Three.js + Vite + TypeScript**, без ассетов: карта, деревни, разрушенный город, танки и звук генерируются процедурно.
+Team tank battles 7 × 7 in the spirit of World of Tanks: **USSR vs Germany**, 1943. Runs in the browser on **Three.js + Vite + TypeScript** with no external assets: the map, villages, ruined city, tanks and sound are all generated procedurally. The game UI is in Russian.
 
-## Запуск
+## Getting started
 
 ```bash
 npm install
@@ -10,86 +10,88 @@ npm run dev      # http://localhost:5181
 npm run build    # tsc + vite build → dist/
 ```
 
-## Что есть в прототипе
+## What's in the prototype
 
-- **Режимы**: две команды по 7 машин, без возрождения, раунд 6 минут; погибший наблюдает за союзниками. **Стандартный бой** (у каждой стороны своя база), **встречный** (одна нейтральная база в центре), **штурм** (одна сторона обороняет базу, по времени побеждает оборона). Захват базы: скорость по перевесу захватчиков над защитниками в круге (до трёх танков), поровну — захват заморожен; очки не сгорают при выезде и попаданиях, сбрасываются, только когда в круге остались одни защитники. Каждый новый бой — новая карта; в гараже можно выбрать именную карту и режим.
-- **Карта 900 × 900 м**, каждый бой новая. Пять типов местности: средняя полоса, степь с балками и железной дорогой, болота с гатями, перевал с хребтом и седловинами, побережье с морем на одном фланге. Восемь именных карт (Прохоровка, Курская дуга, Полесье, Перевал, Керчь, Ржев, Орёл, Малиновка). Погода и время суток: ясно, пасмурно, рассвет, закат, туман, дождь, снегопад; они меняют свет и туман, а также дальность обзора всех машин. Четыре стиля рельефа (холмы, равнина, гряды, долина), три сезона (лето, осень с рыжими кронами, зима со снегом и голыми деревьями), поля с бороздами, луга, леса (деревья валятся под танком; восемь пород — сосна, ель, липа, берёза, дуб, тополь, ива, яблоня, но на каждой карте только 2–3 из них плюс яблони в садах), кусты (маскировка), горы по периметру, примерно на половине карт река с мостами и бродами, грунтовые дороги между базами. В центре разрушенный город или заводской квартал с цехами и трубой; деревни с церковью, часовней или колодцем, на части карт с кирпичными двухэтажными домами, колхозными складами и водонапорной башней, каменными оградами и садами, отдельные хутора, ветряная мельница на холме, бетонные ДОТы у линий, ряды противотанковых ежей или надолбов, аллеи вдоль дорог, камни, стога, заборы, земляные капониры для стрельбы из-за вала, железная дорога на насыпи с товарными составами. Набор фич у каждой карты свой.
-- **28 машин** по пять классов. СССР — Т-60, Т-70, Т-34-76, Т-34-85, КВ-1, КВ-2, ИС-2, СУ-85, СУ-100, СУ-152, СУ-76М, СУ-122, БМ-13 «Катюша»; Германия — Pz. II F, Pz. II Luchs, Pz. III J, Pz. IV H, Panther D, Tiger I, KV-1 753(r) (трофейный КВ-1), Marder III, StuG III G, StuH 42, Nashorn, Ferdinand, Wespe, Hummel, Panzerwerfer 42. У каждой свои прочность, скорость, броня по проекциям, орудие, обзор и маскировка; есть автопушки, «шайтан-трубы» с фугасом по умолчанию, открытые рубки и реактивная артиллерия с залпом ракет. Команды подбираются по боевому рейтингу машин: классы у сторон одинаковые, машины близки к машине игрока, суммы рейтингов команд выровнены.
-- **Бронирование как в WoT**: лоб / борт / корма / крыша корпуса и башни, угол встречи, нормализация, рикошет от 70°, правило трёх калибров, разброс ±25 % пробития и урона.
-- **Три снаряда**: бронебойный, подкалиберный, осколочно-фугасный со сплэшем; боекомплект конечный (по перезарядке машины); стоя на своей базе, танк пополняет снаряды и использованные ремкомплект, аптечку и огнетушитель. САУ стреляют навесом из вида сверху.
-- **Уязвимые зоны**: нижний лобовой лист, толстая маска орудия, командирская башенка, экраны (Schürzen) против фугасов; прицел окрашивается по плите прямо под ним.
-- **Модули и экипаж**: гусеница (обездвиживание), двигатель (ход вдвое медленнее), погон башни (медленный поворот), пожар (огнетушитель), повреждение орудия — всё чинит ремкомплект; боеукладка (повреждение — дольше перезарядка, детонация — башню срывает). Ранения командира, наводчика, мехвода и заряжающего (обзор, сведение, ход, перезарядка) лечит аптечка. Таран.
-- **Обнаружение**: обзор × (1 − маскировка), линия видимости через рельеф и дома, общая разведка команды, куст прячет полностью (до своего выстрела или пока враг не ближе 50 м), лес помогает, выстрел демаскирует. Невидимые враги не рисуются.
-- **Прицел**: сведение, разброс от движения, поворота и выстрела; цвет прицела по шансу пробития под курсором; кольцо перезарядки вокруг прицела (в аркадном и снайперском режиме); жёлтый маркер орудия показывает, куда реально попадёт снаряд при выстреле прямо сейчас (башня и ствол догоняют прицел с конечной скоростью). Аркадная камера, снайперский режим с зумом, артиллерийский «спутник» в духе WoT: эллипс разброса на земле, траектория полёта, маркер снаряда в воздухе, кольцо сплэша и метка «Мимо» в точке падения.
-- **Боты по ролям и командой**: лёгкие светят из кустов на высотах, одна или две ударные группы (средние впереди, тяжёлые прикрывают) идут по своим линиям, ждут отстающих и бьются за центр, потом продавливают; разведчики ездят впереди и светят для САУ, бьют по гусеницам в борт и сразу уходят, а когда врагов поубавилось — уходят в тыл охотиться на вражескую САУ; ПТ прикрывают группу с высот позади неё, САУ встают на ровное место у базы и бьют по засвеченным, в первую очередь по стоящим. В бою — позиция на высоте с видом на цель, после выстрела откат в укрытие; последнего врага ищут всей командой. Выбор снаряда по броне цели, доворот корпуса, отход при низкой прочности.
-- Ленты в бою (пробитие, крит, урон по засвету, броня, захват…) и медали за бой (Колобанов, Воин, Снайпер, Стальная стена…), командные сигналы ботам («Атакую!», «Нужна помощь!», «Защищайте базу!»).
-- Разбор последнего боя в гараже (кому и куда попали, кто попал в вас), лента боя, лог попаданий, таблица (Tab), миникарта, индикатор направления попадания, частицы и процедурный звук со стереопанорамой, сигнал перезарядки, «шестое чувство», пауза по Esc. Плоский «военный» интерфейс без градиентов и размытий: скошенные панели, узкий шрифт, карточки машин с полосками характеристик.
+- **Modes**: two teams of 7 vehicles, no respawn, 6-minute rounds; a destroyed player spectates allies. **Standard** (each side has its own base), **Encounter** (one neutral base in the centre), **Assault** (one side defends a base and wins on the timer). Base capture speed depends on how many more attackers than defenders are in the circle (up to three tanks); with equal numbers the capture freezes. Points are not lost on leaving the circle or on being hit; they reset only when defenders alone remain in the circle. Every battle gets a new map; in the garage you can pick a named map and a mode.
+- **900 × 900 m map**, new every battle. Five terrain types: central Russian mixed country, steppe with gullies and a railway, swamps with corduroy roads, a mountain pass with a ridge and saddles, a coast with sea on one flank. Eight named maps (Prokhorovka, Kursk Bulge, Polesia, The Pass, Kerch, Rzhev, Oryol, Malinovka). Weather and time of day: clear, overcast, dawn, dusk, fog, rain, snowfall; they change the light and fog as well as the view range of every vehicle. Four relief styles (hills, plain, ridges, valley), three seasons (summer, autumn with russet crowns, winter with snow and bare trees), ploughed fields, meadows, forests (trees fall under a tank; eight species — pine, spruce, linden, birch, oak, poplar, willow, apple — but only 2–3 of them per map plus apple trees in orchards), bushes (camouflage), mountains around the perimeter, a river with bridges and fords on roughly half of the maps, dirt roads between the bases. In the centre a ruined town or a factory district with workshops and a chimney; villages with a church, chapel or well, on some maps with two-storey brick houses, kolkhoz warehouses and a water tower, stone walls and orchards, isolated farmsteads, a windmill on a hill, concrete pillboxes near the lines, rows of Czech hedgehogs or dragon's teeth, tree-lined roads, rocks, haystacks, fences, earthwork revetments to fire from behind a berm, a railway on an embankment with freight trains. Every map gets its own set of features.
+- **28 vehicles** in five classes. USSR — T-60, T-70, T-34-76, T-34-85, KV-1, KV-2, IS-2, SU-85, SU-100, SU-152, SU-76M, SU-122, BM-13 Katyusha; Germany — Pz. II F, Pz. II Luchs, Pz. III J, Pz. IV H, Panther D, Tiger I, KV-1 753(r) (captured KV-1), Marder III, StuG III G, StuH 42, Nashorn, Ferdinand, Wespe, Hummel, Panzerwerfer 42. Each has its own hit points, speed, armour per projection, gun, view range and camouflage; there are autocannons, derp guns with HE loaded by default, open-topped casemates and rocket artillery firing a salvo. Teams are matched by battle rating: both sides get the same classes, vehicles close to the player's, and the rating sums are balanced.
+- **WoT-style armour**: front / side / rear / roof of hull and turret, impact angle, normalisation, ricochet from 70°, the three-calibre rule, ±25 % spread on penetration and damage.
+- **Three shell types**: AP, APCR, HE with splash; ammunition is finite (sized by the vehicle's reload); standing on your own base refills shells and used repair kit, first aid kit and fire extinguisher. SPGs fire indirectly from a top-down view.
+- **Weak zones**: lower glacis, thick gun mantlet, commander's cupola, side skirts (Schürzen) against HE; the reticle is coloured by the plate right under it.
+- **Modules and crew**: track (immobilised), engine (half speed), turret ring (slow traverse), fire (extinguisher), gun damage — all fixed by the repair kit; ammo rack (damaged — longer reload, detonation — the turret is blown off). Wounded commander, gunner, driver and loader (view range, aiming, speed, reload) are healed by the first aid kit. Ramming.
+- **Spotting**: view range × (1 − camouflage), line of sight through terrain and buildings, shared team spotting, a bush hides you completely (until you fire or an enemy comes within 50 m), forest helps, firing reveals you. Unspotted enemies are not drawn.
+- **Reticle**: aiming, dispersion from moving, turning and firing; reticle colour by penetration chance under the cursor; a reload ring around the reticle (in arcade and sniper modes); a yellow gun marker shows where the shell would actually land if fired right now (the turret and barrel catch up with the reticle at a finite speed). Arcade camera, sniper mode with zoom, a WoT-style artillery "satellite" view: dispersion ellipse on the ground, flight trajectory, shell marker in the air, splash ring and a «Мимо» (Miss) label at the impact point.
+- **Bots with roles and team play**: light tanks spot from bushes on high ground, one or two strike groups (mediums in front, heavies covering) advance along their lanes, wait for stragglers and fight for the centre, then push; scouts drive ahead and spot for the SPGs, hit tracks from the side and break off at once, and once the enemy thins out go to the rear to hunt the enemy SPG; TDs cover the group from high ground behind it, SPGs park on flat ground near the base and fire at spotted targets, stationary ones first. In combat — a position on high ground with a view of the target, falling back to cover after a shot; the whole team hunts the last enemy. Shell choice by target armour, hull angling, retreat on low HP.
+- In-battle ribbons (penetration, critical hit, damage on spotting, armour, capture…), battle medals (Kolobanov, Warrior, Sniper, Steel Wall…), team signals for bots («Атакую!» Attacking!, «Нужна помощь!» Need help!, «Защищайте базу!» Defend the base!).
+- Review of the last battle in the garage (whom and where you hit, who hit you), battle feed, hit log, scoreboard (Tab), minimap, hit direction indicator, particles and procedural sound with stereo panning, reload signal, sixth sense, pause on Esc. Flat "military" UI without gradients or blur: chamfered panels, condensed font, vehicle cards with stat bars.
 
-## Управление
+## Controls
 
-| Клавиша          | Действие                                                                                            |
-| ---------------- | --------------------------------------------------------------------------------------------------- |
-| W / S            | газ / задний ход                                                                                    |
-| A / D            | поворот корпуса                                                                                     |
-| Мышь             | прицел (башня идёт за камерой)                                                                      |
-| ЛКМ              | огонь                                                                                               |
-| ПКМ (удерживать) | осмотреться, не сбивая наводку                                                                      |
-| Shift            | снайперский режим (САУ — вид сверху); то же даёт колесо мыши, докрученное до упора                  |
-| Колесо           | зум / дистанция камеры; в виде сверху — высота, откручивание до максимума возвращает в аркадный вид |
-| 1 / 2 / 3        | ББ / подкалиберный / фугас                                                                          |
-| R / E / F        | ремкомплект (все модули) / аптечка / огнетушитель                                                   |
-| Q (удерживать)   | меню командных сигналов: мышью выбрать, отпустить Q — отправить                                     |
-| T / G / B        | сигналы: «Атакую!» (цель под прицелом или точка) / «Нужна помощь!» / «Защищайте базу!»              |
-| V                | самолёт (в бою): мышь — курс, W / S — газ, ЛКМ или пробел — бомба, V — назад в танк                 |
-| Tab / H / M / P  | таблица / подсказка / звук / fps                                                                    |
-| Пробел           | после гибели — следующий союзник                                                                    |
-| Esc              | пауза (отпустить мышь); клик по экрану — продолжить                                                 |
+| Key             | Action                                                                                              |
+| --------------- | --------------------------------------------------------------------------------------------------- |
+| W / S           | throttle / reverse                                                                                  |
+| A / D           | hull turn                                                                                           |
+| Mouse           | aim (the turret follows the camera)                                                                 |
+| LMB             | fire                                                                                                |
+| RMB (hold)      | look around without disturbing the aim                                                              |
+| Shift           | sniper mode (SPG — top-down view); the mouse wheel scrolled all the way in does the same            |
+| Wheel           | zoom / camera distance; in top-down view — height, scrolling all the way out returns to arcade view |
+| 1 / 2 / 3       | AP / APCR / HE                                                                                      |
+| R / E / F       | repair kit (all modules) / first aid kit / fire extinguisher                                        |
+| Q (hold)        | team signal menu: pick with the mouse, release Q to send                                            |
+| T / G / B       | signals: Attacking! (target under the reticle or a point) / Need help! / Defend the base!           |
+| V               | aircraft (in battle): mouse — heading, W / S — throttle, LMB or Space — bomb, V — back to the tank  |
+| Tab / H / M / P | scoreboard / help / sound / fps                                                                     |
+| Space           | after death — next ally                                                                             |
+| Esc             | pause (release the mouse); click on the screen to continue                                          |
 
-## Структура
+## Structure
 
 ```
 src/
-  main.ts               точка входа: new Game(опции из URL).start()
-  config/               все числа по областям: машины (файл на машину — характеристики и облик — в vehicles/ussr,
-                        vehicles/germany), орудия, снаряды, бой и обнаружение, боты, матч, рендер и камера, мир;
-                        index.ts реэкспортирует всё
-  core/                 math (углы, оси, гаусс), noise (simplex, mulberry32), spatialGrid
-  game/                 game.ts — цикл и жизненный цикл раунда; playerController, combatFeedback (эффекты и
-                        сообщения боя), messages (тексты), match, capture (захват баз), medals, teamSignals
-                        (сигналы ботам), battleReport (разбор боя), spotting, world (генерация карты, выбор в гараже), testHooks
-  render/               renderer, environment (небо, туман, солнце), adaptiveResolution, geometryBuilder
-  hud/                  hud.ts (фасад) + garage, statusPanel, reticle, minimap, tankLabels, notifications,
-                        scoreboard, ribbons (ленты), captureBar; dom.ts — кэш элементов и запись при изменении
-  camera.ts, input.ts   камера (аркадная / снайперская / артиллерийская), pointer lock и клавиши
-  world/terrain/        terrain.ts (высоты, биомы, запросы), style (архетип, сезон, погода, режим), layout
-                        (раскладка карты), relief, river, railway, roadNetwork, smoothPath, mesh, palette, types
-  world/props/          scatter (разброс), meshes (инстансы), props.ts (столкновения и маскировка)
-  world/buildings/      buildings.ts (коллайдеры и запросы), village, town, landmarks (мосты, ДОТы, мельница),
-                        railway (пути и вагоны), revetments (капониры)
-  world/obb.ts          ориентированный бокс: толкание, трассировка
-  tank/                 tank.ts (состояние, модули, стрельба), drive (движение), crew (экипаж, статистика боя),
-                        collisions, suspension, dispersion, ammo (боекомплект), hitBoxes,
-                        tankView.ts + model/ (корпус, башня, орудие, маркировка, катки)
-  combat/               armor (попадание в бокс, грань, пробитие), shells, ballistics, trace
-  plane/                самолёт игрока: plane.ts (полёт, бомбы, прицел, разведка), planeView.ts (модель, кольцо прицела)
-  ai/                   bot.ts (ядро) + roles/ (light, medium, heavy, td, spg — поведение классов), team (командная тактика), fight (позиция и укрытие), positions, routes, targeting, gunner, steering, avoidance, lineOfFire
-  fx/                   particles, groundMarks, particleShader, tankFx, artyView, audio, precipitation (дождь и
-                        снег)
-docs/mechanics/         правила и числа по областям
+  main.ts               entry point: new Game(options from the URL).start()
+  config/               all the numbers by area: vehicles (one file per vehicle — stats and look — in vehicles/ussr,
+                        vehicles/germany), guns, shells, combat and spotting, bots, match, render and camera, world;
+                        index.ts re-exports everything
+  core/                 math (angles, axes, gaussian), noise (simplex, mulberry32), spatialGrid
+  game/                 game.ts — loop and round lifecycle; playerController, combatFeedback (combat effects and
+                        messages), messages (texts), match, capture (base capture), medals, teamSignals
+                        (signals to bots), battleReport (battle review), spotting, world (map generation, garage
+                        selection), testHooks
+  render/               renderer, environment (sky, fog, sun), adaptiveResolution, geometryBuilder
+  hud/                  hud.ts (facade) + garage, statusPanel, reticle, minimap, tankLabels, notifications,
+                        scoreboard, ribbons, captureBar; dom.ts — element cache and write-on-change
+  camera.ts, input.ts   camera (arcade / sniper / artillery), pointer lock and keys
+  world/terrain/        terrain.ts (heights, biomes, queries), style (archetype, season, weather, mode), layout
+                        (map layout), relief, river, railway, roadNetwork, smoothPath, mesh, palette, types
+  world/props/          scatter, meshes (instances), props.ts (collisions and camouflage)
+  world/buildings/      buildings.ts (colliders and queries), village, town, landmarks (bridges, pillboxes, windmill),
+                        railway (tracks and wagons), revetments
+  world/obb.ts          oriented bounding box: pushing, tracing
+  tank/                 tank.ts (state, modules, firing), drive (movement), crew (crew, battle stats),
+                        collisions, suspension, dispersion, ammo, hitBoxes,
+                        tankView.ts + model/ (hull, turret, gun, markings, road wheels)
+  combat/               armor (box hit, face, penetration), shells, ballistics, trace
+  plane/                the player's aircraft: plane.ts (flight, bombs, sight, spotting), planeView.ts (model, sight ring)
+  ai/                   bot.ts (core) + roles/ (light, medium, heavy, td, spg — class behaviour), team (team tactics),
+                        fight (position and cover), positions, routes, targeting, gunner, steering, avoidance, lineOfFire
+  fx/                   particles, groundMarks, particleShader, tankFx, artyView, audio, precipitation (rain and
+                        snow)
+docs/mechanics/         rules and numbers by area
 ```
 
-## Разработка
+## Development
 
 ```bash
 npm run typecheck   # tsc --noEmit
 npm run lint        # ESLint (typescript-eslint, type-aware)
 npm run lint:fix
-npm run format      # Prettier: табы (ширина 4), без точек с запятой, одинарные кавычки, 120 символов
-npm run check       # typecheck + lint + format:check — перед коммитом
+npm run format      # Prettier: tabs (width 4), no semicolons, single quotes, 120 columns
+npm run check       # typecheck + lint + format:check — run before committing
 ```
 
-Тестовые параметры URL: `?autostart&seed=N&tank=id&round=N&speed=K&view=top&debug`, а также `&map=classic|steppe|swamp|pass|coast`, `&mode=standard|encounter|assault`, `&weather=clear|overcast|dawn|dusk|fog|rain|snow` (см. `src/game/testHooks.ts`).
+Test URL parameters: `?autostart&seed=N&tank=id&round=N&speed=K&view=top&debug`, plus `&map=classic|steppe|swamp|pass|coast`, `&mode=standard|encounter|assault`, `&weather=clear|overcast|dawn|dusk|fog|rain|snow` (see `src/game/testHooks.ts`).
 
-## Лицензия
+## License
 
 [MIT](LICENSE).
