@@ -21,7 +21,7 @@ The layout is described in `README.md` (Project structure); the rules and number
 
 - `src/config/` holds every tunable number; one file per vehicle in `config/vehicles/{ussr,germany}`. Change balance there, not in the systems.
 - `src/game/game.ts` is the loop and the round lifecycle; systems (`tank/`, `combat/`, `ai/`, `world/`, `hud/`, `fx/`) are called from it and do not import each other's internals.
-- Everything visual is procedural: no files under `public/` except `.htaccess`.
+- Everything visual is procedural: no files under `public/` except `.htaccess` and `og-image.jpg` (the link preview, cropped from `docs/screenshots/battle.jpg`).
 - Deferred plans live in `docs/TODO-progression.md` and `docs/TODO-server.md`.
 
 ## Language

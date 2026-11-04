@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+### Patch Changes
+
+- Links to the game now show a title, a description and a preview picture in chats and social networks
+
 ## 0.1.0
 
 First public release: the prototype is live at [tanks.miksoft.pro](https://tanks.miksoft.pro).
