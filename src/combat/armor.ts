@@ -117,6 +117,9 @@ function localPoint(box: OBB, x: number, y: number, z: number) {
 	return { across: dx * box.cos - dz * box.sin, along: dx * box.sin + dz * box.cos, up: y - box.y0 }
 }
 
+/** Chance that a penetration of the turret front damages the gun, where the zone hit changes it. */
+const GUN_CHANCE: Record<string, number> = { mantlet: COMBAT.mantletGunChance, cupola: 0 }
+
 /** The plate a box hit lands on: part, face, the zone inside it and its nominal thickness; the modules behind it. */
 export interface Plate {
 	part: Part
@@ -255,7 +258,8 @@ export function testShell(
 	const fire = engineHit && Math.random() < COMBAT.engineFireChance
 	const engine = engineHit && !fire && Math.random() < COMBAT.engineHitChance
 	const ring = penetrated && plate.ring && Math.random() < COMBAT.ringChance
-	const gunChance = zone === 'mantlet' ? COMBAT.mantletGunChance : COMBAT.gunDamageChance
+	// The mantlet is the gun's own shield; the cupola sits above it and has nothing to do with it
+	const gunChance = GUN_CHANCE[String(zone)] ?? COMBAT.gunDamageChance
 	const gunHit = penetrated && part === 'turret' && face === 'front' && Math.random() < gunChance
 	const seats = penetrated ? crewBehind(part, face, zone) : []
 	const crewChance = zone === 'cupola' ? ZONES.cupolaWound : CREW.hitChance
