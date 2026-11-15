@@ -41,13 +41,11 @@ export class GroundMarks {
 
 	update(dt: number) {
 		if (!this.ringList.length && !this.rings.count) return
-		for (let i = this.ringList.length - 1; i >= 0; i--) {
+		// Age and drop the dead ones first: instance slots are the list indices, so they must be final before writing
+		for (const q of this.ringList) q.life -= dt
+		this.ringList = this.ringList.filter((q) => q.life > 0)
+		for (let i = 0; i < this.ringList.length; i++) {
 			const q = this.ringList[i]
-			q.life -= dt
-			if (q.life <= 0) {
-				this.ringList.splice(i, 1)
-				continue
-			}
 			const k = 1 - q.life / RING_LIFE
 			const s = q.r * Math.min(1, k * 2.2 + 0.15)
 			this.tmp.makeScale(s, 1, s).setPosition(q.x, q.y, q.z)

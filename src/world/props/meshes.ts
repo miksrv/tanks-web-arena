@@ -229,6 +229,7 @@ export class PropMeshes {
 			if (!m.isMesh) return
 			m.geometry.dispose()
 			;(m.material as THREE.Material).dispose()
+			if (m instanceof THREE.InstancedMesh) m.dispose() // the instance buffers
 		})
 	}
 }

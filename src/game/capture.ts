@@ -176,5 +176,6 @@ function disposeZoneMeshes(g: THREE.Group) {
 		if (!(o instanceof THREE.Mesh)) return
 		;(o.geometry as THREE.BufferGeometry).dispose()
 		;(o.material as THREE.Material).dispose()
+		if (o instanceof THREE.InstancedMesh) o.dispose() // the instance buffers
 	})
 }
