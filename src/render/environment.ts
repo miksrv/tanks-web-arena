@@ -135,10 +135,11 @@ export class Environment {
 	}
 
 	/** Weak GPUs: a smaller shadow map for the rest of the session. */
-	lowerShadowQuality() {
+	lowerShadowQuality(renderer: THREE.WebGLRenderer) {
 		this.sun.shadow.mapSize.set(1024, 1024)
 		this.sun.shadow.map?.dispose()
 		this.sun.shadow.map = null
+		renderer.shadowMap.needsUpdate = true // redrawn even while the shadows are frozen (garage, pause)
 	}
 
 	/** Per frame: ease the fog toward the camera mode's range and keep the sun over the camera target. */

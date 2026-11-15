@@ -120,9 +120,11 @@ export class CombatFeedback {
 		particles.impact(imp.x, imp.y, imp.z, imp.he ? Math.min(1.5, imp.splash / 4) : 0.2)
 		if (big) particles.marks.splashRing(imp.x, imp.y, imp.z, imp.splash)
 		audio.impact(imp, big)
-		if (by === player && player.def.gun.howitzer) {
-			this.playerImpact = { x: imp.x, y: imp.y, z: imp.z, damage: this.pendingDirect }
-			this.pendingDirect = 0
+		if (by === player) {
+			if (player.def.gun.howitzer) {
+				this.playerImpact = { x: imp.x, y: imp.y, z: imp.z, damage: this.pendingDirect }
+			}
+			this.pendingDirect = 0 // per shell: never carried over to a later shot or round
 		}
 	}
 

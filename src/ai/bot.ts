@@ -38,6 +38,7 @@ export class BotBrain implements Bot {
 	mode: BotMode = 'advance'
 	target: Tank | null = null
 	holdSpot: Pt | null = null
+	fellBack = false
 	readonly gunner: BotGunner
 	readonly fighter: Fighter
 	private readonly role: RoleAi
@@ -123,6 +124,7 @@ export class BotBrain implements Bot {
 		this.evadeTimer = 0
 		this.fighter.reset()
 		this.resupplying = false
+		this.fellBack = false
 		const p = this.role.plan(w, this)
 		this.mode = p.mode
 		this.setPath(p.path, p.holdSpot)

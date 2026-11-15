@@ -9,8 +9,14 @@ const upv = new THREE.Vector3()
  * clamped to 2σ (the reticle radius).
  */
 export function disperse(dir: THREE.Vector3, sigma: number): THREE.Vector3 {
-	const a1 = THREE.MathUtils.clamp(gaussian() * sigma, -2 * sigma, 2 * sigma)
-	const a2 = THREE.MathUtils.clamp(gaussian() * sigma, -2 * sigma, 2 * sigma)
+	let a1 = gaussian() * sigma
+	let a2 = gaussian() * sigma
+	// Inside the reticle's circle, not the square around it
+	const k = Math.hypot(a1, a2) / (2 * sigma)
+	if (k > 1) {
+		a1 /= k
+		a2 /= k
+	}
 	side.crossVectors(dir, AXIS_Y).normalize()
 	upv.crossVectors(side, dir).normalize()
 	return dir.addScaledVector(side, Math.tan(a1)).addScaledVector(upv, Math.tan(a2)).normalize()

@@ -5,7 +5,7 @@ Code: `src/combat/armor.ts`, `src/combat/shells.ts`, `src/combat/ballistics.ts`,
 ## Firing
 
 - The shell leaves the muzzle along the barrel direction with Gaussian dispersion: reticle radius (m per 100 m) = `dispersion · (1 + bloom)`, circle = 2σ, clipped at 2σ.
-- `bloom` grows with movement (0.12 per m/s), hull rotation (0.6 per rad/s), turret rotation (0.3), firing (+2.5) and decays exponentially with the time constant `aimTime / 3`.
+- `bloom` grows with movement (0.19 per m/s), hull rotation (0.95 per rad/s), turret rotation (0.4), firing (+2.5) and decays exponentially with the time constant `aimTime / 3`.
 - Damaged gun: dispersion ×1.5 for 12 s.
 - Elevation is solved analytically (`solveElevation`) from the range and the height difference to the aim point: low trajectory for tanks, high for howitzers. The resulting world direction is converted into the turret frame, so hull pitch and roll on a slope are compensated. The shell flies with gravity 9.8.
 
@@ -23,7 +23,7 @@ Code: `src/combat/armor.ts`, `src/combat/shells.ts`, `src/combat/ballistics.ts`,
 
 ## Hit (`testShell`)
 
-- The flight segment for the frame is tested against the hull and turret boxes (OBB), houses, rocks and terrain. The first along the path wins. A box inside which the segment starts does not count as a hit: a barrel pushed into a wall fires through it outward. Destroyed tanks are cover: the shell is absorbed without damage.
+- The flight segment for the frame is tested against the hull and turret boxes (OBB), houses, rocks and terrain. The first along the path wins (a rock, a wall or the ground in front of a tank stops the shell; an HE burst there still catches the tank with its splash). A box inside which the segment starts does not count as a hit: a barrel pushed into a wall fires through it outward. Destroyed tanks are cover: the shell is absorbed without damage.
 - The face is chosen by the normal: front / side / rear / roof; the turret has its own values. Hull side below the top of the running gear = **track**.
 - Impact angle θ between the shell and the plate normal. If calibre ≥ 3 × thickness — no ricochet, normalisation ×1.4. Otherwise AP/APCR ricochet at θ > 70°.
 - Effective armour = nominal / cos(θ − normalisation). Penetration = `pen · (1 ± 25 %)` ≥ effective → damage `dmg · (1 ± 25 %)`.
@@ -72,7 +72,7 @@ The hitboxes stayed the same (hull and turret) plus a small commander's cupola b
 - First aid kit (E), 1 pc., heals everyone. Bots use it on their own after 3–8 s × (1.3 − skill).
 - The status shows a crew line (wounded in red); crit counts are kept for ribbons: wound, ammo rack, gun.
 
-- Ramming: closing speed > 3 m/s → damage `1.4 · speed · mass ratio` (mass = hit points). A pair is resolved once per frame (from the side of the tank with the smaller uid), both vehicles lose speed.
+- Ramming: closing speed > 3 m/s → damage `1.4 · speed · mass ratio` (mass = hit points), doubled for the rammed vehicle. The rammer is the one that brought more of the closing speed; it gets the ram ribbon. A pair is resolved once per frame, both vehicles lose speed.
 - Rocket artillery (`gun.salvo`): a shot launches a salvo, the remaining rockets leave on their own at `salvoInterval` intervals (`Tank.salvoTick`, polled by the game loop), each along the current position of the rails with its own dispersion; the reload counts from the first rocket. HE only, an attempt to switch the shell is rejected.
 - Empty rack: no shot happens, the gun switches to another shell on its own with the switch delay (see "Ammunition").
 - HE splash: everyone within the radius takes `0.6 · dmg · (1 − d/r)` minus `roof · 1.1`, 30 % chance to knock off a track.

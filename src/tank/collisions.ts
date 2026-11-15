@@ -75,16 +75,21 @@ function collideWithTank(me: Tank, o: Tank, dt: number) {
 	const rel = me.speed * (me.fx * nx + me.fz * nz) - (o.alive ? o.speed * (o.fx * nx + o.fz * nz) : 0)
 	if (rel > RAM_MIN_SPEED && me.alive && (me.uid < o.uid || !o.alive)) {
 		// Ram: resolved once per pair (the other tank's update sees the same closing speed and would double it)
+		const mine = me.speed * (me.fx * nx + me.fz * nz)
 		me.speed *= 0.3
 		if (o.alive) {
+			// The rammer is the one that brought more of the closing speed: it deals double and takes the plain hit
+			const rammer = mine >= rel - mine ? me : o
+			const victim = rammer === me ? o : me
 			o.speed *= 0.3
-			if (o.team !== me.team) me.stats.rams++
-			o.damage(rel * COMBAT.ramDamageMult * (me.mass / o.mass) * 2, me)
-			me.damage(rel * COMBAT.ramDamageMult * (o.mass / me.mass), o)
+			if (o.team !== me.team) rammer.stats.rams++
+			const dmg = rel * COMBAT.ramDamageMult
+			victim.damage(dmg * (rammer.mass / victim.mass) * 2, rammer)
+			rammer.damage(dmg * (victim.mass / rammer.mass), victim)
 		}
 	} else if (rel > 0 && rel <= RAM_MIN_SPEED) {
 		// Nudging: bleed a little speed and slide sideways around the other hull instead of grinding to a halt
-		me.speed *= 0.92
+		me.speed *= Math.pow(0.92, dt * 60)
 		const side = me.fx * nz - me.fz * nx > 0 ? -1 : 1
 		me.pos.x += me.fz * side * NUDGE_SLIDE * dt
 		me.pos.z += -me.fx * side * NUDGE_SLIDE * dt

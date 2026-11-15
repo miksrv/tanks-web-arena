@@ -1,10 +1,11 @@
+import * as THREE from 'three'
 import { AMMO, BOTS, type AmmoId } from '../config'
 import { HOWITZER, flightTime, howitzerSolve, solveElevation } from '../combat/ballistics'
 import { penChance } from '../combat/armor'
 import type { Shells } from '../combat/shells'
 import { wrapAngle } from '../core/math'
 import type { Tank, WorldRefs } from '../tank/tank'
-import { friendInLine, gunHasLos, losBlocker } from './lineOfFire'
+import { friendInLine, gunSight, losBlocker, turretPoint } from './lineOfFire'
 import { facingArmor } from './targeting'
 import type { Pt } from './types'
 
@@ -29,6 +30,8 @@ function trackSide(me: Tank, t: Tank): number {
 	if (Math.abs((dx * t.fx + dz * t.fz) / l) > SIDE_ON) return 0
 	return dx * t.fz - dz * t.fx > 0 ? 1 : -1
 }
+
+const tmp = new THREE.Vector3()
 
 /** Why the last gunnery pass did not fire (debugging aid). */
 export type HoldFire =
@@ -62,6 +65,8 @@ export class BotGunner {
 	shots = 0
 	/** Scout discipline: shoot only to break a track (or to finish a weak target), otherwise stay hidden. */
 	trackHunter = false
+	/** The target's hull is hidden from our gun but its turret is not: lay on the turret. */
+	private aimTurret = false
 	private aimErr = { x: 0, y: 0, z: 0 }
 	private aimErrTimer = 0
 	private reaction = 0
@@ -80,6 +85,7 @@ export class BotGunner {
 	resetRound() {
 		this.fireSpot = null
 		this.elevTimer = 0
+		this.aimTurret = false
 	}
 
 	update(w: WorldRefs, shells: Shells, target: Tank | null, dt: number) {
@@ -88,6 +94,7 @@ export class BotGunner {
 			this.why = 'no-target'
 			this.noLosTimer = 0
 			this.elevTimer = 0
+			this.aimTurret = false
 			return
 		}
 		const me = this.me
@@ -106,7 +113,7 @@ export class BotGunner {
 				return
 			}
 		}
-		const facing = facingArmor(me, target)
+		const facing = facingArmor(me, target, this.aimTurret)
 		if (!g.howitzer) this.chooseAmmo(facing)
 		const hold = this.readiness() ?? (g.howitzer ? null : this.lineOfFireHold(w, target, d, facing, dt))
 		if (hold) {
@@ -166,6 +173,17 @@ export class BotGunner {
 		const lead = g.howitzer ? 1 : this.skill * 0.9
 		const tx = t.pos.x + t.fx * t.speed * tf * lead
 		const tz = t.pos.z + t.fz * t.speed * tf * lead
+		if (this.aimTurret && !g.howitzer) {
+			// Hull-down target: the turret is all there is to shoot at
+			const c = turretPoint(t, tmp)
+			const ox = t.speed * tf * lead
+			me.aimTarget.set(
+				c.x + t.fx * ox + this.aimErr.x,
+				c.y + this.aimErr.y * 0.5,
+				c.z + t.fz * ox + this.aimErr.z,
+			)
+			return
+		}
 		// Smart gunners aim at the lower hull / side; greener ones at the middle
 		if (trackSide) {
 			// The running gear on the side facing us: low, at the outer edge of the hull
@@ -224,9 +242,15 @@ export class BotGunner {
 	/** Direct fire: our muzzle to the target through buildings or terrain = no shot; no friends in the line. */
 	private lineOfFireHold(w: WorldRefs, t: Tank, d: number, facing: number, dt: number): HoldFire | null {
 		const me = this.me
-		const clear = gunHasLos(w, me, t)
-		this.noLosTimer = clear ? 0 : this.noLosTimer + dt
-		if (!clear) return losBlocker(w, me, t)
+		const sight = gunSight(w, me, t)
+		this.noLosTimer = sight ? 0 : this.noLosTimer + dt
+		if (!sight) return losBlocker(w, me, t)
+		// The visible part changed (the target went hull-down, or came out): lay on it before shooting
+		const turret = sight === 'turret'
+		if (turret !== this.aimTurret) {
+			this.aimTurret = turret
+			return 'laying'
+		}
 		if (friendInLine(w, me, t, d)) return 'friend'
 		// Wait for a better angle
 		if (penChance(me.shellPen, facing) < HOPELESS_PEN_CHANCE && !me.ammoDef.he && this.skill > 0.5 && d > 120) {

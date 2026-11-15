@@ -12,3 +12,13 @@ export function createRenderer(pixelRatio: number): THREE.WebGLRenderer {
 	document.body.prepend(renderer.domElement)
 	return renderer
 }
+
+/**
+ * Nothing moves (the garage backdrop, a paused battle): render the shadow map once more and keep it, instead of
+ * redrawing every caster each frame.
+ */
+export function freezeShadows(renderer: THREE.WebGLRenderer, still: boolean) {
+	const { shadowMap } = renderer
+	if (still && shadowMap.autoUpdate) shadowMap.needsUpdate = true
+	shadowMap.autoUpdate = !still
+}

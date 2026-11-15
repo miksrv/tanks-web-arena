@@ -370,13 +370,13 @@ export class Tank {
 		let speed = g.shellSpeed * am.speedMult
 		if (g.howitzer) {
 			// A lobbed shell scatters on the ground in a circle: across by the azimuth, along by the charge
+			// The range is from the muzzle, where the shell starts, not from the hull centre
 			const dy = this.aimTarget.y - origin.y
-			const range = Math.max(5, this.aimDist)
+			const range = Math.max(5, Math.hypot(this.aimTarget.x - origin.x, this.aimTarget.z - origin.z))
 			const s = scatter(sigma * range)
 			dir.applyAxisAngle(AXIS_Y, s.across / range)
 			speed =
-				(howitzerSolve(this.aimDist, dy)?.speed ?? 100) *
-				rangeSpeedScale(Math.asin(dir.y), dy, range, range + s.along)
+				(howitzerSolve(range, dy)?.speed ?? 100) * rangeSpeedScale(Math.asin(dir.y), dy, range, range + s.along)
 		} else disperse(dir, sigma)
 		this.bloom += g.bloomShot ?? DRIVE.bloomShot
 		return {

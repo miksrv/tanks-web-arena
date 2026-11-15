@@ -68,7 +68,9 @@ export function resultHtml(winner: 0 | 1 | -1 | null, outcome: Outcome, player: 
 	const title = winner === -1 ? 'Ничья' : winner === player.team ? 'Победа!' : 'Поражение'
 	const reason =
 		winner === -1 || winner === null
-			? 'Время вышло'
+			? outcome === 'destroyed'
+				? 'Все машины уничтожены'
+				: 'Время вышло'
 			: OUTCOME[outcome](NATION_LABEL[winner === 0 ? 'ussr' : 'germany'])
 	const s = player.stats
 	const stats = [

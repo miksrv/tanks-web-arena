@@ -14,6 +14,8 @@ export interface Bot {
 	target: Tank | null
 	/** Where to stop at the end of the current path (null = drive through). */
 	holdSpot: Pt | null
+	/** Badly hurt and already fallen back to cover this round: it holds there until it is hit again. */
+	fellBack: boolean
 	readonly pathDone: boolean
 	/** The last enemy is out there: everyone hunts it, nobody waits or falls back. */
 	readonly hunting: boolean

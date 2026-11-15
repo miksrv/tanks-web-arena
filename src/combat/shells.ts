@@ -118,13 +118,14 @@ export class Shells {
 	update(dt: number, w: WorldRefs) {
 		for (let i = this.list.length - 1; i >= 0; i--) {
 			const s = this.list[i]
-			s.vy -= s.gravity * dt
 			const ax = s.x
 			const ay = s.y
 			const az = s.z
+			// The exact parabola over the step, so the fall of shot does not depend on the frame rate
 			const bx = s.x + s.vx * dt
-			const by = s.y + s.vy * dt
+			const by = s.y + s.vy * dt - 0.5 * s.gravity * dt * dt
 			const bz = s.z + s.vz * dt
+			s.vy -= s.gravity * dt
 			s.life -= dt
 			s.dist += Math.hypot(bx - ax, by - ay, bz - az)
 			const c = this.sweep(s, w, ax, ay, az, bx, by, bz)
@@ -132,7 +133,7 @@ export class Shells {
 				s.x = bx
 				s.y = by
 				s.z = bz
-				if (s.life <= 0 || Math.abs(s.x) > OUT_OF_WORLD) {
+				if (s.life <= 0 || Math.abs(s.x) > OUT_OF_WORLD || Math.abs(s.z) > OUT_OF_WORLD) {
 					this.list.splice(i, 1)
 					this.stats.expired++
 				}
@@ -172,11 +173,17 @@ export class Shells {
 			if (h && h.t < (best?.t ?? 2)) best = { t: h.t, kind: t.alive ? 'tank' : 'wreck', tank: t, hit: h }
 		}
 		const tb = w.buildings.raySegment(ax, ay, az, bx, by, bz)
-		if (tb >= 0 && tb < (best?.t ?? 2)) best = { ...(best ?? { tank: null, hit: null }), t: tb, kind: 'building' }
+		// A wall or the ground in front of a tank: the tank behind it is not the one hit (and takes the blast)
+		if (tb >= 0 && tb < (best?.t ?? 2)) best = { t: tb, kind: 'building', tank: null, hit: null }
 		const tg = this.groundContact(w, ax, ay, az, bx, by, bz)
-		if (tg >= 0 && tg < (best?.t ?? 2)) best = { ...(best ?? { tank: null, hit: null }), t: tg, kind: 'ground' }
-		if (!best && w.props.blocksSegment(ax, ay, az, bx, by, bz))
-			best = { t: 0.5, kind: 'building', tank: null, hit: null }
+		if (tg >= 0 && tg < (best?.t ?? 2)) best = { t: tg, kind: 'ground', tank: null, hit: null }
+		// Rocks: on the way to whatever the shell reaches this step, not only on a step that reaches nothing
+		const k = best?.t ?? 1
+		const ex = ax + (bx - ax) * k
+		const ey = ay + (by - ay) * k
+		const ez = az + (bz - az) * k
+		if (k > 0 && w.props.blocksSegment(ax, ay, az, ex, ey, ez))
+			best = { t: k * 0.5, kind: 'building', tank: null, hit: null }
 		return best
 	}
 
@@ -232,7 +239,7 @@ export class Shells {
 			if (hit.fire && target.burning <= 0) by.fires++
 		}
 		if (enemy && hit.tracked && target.tracked <= 0) by.tracks++
-		if (!hit.penetrated && hit.part !== 'tracks' && hit.damage < s.spec.dmg) {
+		if (enemy && !hit.penetrated && hit.part !== 'tracks' && hit.damage < s.spec.dmg) {
 			target.stats.blocked += s.spec.dmg - hit.damage
 			target.stats.blockedHits++
 		}

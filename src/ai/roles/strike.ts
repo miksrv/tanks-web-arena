@@ -80,8 +80,9 @@ export abstract class StrikeAi implements RoleAi {
 		this.regroupCooldown -= f.dt
 		this.survive(bot, f)
 		joinFight(bot, CONTACT_RANGE)
-		// Holding the centre is a fight for it, not sitting under fire (a base circle is held from inside it)
-		if (bot.mode === 'hold' && bot.target && !bot.onObjective) bot.mode = 'engage'
+		// Holding the centre is a fight for it, not sitting under fire (a base circle is held from inside it; a tank
+		// that fell back hurt shoots from its cover instead of driving out again)
+		if (bot.mode === 'hold' && bot.target && !bot.onObjective && !bot.fellBack) bot.mode = 'engage'
 		this.updateRegroup(bot, f)
 		this.moveOnWhenQuiet(bot, f)
 	}

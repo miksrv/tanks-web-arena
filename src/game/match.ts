@@ -195,8 +195,10 @@ export class Match {
 			if (player.alive && alive[player.team] === 1)
 				this.lastStand = Math.max(this.lastStand, alive[1 - player.team])
 			const captured = this.capture.update(dt, tanks)
-			if (alive[0] === 0 || alive[1] === 0) this.finish(alive[0] === 0 ? 1 : 0, 'destroyed')
-			else if (captured !== null) this.finish(captured, 'capture')
+			if (alive[0] === 0 || alive[1] === 0) {
+				// Both sides gone in the same instant (a ram, two fires) is a draw
+				this.finish(alive[0] === alive[1] ? -1 : alive[0] === 0 ? 1 : 0, 'destroyed')
+			} else if (captured !== null) this.finish(captured, 'capture')
 			else if (this.roundLeft <= 0) {
 				// Time: the defence holds in an assault; otherwise the side with more tanks left takes it
 				if (this.mode === 'assault') this.finish(this.defender, 'defended')
