@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.2
+
+Smarter bots, a round of combat fixes and smoother frames.
+
+### Patch Changes
+
+- Bots: a badly hurt tank falls back to cover once and fights from there instead of running to its base
+- Bots: a hull-down target is no longer safe — they shoot at the turret showing over the crest
+- Shells no longer pass through a rock to a tank right behind it
+- HE bursting on the ground or a wall in front of a tank now damages it with the splash
+- Ramming: the double damage and the ribbon go to whoever actually rammed
+- Artillery lands where the marker shows at any frame rate
+- Shots stay inside the reticle circle
+- A tank destroyer with a broken track no longer turns its hull
+- Both teams destroyed at the same moment is a draw
+- No more frame drops from gun smoke in the sniper view, or a freeze when the result screen appears
+- Shadows in the artillery view are drawn where you are looking
+
 ## 0.1.1
 
 ### Patch Changes
