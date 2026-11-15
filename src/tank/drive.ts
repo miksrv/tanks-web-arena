@@ -46,7 +46,7 @@ function updateHeading(me: Tank, dt: number) {
 	const def = me.def
 	let steer = me.tracked > 0 ? 0 : me.steer
 	// Casemates: when the gun cannot reach the aim point, the hull turns toward it
-	if (!def.shape.turret && steer === 0) {
+	if (!def.shape.turret && steer === 0 && me.tracked <= 0) {
 		const want = wrapAngle(Math.atan2(me.aimTarget.x - me.pos.x, me.aimTarget.z - me.pos.z) - me.yaw)
 		if (Math.abs(want) > def.gun.arc * 0.85) steer = clamp(want * 2, -0.7, 0.7)
 	}
