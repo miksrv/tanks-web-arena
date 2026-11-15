@@ -3,6 +3,8 @@ import { GroundMarks } from './groundMarks'
 import { PARTICLE_FRAGMENT, PARTICLE_VERTEX } from './particleShader'
 
 const MAX = 4000
+/** Largest sprite on screen, as a share of the drawing buffer's height. */
+const MAX_SCREEN_SHARE = 0.45
 const ATTRIBUTES = [
 	['position', 3],
 	['aSize', 1],
@@ -67,7 +69,7 @@ export class Particles {
 		geo.setAttribute('aColor', new THREE.BufferAttribute(this.col, 3))
 		geo.setAttribute('aAlpha', new THREE.BufferAttribute(this.alpha, 1))
 		this.mat = new THREE.ShaderMaterial({
-			uniforms: { uScale: { value: 600 } },
+			uniforms: { uScale: { value: 600 }, uMaxSize: { value: 400 } },
 			vertexShader: PARTICLE_VERTEX,
 			fragmentShader: PARTICLE_FRAGMENT,
 			transparent: true,
@@ -83,6 +85,7 @@ export class Particles {
 	/** `bufferHeight`: drawing-buffer height in pixels (CSS height × pixel ratio). */
 	setScale(bufferHeight: number, fovDeg: number) {
 		this.mat.uniforms.uScale.value = bufferHeight / (2 * Math.tan((fovDeg * Math.PI) / 360))
+		this.mat.uniforms.uMaxSize.value = bufferHeight * MAX_SCREEN_SHARE
 	}
 
 	emit(p: Partial<P> & { x: number; y: number; z: number }) {

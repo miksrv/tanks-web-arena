@@ -56,6 +56,11 @@ export function generateMap(hud: Hud, req: MapRequest): GeneratedMap {
 	return { terrain, props: new Props(terrain), buildings: new Buildings(terrain), minimap, key: req.key }
 }
 
+/** Run `work` (a map generation: ~0.1 s on the main thread) a moment later, once the current screen is up. */
+export function afterPaint(work: () => unknown) {
+	setTimeout(work, 400)
+}
+
 export function disposeMap(map: GeneratedMap) {
 	map.props.dispose()
 	map.buildings.dispose()

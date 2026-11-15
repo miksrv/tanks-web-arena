@@ -15,7 +15,7 @@ import { AdaptiveResolution } from '../render/adaptiveResolution'
 import { Environment } from '../render/environment'
 import { FpsCounter, FramePacer } from '../render/framePacer'
 import { Plane } from '../plane/plane'
-import { createRenderer } from '../render/renderer'
+import { createRenderer, freezeShadows } from '../render/renderer'
 import { resupplyAll } from '../tank/ammo'
 import { type Tank, type WorldRefs } from '../tank/tank'
 import { ZoneMarkers, zonesFor } from './capture'
@@ -28,7 +28,7 @@ import { PlayerController } from './playerController'
 import { Spotting } from './spotting'
 import { TeamSignals, type Squad } from './teamSignals'
 import { exposeOnWindow, type TestOptions } from './testHooks'
-import { disposeMap, generateMap, mapKey, mapRequest, type GeneratedMap, type MapRequest } from './world'
+import { afterPaint, disposeMap, generateMap, mapKey, mapRequest, type GeneratedMap, type MapRequest } from './world'
 
 const MAX_STEP = 0.05 // s: longer frames are simulated slower rather than in one big step
 const MAX_RAW_FRAME = 0.25
@@ -85,7 +85,7 @@ export class Game {
 		const maxScale = Math.min(window.devicePixelRatio, RENDER.maxScale)
 		this.renderer = createRenderer(maxScale)
 		this.resolution = new AdaptiveResolution(this.renderer, maxScale, RENDER.minScale, () =>
-			this.env.lowerShadowQuality(),
+			this.env.lowerShadowQuality(this.renderer),
 		)
 		this.input = new Input(this.renderer.domElement)
 		this.controller = new PlayerController(this.input, this.rig, this.hud, this.audio, this.shells, this.plane)
@@ -296,7 +296,8 @@ export class Game {
 			)
 			hud.center('')
 			hud.setReport(this.report.html())
-			this.nextMap ??= generateMap(hud, this.request())
+			// The next map is built once the result screen is up, not in the frame that shows it
+			afterPaint(() => match.phase === 'result' && (this.nextMap ??= generateMap(hud, this.request())))
 		}
 		if (changed && match.phase === 'garage') {
 			hud.showResult('')
@@ -368,7 +369,9 @@ export class Game {
 		else rig.update(dt, camTarget, world)
 		this.artyView.update(rig.mode === 'arty' && player.alive, player, rig, world, this.shells)
 		plane.view.drawBombs(this.shells.list)
-		this.env.update(dt, rig.mode, focus)
+		// The satellite view looks at the aim point, far from the tank: light and shadows belong there
+		this.env.update(dt, rig.mode, rig.mode === 'arty' && !flying ? rig.artyPoint : focus)
+		freezeShadows(this.renderer, paused || this.match.phase === 'garage')
 		// Point sizes are in drawing-buffer pixels: scale by the render pixel ratio so particles keep their size
 		const bufferHeight = window.innerHeight * this.renderer.getPixelRatio()
 		this.particles.setScale(bufferHeight, rig.camera.fov)
