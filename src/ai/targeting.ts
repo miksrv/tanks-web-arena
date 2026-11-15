@@ -13,15 +13,20 @@ export function reachOf(me: Tank): number {
 	return me.def.gun.howitzer ? HOWITZER.maxRange : BOTS.engageRange
 }
 
-/** Effective armour `me` would meet on `t`, from the target's facing relative to us. */
-export function facingArmor(me: Tank, t: Tank): number {
+/**
+ * Effective armour `me` would meet on `t`, from the target's facing relative to us; with `turret`, on its turret
+ * alone (the only part showing of a hull-down tank), which faces where its gun points.
+ */
+export function facingArmor(me: Tank, t: Tank, turret = false): number {
 	const dx = me.pos.x - t.pos.x
 	const dz = me.pos.z - t.pos.z
 	const l = Math.hypot(dx, dz) || 1
-	const c = (dx * t.fx + dz * t.fz) / l // +1 = we are in front of it
+	const f = turret ? t.turretForward() : { x: t.fx, z: t.fz }
+	const c = (dx * f.x + dz * f.z) / l // +1 = we are in front of it
 	const a = t.def.armor
 	const frontOrRear = c > 0.5 || c < -0.5
-	const nominal = c > 0.5 ? (a.front + a.tFront) / 2 : c < -0.5 ? a.rear : a.side
+	const front = turret ? a.tFront : (a.front + a.tFront) / 2
+	const nominal = c > 0.5 ? front : c < -0.5 ? (turret ? a.tRear : a.rear) : turret ? a.tSide : a.side
 	const angle = Math.acos(Math.min(1, Math.abs(frontOrRear ? c : Math.sqrt(1 - c * c))))
 	return nominal / Math.max(0.35, Math.cos(angle))
 }
