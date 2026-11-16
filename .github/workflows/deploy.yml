@@ -54,6 +54,7 @@ jobs:
       # chunks from previous builds are removed and the new ones are in place before the new
       # index.html that references them is uploaded, with no window where the page is broken.
       # Only assets/ is synced with `--delete`: nothing else on the hosting is touched.
+      # Every other file from public/ must be listed here explicitly, or it never reaches the site.
       - name: Upload site
         run: |
           lftp ${{ secrets.FTP_HOSTNAME }} <<'EOF'
@@ -61,6 +62,7 @@ jobs:
           mirror -R --delete --parallel=10 assets /assets
           put -O / index.html
           put -O / .htaccess
+          put -O / og-image.jpg
           bye
           EOF
         working-directory: dist
