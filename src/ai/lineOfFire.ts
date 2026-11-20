@@ -12,10 +12,12 @@ export function turretPoint(t: Tank, out: THREE.Vector3): THREE.Vector3 {
 	return out.set(t.turretBox.x, t.pos.y + t.view.hullTop + t.def.shape.tH * 0.5, t.turretBox.z)
 }
 
-/** Is the segment `from` → `to` clear of terrain, buildings and wrecks (other than `t` itself)? */
+/** Is the segment `from` → `to` clear of terrain, buildings, rocks and wrecks (other than `t` itself)? */
 function clearTo(w: WorldRefs, t: Tank): boolean {
 	if (!w.terrain.lineOfSight(from.x, from.y, from.z, to.x, to.y, to.z)) return false
 	if (w.buildings.blocksLos(from.x, from.y, from.z, to.x, to.y, to.z)) return false
+	// Rocks, hedgehogs and dragon's teeth stop shells: firing into one is no shot either
+	if (w.props.blocksSegment(from.x, from.y, from.z, to.x, to.y, to.z)) return false
 	// Wrecks stop shells too: a burnt-out hull between us and the target is not a shot
 	for (const o of w.tanks) {
 		if (o.alive || o === t || !o.nearSegment(from.x, from.z, to.x, to.z)) continue

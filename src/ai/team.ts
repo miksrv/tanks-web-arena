@@ -1,12 +1,8 @@
-import { CAPTURE, MATCH, WORLD, WORLD_HALF } from '../config'
+import { BOT_AI, CAPTURE, MATCH, WORLD, WORLD_HALF } from '../config'
 import { capturableBy, inZone, type CaptureZone } from '../game/capture'
 import type { Tank, WorldRefs } from '../tank/tank'
 import { scatterNear } from './positions'
 import type { BotMode, Pt } from './types'
-
-const UPDATE_INTERVAL = 0.4 // s
-/** A last sighting older than this is no lead any more: the hunt sweeps the map instead. */
-const LEAD_FRESH = 45 // s
 
 /** What the team needs to know about one of its bots, and the orders it can give it. */
 export interface Member {
@@ -19,28 +15,6 @@ export interface Member {
 	readonly capturing: boolean
 	readonly defending: boolean
 }
-
-/**
- * Bots sent back to break up a capture, by battle mode (at least one more than the capturers in the circle). An
- * assault's defence has one base and loses with it; a neutral circle is half the map's worth.
- */
-const DEFENDERS = { standard: 2, encounter: 3, assault: 4 }
-/** Capture points past which bots already in a fight are pulled back to the circle too. */
-const DEFEND_URGENT = 50
-/** Share of idle bots that go and take a base instead of looking for the enemy, by battle mode. */
-const CAPTURE_CHANCE = { standard: 0.3, encounter: 0.5, assault: 0.7 }
-const CAPTURE_CHANCE_LATE = { standard: 0.55, encounter: 0.8, assault: 1 }
-/** s before the end: a side that can only win by a capture (the assault's attack, both sides of an encounter) rushes the base. */
-const HURRY_TIME = 110
-
-/** The enemy is "thinned out" (scouts raid, everyone closes in) at this share of its starting strength or less. */
-const FEW_ENEMIES = 0.6
-/** s into the battle after which everyone closes in anyway, so the round does not drag on. */
-const LATE_TIME = 120
-const ASSAULT_LATE_TIME = 80
-
-/** Chance of splitting the strike group in two (when there are two lanes and enough tanks). */
-const TWO_GROUPS_CHANCE = 0.55
 
 const pick = <T>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)]
 const zoneDist = (z: CaptureZone, t: Tank) => Math.hypot(z.x - t.pos.x, z.z - t.pos.z)
@@ -80,9 +54,9 @@ export class TeamTactics {
 	/** Group the tank destroyers back up (and its lane). */
 	readonly ambushGroup: number
 	readonly ambushLane: number
-	/** The enemy is down to FEW_ENEMIES of its strength. */
+	/** The enemy is down to `fewEnemies` of its strength. */
 	fewEnemies = false
-	/** Thinned out, or LATE_TIME into the battle: no more waiting about, close in. */
+	/** Thinned out, or `lateTime` into the battle: no more waiting about, close in. */
 	late = false
 	/** The only enemy left alive (everyone hunts it), else null. */
 	lastEnemy: Tank | null = null
@@ -105,7 +79,7 @@ export class TeamTactics {
 	) {
 		const lanes = lanesAcross(w)
 		const strike = bots.filter((t) => t.def.role === 'medium' || t.def.role === 'heavy')
-		if (lanes.length >= 2 && strike.length >= 3 && Math.random() < TWO_GROUPS_CHANCE) {
+		if (lanes.length >= 2 && strike.length >= 3 && Math.random() < BOT_AI.team.twoGroupsChance) {
 			// Two different lanes: both flanks, or a flank and the middle
 			const a = pick(lanes)
 			this.groupLanes = [a, pick(lanes.filter((l) => l !== a))]
@@ -133,13 +107,14 @@ export class TeamTactics {
 			const threatened = z.capturing !== null && z.capturing !== this.team && z.points > 0
 			if (!threatened) continue
 			const capturers = w.tanks.filter((t) => t.alive && t.team === z.capturing && inZone(z, t.pos.x, t.pos.z))
-			const want = Math.max(DEFENDERS[mode], capturers.length + 1)
-			const urgent = defence || z.points > DEFEND_URGENT
+			const want = Math.max(BOT_AI.team.defenders[mode], capturers.length + 1)
+			const urgent = defence || z.points > BOT_AI.team.defendUrgent
 			const sent = members.filter((m) => this.defenders.has(m.tank) && m.tank.alive).length
 			const free = members
 				.filter((m) => m.tank.alive && !this.defenders.has(m.tank) && m.tank.def.role !== 'spg')
 				.filter((m) => m.mode !== 'retreat' && (urgent || m.mode !== 'engage'))
-				.sort((a, b) => zoneDist(z, a.tank) - zoneDist(z, b.tank))
+				// By time to get there, not distance: a nearby medium goes before a slow heavy
+				.sort((a, b) => zoneDist(z, a.tank) / a.tank.def.speed - zoneDist(z, b.tank) / b.tank.def.speed)
 			for (const m of free.slice(0, Math.max(0, want - sent))) {
 				this.defenders.add(m.tank)
 				m.defend(w, z)
@@ -183,7 +158,7 @@ export class TeamTactics {
 	captureChance(w: WorldRefs): number {
 		const mode = w.terrain.mode
 		if (mode === 'assault' && w.terrain.defender === this.team) return 0
-		return Math.max(CAPTURE_CHANCE[mode], this.late ? CAPTURE_CHANCE_LATE[mode] : 0)
+		return Math.max(BOT_AI.team.captureChance[mode], this.late ? BOT_AI.team.captureChanceLate[mode] : 0)
 	}
 
 	/** Lane for `t`: its group's (the first group's for anyone outside the strike groups). */
@@ -206,21 +181,22 @@ export class TeamTactics {
 		}
 		this.timer -= dt
 		if (this.timer > 0) return
-		this.timer = UPDATE_INTERVAL
+		this.timer = BOT_AI.team.updateInterval
 		const enemies = w.tanks.filter((o) => o.team !== this.team && o.alive)
 		this.lastEnemy = enemies.length === 1 ? enemies[0] : null
 		if (this.start === null) {
 			this.start = time
 			this.enemyStart = enemies.length
 		}
-		this.fewEnemies = enemies.length <= Math.ceil(this.enemyStart * FEW_ENEMIES)
+		this.fewEnemies = enemies.length <= Math.ceil(this.enemyStart * BOT_AI.team.fewEnemies)
 		// An assault's defence does not tire of waiting: only losses send it forward. The attack presses on sooner.
 		const mode = w.terrain.mode
 		const defence = mode === 'assault' && w.terrain.defender === this.team
-		const lateTime = mode === 'assault' ? ASSAULT_LATE_TIME : LATE_TIME
+		const lateTime = mode === 'assault' ? BOT_AI.team.assaultLateTime : BOT_AI.team.lateTime
 		this.late = this.fewEnemies || (!defence && time - this.start > lateTime)
 		this.defendBases(w, members)
-		if (mode !== 'standard' && !defence && time - this.start > MATCH.roundTime - HURRY_TIME) this.rush(w, members)
+		if (mode !== 'standard' && !defence && time - this.start > MATCH.roundTime - BOT_AI.team.hurryTime)
+			this.rush(w, members)
 		this.fronts = this.groupLanes.map(() => [])
 		for (const m of members) {
 			const g = this.groupOf.get(m.tank)
@@ -282,7 +258,7 @@ export class TeamTactics {
 	/** The enemy seen most recently (alive), if any sighting is still fresh. */
 	freshestSighting(w: WorldRefs, time: number): Tank | null {
 		let best: Tank | null = null
-		let bt = time - LEAD_FRESH
+		let bt = time - BOT_AI.team.leadFresh
 		for (const o of w.tanks) {
 			const s = o.alive && o.team !== this.team ? this.seen.get(o) : undefined
 			if (s && s.t > bt) {
@@ -301,7 +277,7 @@ export class TeamTactics {
 		// Search inside the playable ground, never up in the mountains round the edge
 		const half = WORLD_HALF - WORLD.mountainBand - 10
 		const s = prey && this.lastSighting(prey)
-		if (s && time - s.t < LEAD_FRESH) {
+		if (s && time - s.t < BOT_AI.team.leadFresh) {
 			const a = (slot / Math.max(1, slots)) * Math.PI * 2 + Math.random() * 0.8
 			const r = 40 + Math.random() * 90
 			return scatterNear(w.terrain, s.x + Math.cos(a) * r, s.z + Math.sin(a) * r, 30, half)

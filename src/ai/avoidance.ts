@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { DRIVE, WORLD_HALF } from '../config'
+import { BOT_AI, DRIVE, WORLD_HALF } from '../config'
 import { wrapAngle } from '../core/math'
 import type { Tank, WorldRefs } from '../tank/tank'
 import { routeAcross } from './routes'
@@ -7,16 +7,6 @@ import type { Pt } from './types'
 
 const tmpPush = { x: 0, z: 0 }
 const tmpGrad = new THREE.Vector2()
-const STUCK_TIME = 2.5 // s of no progress before backing out
-const REVERSE_TIME = 1.8
-const STUCK_EVENTS_TO_REROUTE = 3
-/** Half-angle of the cone ahead in which another tank counts as being in the way. */
-const TANK_CONE = 0.9
-/** Longest a bot gives way to the same traffic before it stops waiting and drives around it instead. */
-const YIELD_MAX = 3
-const YIELD_COOLDOWN = 2.5
-/** s a chosen side for swerving around a building or a rock is kept, so the bot does not dither left–right. */
-const SIDE_HOLD = 1.5
 
 interface TankInWay {
 	o: Tank
@@ -82,7 +72,7 @@ export class Avoidance {
 	/** Keep swerving to one side around the same obstacle; pick a new side only after it has been clear a while. */
 	private pickSide(lClear: boolean, rClear: boolean) {
 		if (lClear !== rClear && this.sideTimer <= 0) this.side = lClear ? 1 : -1
-		this.sideTimer = SIDE_HOLD
+		this.sideTimer = BOT_AI.avoidance.sideHold
 		return this.side
 	}
 
@@ -121,12 +111,16 @@ export class Avoidance {
 		// Where we are relative to its heading (it is coming at us when we are in its own cone ahead, or behind it
 		// while it reverses)
 		const back = wrapAngle(Math.atan2(me.pos.x - o.pos.x, me.pos.z - o.pos.z) - o.yaw)
-		const comingAtUs = oMoving && (o.speed > 0 ? Math.abs(back) < TANK_CONE : Math.abs(back) > Math.PI - TANK_CONE)
+		const comingAtUs =
+			oMoving &&
+			(o.speed > 0
+				? Math.abs(back) < BOT_AI.avoidance.tankCone
+				: Math.abs(back) > Math.PI - BOT_AI.avoidance.tankCone)
 		if (comingAtUs && this.givesWayTo(o) && this.yieldCooldown <= 0) {
 			this.yieldTimer += dt
-			if (this.yieldTimer > YIELD_MAX) {
+			if (this.yieldTimer > BOT_AI.avoidance.yieldMax) {
 				this.yieldTimer = 0
-				this.yieldCooldown = YIELD_COOLDOWN
+				this.yieldCooldown = BOT_AI.avoidance.yieldCooldown
 			}
 			this.throttleCap = t.gap < 1.5 ? -0.5 : 0
 			if (t.gap < 1.5) this.steer = -away // reversing: the opposite steer swings the nose the same way
@@ -140,6 +134,7 @@ export class Avoidance {
 
 	/** Right of way: the player never gives way, so bots give way to it; between bots the older one goes first. */
 	private givesWayTo(o: Tank) {
+		if (o.team !== this.me.team) return false // nobody clears the road for the enemy
 		if (o.isPlayer) return true
 		if (this.me.isPlayer) return false
 		return o.uid < this.me.uid
@@ -159,7 +154,7 @@ export class Avoidance {
 			const bearing = wrapAngle(Math.atan2(dx, dz) - me.yaw)
 			// Touching: anything off the front quarter; further out: only a hull that overlaps our track corridor
 			const lateral = Math.abs(Math.sin(bearing)) * Math.hypot(dx, dz)
-			const inCorridor = Math.abs(bearing) < TANK_CONE && lateral < o.radius + me.radius + 1.5
+			const inCorridor = Math.abs(bearing) < BOT_AI.avoidance.tankCone && lateral < o.radius + me.radius + 1.5
 			if (!inCorridor && !(gap < 1 && Math.abs(bearing) < 1.4)) continue
 			best = { o, bearing, gap }
 		}
@@ -209,8 +204,8 @@ export class Avoidance {
 		else this.stuckTimer = 0
 		this.lastPos.x = me.pos.x
 		this.lastPos.z = me.pos.z
-		if (this.stuckTimer <= STUCK_TIME || this.reverseTimer > 0) return null
-		this.reverseTimer = REVERSE_TIME
+		if (this.stuckTimer <= BOT_AI.avoidance.stuckTime || this.reverseTimer > 0) return null
+		this.reverseTimer = BOT_AI.avoidance.reverseTime
 		this.stuckTimer = 0
 		// Back out with the nose swinging away from whatever is in front (reverse steering is mirrored); with
 		// something behind as well, pivot on the spot instead
@@ -218,7 +213,7 @@ export class Avoidance {
 		const s = t?.bearing ? Math.sign(t.bearing) : -this.side // side the obstacle is on
 		this.pivot = this.blockedBehind(w)
 		this.unstickSteer = this.pivot ? -s : s
-		if (++this.stuckEvents < STUCK_EVENTS_TO_REROUTE) return null
+		if (++this.stuckEvents < BOT_AI.avoidance.stuckEventsToReroute) return null
 		// Repeatedly stuck: give up on this leg and head for the nearest lane waypoint (never a base centre) instead
 		this.stuckEvents = 0
 		let best: Pt | null = null

@@ -1,12 +1,10 @@
+import { BOT_AI } from '../../config'
 import type { WorldRefs } from '../../tank/tank'
 import { flatSpot } from '../positions'
 import { planRetreat } from '../routes'
 import type { Bot, Frame, RoleAi, RoundPlan } from './types'
 
-/** An enemy this close (m) sends the artillery back toward the base. */
-const DANGER = 90
-/** s the gun may be stuck at its elevation stop before moving to level ground. */
-const TILT_RELOCATE = 3
+const cfg = BOT_AI.roles.spg
 
 /**
  * Self-propelled gun — the artillery: stands on level ground by its spawn point (the base is levelled; a tilted hull
@@ -23,12 +21,12 @@ export class ArtilleryAi implements RoleAi {
 
 	think(bot: Bot, f: Frame) {
 		const me = bot.tank
-		if (f.enemyNear < DANGER && bot.mode !== 'relocate') {
+		if (f.enemyNear < cfg.danger && bot.mode !== 'relocate') {
 			const r = planRetreat(f.w, me)
 			bot.setPath(r.path, r.holdSpot)
 			bot.mode = 'relocate'
 		} else if (bot.mode === 'relocate' && bot.pathDone) bot.mode = 'hold'
-		else if (bot.mode === 'hold' && bot.gunner.elevTimer > TILT_RELOCATE) {
+		else if (bot.mode === 'hold' && bot.gunner.elevTimer > cfg.tiltRelocate) {
 			// The barrel is at its stop: this slope is no good, find level ground nearby
 			const spot = flatSpot(f.w.terrain, me.pos.x, me.pos.z, 35, [{ x: me.pos.x, z: me.pos.z }])
 			bot.setPath([spot], spot)

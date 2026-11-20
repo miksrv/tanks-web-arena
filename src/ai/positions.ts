@@ -1,18 +1,7 @@
+import { BOT_AI } from '../config'
 import type { Tank, WorldRefs } from '../tank/tank'
 import type { Terrain } from '../world/terrain'
 import type { Pt } from './types'
-
-/** How much a spot on a slope is worth losing per unit of gradient (m of the score). */
-const SLOPE_WEIGHT = 120
-/** Vantage scoring: metres of score per metre of height gained over the start point. */
-const HEIGHT_WEIGHT = 2.5
-/** Tank destroyers snipe: height counts this many times more for them (a long view, a hull-down aimed shot). */
-export const TD_HEIGHT = 2.2
-const LOS_BONUS = 60
-const BUSH_BONUS = 25
-const CROWD_DIST = 12
-const MAX_CANDIDATES = 32 // each costs a line-of-sight probe
-const EYE = 2.4 // m above the ground for vantage line-of-sight probes
 
 const rnd = (k: number) => (Math.random() - 0.5) * k
 
@@ -29,7 +18,8 @@ function usable(t: Terrain, x: number, z: number) {
 	return t.passable(x, z) && t.waterDepth(x, z) <= 0 && !t.deckAt(x, z)
 }
 
-const crowded = (p: Pt, avoid: readonly Pt[]) => avoid.some((a) => Math.hypot(a.x - p.x, a.z - p.z) < CROWD_DIST)
+const crowded = (p: Pt, avoid: readonly Pt[]) =>
+	avoid.some((a) => Math.hypot(a.x - p.x, a.z - p.z) < BOT_AI.positions.crowdDist)
 
 /**
  * The flattest open spot within `radius` of (cx, cz), nearer ones preferred; the centre itself when nothing is
@@ -37,13 +27,13 @@ const crowded = (p: Pt, avoid: readonly Pt[]) => avoid.some((a) => Math.hypot(a.
  */
 export function flatSpot(t: Terrain, cx: number, cz: number, radius: number, avoid: readonly Pt[] = []): Pt {
 	let best: Pt = { x: cx, z: cz }
-	let bs = usable(t, cx, cz) && !crowded(best, avoid) ? slopeAt(t, cx, cz) * SLOPE_WEIGHT : Infinity
+	let bs = usable(t, cx, cz) && !crowded(best, avoid) ? slopeAt(t, cx, cz) * BOT_AI.positions.slopeWeight : Infinity
 	for (let i = 0; i < 48; i++) {
 		const a = Math.random() * Math.PI * 2
 		const d = Math.sqrt(Math.random()) * radius
 		const p = { x: cx + Math.cos(a) * d, z: cz + Math.sin(a) * d }
 		if (!usable(t, p.x, p.z) || crowded(p, avoid)) continue
-		const s = slopeAt(t, p.x, p.z) * SLOPE_WEIGHT + d * 0.05
+		const s = slopeAt(t, p.x, p.z) * BOT_AI.positions.slopeWeight + d * 0.05
 		if (s < bs) {
 			bs = s
 			best = p
@@ -78,7 +68,7 @@ export function vantage(w: WorldRefs, around: Pt, radius: number, o: VantageOpts
 	}
 	if (o.bushes) {
 		for (const b of w.props.bushes) {
-			if (cands.length >= MAX_CANDIDATES) break
+			if (cands.length >= BOT_AI.positions.maxCandidates) break
 			if (Math.hypot(b.x - around.x, b.z - around.z) < radius) cands.push(b)
 		}
 	}
@@ -90,11 +80,11 @@ export function vantage(w: WorldRefs, around: Pt, radius: number, o: VantageOpts
 		if (slope > 0.3) continue
 		const h = t.height(p.x, p.z)
 		let s =
-			(h - h0) * HEIGHT_WEIGHT * (o.height ?? 1) -
-			slope * SLOPE_WEIGHT * 0.3 -
+			(h - h0) * BOT_AI.positions.heightWeight * (o.height ?? 1) -
+			slope * BOT_AI.positions.slopeWeight * 0.3 -
 			Math.hypot(p.x - around.x, p.z - around.z) * 0.2
-		if (o.bushes && w.props.bushAt(p.x, p.z)) s += BUSH_BONUS
-		if (o.watch && seesPoint(w, p, h + EYE, o.watch)) s += LOS_BONUS
+		if (o.bushes && w.props.bushAt(p.x, p.z)) s += BOT_AI.positions.bushBonus
+		if (o.watch && seesPoint(w, p, h + BOT_AI.positions.eye, o.watch)) s += BOT_AI.positions.losBonus
 		if (s > bs) {
 			bs = s
 			best = p

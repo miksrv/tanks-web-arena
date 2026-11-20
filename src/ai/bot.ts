@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { AMMO_LOAD, BOTS } from '../config'
+import { AMMO_LOAD, BOT_AI, BOTS } from '../config'
 import type { Shells } from '../combat/shells'
 import { wrapAngle } from '../core/math'
 import { Spotting } from '../game/spotting'
@@ -18,15 +18,6 @@ import { spotInZone, type TeamTactics } from './team'
 import type { BotMode, DriveCommand, Pt } from './types'
 
 const { clamp } = THREE.MathUtils
-const RETARGET = 1.2 // s between target re-evaluations
-const RETARGET_AFTER_HIT = 1.5
-const WAYPOINT_RADIUS = 10
-const EVADE_TIME = 2.2
-/** s the target may stay hidden from a holding bot's gun before it shifts toward it. */
-const HOLD_BLIND_SHIFT = 6
-/** Share of the load at which a bot topping up at the base goes back to the fight. */
-const RESUPPLY_DONE = 0.9
-const RESUPPLY_SPOT = 20 // m around the base centre
 
 /**
  * A bot's core: targeting, gunnery, driving, consumables, reacting to hits and the hunt for the last enemy. What a
@@ -148,7 +139,7 @@ export class BotBrain implements Bot {
 		if (this.mode === 'advance' && this.pathDone) this.mode = this.holdSpot ? 'hold' : 'engage'
 		const resupplying = this.resupply(w)
 		if (!resupplying) this.role.think(this, { w, dt, time, enemyNear, hurt })
-		if (this.mode === 'engage' && !this.target) this.mode = this.pathDone ? 'hold' : 'advance'
+		if (this.mode === 'engage' && !this.target) this.fightOver()
 		if (!resupplying) this.shiftWhenBlind(w)
 		if (this.mode === 'engage' || this.mode === 'retreat' || this.mode === 'relocate') this.captureZone = null
 		// Arrived short of the circle (the spot was blocked): give the plan up, the idle clock picks a new one
@@ -166,6 +157,16 @@ export class BotBrain implements Bot {
 		me.steer = cmd.steer
 
 		this.gunner.update(w, shells, this.target, dt)
+	}
+
+	/** The target is gone: back to the route, or hold at its end. */
+	private fightOver() {
+		const me = this.tank
+		this.mode = this.pathDone ? 'hold' : 'advance'
+		// The fight moved a strike tank: it holds the ground it fought on rather than drive back, rear to the enemy
+		const strike = me.def.role === 'medium' || me.def.role === 'heavy'
+		const free = this.pathDone && this.holdSpot && !this.onObjective && !this.defending
+		if (strike && free) this.holdSpot = { x: me.pos.x, z: me.pos.z }
 	}
 
 	// ---------------------------------------------------------------- moves the roles use
@@ -264,7 +265,7 @@ export class BotBrain implements Bot {
 				this.resupplying = false
 				return false
 			}
-			if (me.ammoShare < RESUPPLY_DONE) return true
+			if (me.ammoShare < BOT_AI.core.resupplyDone) return true
 			this.resupplying = false
 			const p = this.role.plan(w, this)
 			this.mode = p.mode
@@ -274,7 +275,7 @@ export class BotBrain implements Bot {
 		if (me.ammoShare >= AMMO_LOAD.lowShare || this.hunting || busy) return false
 		this.resupplying = true
 		const base = w.terrain.bases[me.team]
-		this.goTo(w, w.terrain.findSpot(base.x, base.z, RESUPPLY_SPOT))
+		this.goTo(w, w.terrain.findSpot(base.x, base.z, BOT_AI.core.resupplySpot))
 		return true
 	}
 
@@ -307,7 +308,7 @@ export class BotBrain implements Bot {
 		if (this.retarget > 0 && !lost) return
 		const focus = this.tactics.focused(time)
 		this.target = this.role.preferTarget?.(this, w, time) ?? pickTarget(w, me, t, time, focus)
-		this.retarget = RETARGET
+		this.retarget = BOT_AI.core.retarget
 		if (this.target !== t) this.fighter.retarget()
 	}
 
@@ -334,7 +335,7 @@ export class BotBrain implements Bot {
 		const me = this.tank
 		const t = this.target
 		if (this.mode !== 'hold' || !t || !this.holdSpot || me.def.gun.howitzer || this.holdingCircle) return
-		if (this.fighter.blind <= HOLD_BLIND_SHIFT) return
+		if (this.fighter.blind <= BOT_AI.core.holdBlindShift) return
 		const dx = t.pos.x - me.pos.x
 		const dz = t.pos.z - me.pos.z
 		const l = Math.hypot(dx, dz) || 1
@@ -355,13 +356,13 @@ export class BotBrain implements Bot {
 		const seen = Spotting.visibleTo(me.team, by, time)
 		if (seen && this.dist(by) <= reachOf(me) && this.target !== by && (!this.target || gunHasLos(w, me, by))) {
 			this.target = by
-			this.retarget = RETARGET_AFTER_HIT
+			this.retarget = BOT_AI.core.retargetAfterHit
 			this.fighter.retarget()
 		} else if (!seen && !me.def.gun.howitzer && this.evadeTimer <= 0) {
 			if (this.mode === 'retreat' || this.mode === 'relocate') return
 			// Backing out of the circle would throw the capture (or its defence) away
 			if (this.holdingCircle) return
-			this.evadeTimer = EVADE_TIME
+			this.evadeTimer = BOT_AI.core.evadeTime
 			this.evadeFrom = { x: by.pos.x, z: by.pos.z }
 		}
 	}
@@ -388,7 +389,7 @@ export class BotBrain implements Bot {
 		const p = this.path[Math.min(this.wp, this.path.length - 1)]
 		if (!p) return
 		const d = Math.hypot(p.x - me.pos.x, p.z - me.pos.z)
-		if (d < WAYPOINT_RADIUS || (d < WAYPOINT_RADIUS * 2.5 && occupied(w, me, p))) this.wp++
+		if (d < BOT_AI.core.waypointRadius || (d < BOT_AI.core.waypointRadius * 2.5 && occupied(w, me, p))) this.wp++
 		else steerTo(me, cmd, p, 1)
 	}
 
