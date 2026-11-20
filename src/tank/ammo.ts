@@ -6,12 +6,12 @@ const { clamp } = THREE.MathUtils
 
 /**
  * Rounds of each shell carried: the whole load from the reload (or the vehicle's own number), a share of APCR and of
- * the other common shell, the stock shell for the rest. Howitzers carry no APCR, rocket launchers HE salvoes only.
+ * the other common shell, the stock shell for the rest. Howitzers carry no APCR, rocket launchers and the rocket mortar HE only.
  */
 export function ammoLoad(def: TankDef): Record<AmmoId, number> {
 	const g = def.gun
 	const total = g.rounds ?? Math.round(clamp(AMMO_LOAD.fireTime / g.reload, AMMO_LOAD.min, AMMO_LOAD.max))
-	if (g.salvo) return { ap: 0, apcr: 0, he: total }
+	if (g.salvo || g.mortar) return { ap: 0, apcr: 0, he: total }
 	const alt = Math.round(total * AMMO_LOAD.altShare)
 	if (g.howitzer || g.derp) return { ap: alt, apcr: 0, he: total - alt }
 	const apcr = Math.min(AMMO.apcr.count, Math.round(total * AMMO_LOAD.apcrShare))

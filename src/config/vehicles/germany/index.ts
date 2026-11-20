@@ -14,6 +14,7 @@ import { ferdinand } from './ferdinand'
 import { wespe } from './wespe'
 import { pzwerfer } from './pzwerfer'
 import { stuh42 } from './stuh42'
+import { sturmtiger } from './sturmtiger'
 
 /** German vehicles in garage order (the second one is the garage's default pick). */
 export const GERMANY_TANKS: TankDef[] = [
@@ -32,4 +33,5 @@ export const GERMANY_TANKS: TankDef[] = [
 	wespe,
 	pzwerfer,
 	stuh42,
+	sturmtiger,
 ]

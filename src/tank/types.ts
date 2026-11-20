@@ -28,4 +28,6 @@ export interface ShotParams {
 	splash: number
 	howitzer: boolean
 	rocket: boolean
+	/** Rocket mortar round: a smoke trail in flight and a shock-wave blast. */
+	shock: boolean
 }

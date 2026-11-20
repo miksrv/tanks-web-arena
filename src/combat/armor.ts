@@ -55,11 +55,6 @@ export interface HitResult {
 }
 
 const n = { x: 0, y: 0, z: 0 }
-const TOP_NORMAL_Y = 0.7
-const FRONT_DOT = 0.6 // |cos| beyond which a vertical face counts as front / rear
-const TRACK_MARGIN = 0.1 // m above the running gear still counted as a track hit
-const MIN_COS = 0.2 // cap on the slope multiplier (5×)
-const OVERMATCH_NORMALIZATION = 1.4
 
 /** Segment vs the tank's hull, turret and cupola boxes: the earliest entry, or null. No armour rolls. */
 export function hitBoxes(
@@ -97,10 +92,10 @@ export function hitBoxes(
 
 /** Which face of the hull (or turret) a box normal belongs to. */
 function faceOf(tank: Tank, h: BoxHit): Face {
-	if (h.ny > TOP_NORMAL_Y) return 'top'
+	if (h.ny > ZONES.topNormalY) return 'top'
 	const fwd = h.part === 'hull' ? { x: tank.fx, z: tank.fz } : tank.turretForward()
 	const d = h.nx * fwd.x + h.nz * fwd.z
-	return d > FRONT_DOT ? 'front' : d < -FRONT_DOT ? 'rear' : 'side'
+	return d > ZONES.frontDot ? 'front' : d < -ZONES.frontDot ? 'rear' : 'side'
 }
 
 /** Nominal plate thickness of a face. The roof is shared by hull and turret. */
@@ -170,7 +165,7 @@ function hullPlate(tank: Tank, h: BoxHit, face: Face): Plate {
 	const top = tank.hullBox.y1 - tank.hullBox.y0
 	const lower = face === 'front' && p.up < top * ZONES.lowerShare
 	// Running gear: low side hits
-	const tracks = face === 'side' && p.up < s.trackH + TRACK_MARGIN
+	const tracks = face === 'side' && p.up < s.trackH + ZONES.trackMargin
 	const screen = !!s.hullLook.skirts && face === 'side'
 	const zone: Zone = lower ? 'lower' : screen ? 'screen' : null
 	const nominal = lower ? (a.lowerFront ?? a.front * ZONES.lowerFront) : plateArmor(a, 'hull', face)
@@ -186,9 +181,9 @@ function slopeArmor(nominal: number, angle: number, shell: ShellSpec) {
 	const am = shell.ammo
 	const overmatch = shell.caliber >= nominal * COMBAT.overmatch
 	if (!am.he && angle > am.ricochet && !overmatch) return { ricochet: true, effective: nominal, angle }
-	const norm = overmatch ? am.normalization * OVERMATCH_NORMALIZATION : am.normalization
+	const norm = overmatch ? am.normalization * COMBAT.overmatchNormalization : am.normalization
 	const a = Math.max(0, angle - norm)
-	return { ricochet: false, effective: nominal / Math.max(MIN_COS, Math.cos(a)), angle: a }
+	return { ricochet: false, effective: nominal / Math.max(COMBAT.minSlopeCos, Math.cos(a)), angle: a }
 }
 
 /** Armour a shell along (dx, dy, dz) meets at a box hit, without dice: a Schürzen plate adds to it against AP. */
@@ -246,7 +241,7 @@ export function testShell(
 	let damage = 0
 	if (penetrated) damage = shell.dmg * roll(COMBAT.dmgRng)
 	else if (shell.ammo.he && !ricochet) {
-		const raw = shell.dmg * COMBAT.heNonPenFactor * roll(COMBAT.dmgRng) - effective * 1.1
+		const raw = shell.dmg * COMBAT.heNonPenFactor * roll(COMBAT.dmgRng) - effective * COMBAT.heArmorFactor
 		damage = Math.max(0, raw) * (blocked ? ZONES.screenHe : 1)
 	}
 	let tracked = false
@@ -313,7 +308,6 @@ interface Point {
 	y: number
 	z: number
 }
-const AIM_PAST = 2 // m the aim ray runs on past the reticle point, to be sure to enter the box
 
 /**
  * The plate under the reticle: a shell from `from` (the muzzle) toward `at` (where the reticle sits on `t`),
@@ -323,7 +317,7 @@ export function aimedArmor(me: Tank, t: Tank, from: Point, at: Point) {
 	const dx = at.x - from.x
 	const dy = at.y - from.y
 	const dz = at.z - from.z
-	const k = 1 + AIM_PAST / (Math.hypot(dx, dy, dz) || 1)
+	const k = 1 + COMBAT.aimPast / (Math.hypot(dx, dy, dz) || 1)
 	const h = hitBoxes(t, from.x, from.y, from.z, from.x + dx * k, from.y + dy * k, from.z + dz * k)
 	if (!h) return null
 	const shell = { pen: me.shellPen, dmg: me.shellDmg, caliber: me.def.gun.caliber, ammo: me.ammoDef }

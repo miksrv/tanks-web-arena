@@ -83,6 +83,26 @@ export const rockets = (
 	salvoInterval: 0.1,
 	bloomShot: 0.15,
 })
+/** Rocket mortar: a slow rocket-assisted HE shell with a huge blast, fired directly; a handful of rounds. */
+export const rocketMortar = (
+	caliber: number,
+	pen: number,
+	dmg: number,
+	reload: number,
+	dispersion: number,
+	aimTime: number,
+	shellSpeed: number,
+	splash: number,
+	arc: number,
+	rounds: number,
+): GunDef => ({
+	...casemateGun(caliber, pen, dmg, reload, dispersion, aimTime, shellSpeed, arc),
+	elevMin: -0.05,
+	elevMax: 0.4,
+	mortar: true,
+	splash,
+	rounds,
+})
 export const autocannon = (
 	caliber: number,
 	pen: number,

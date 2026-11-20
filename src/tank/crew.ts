@@ -51,7 +51,7 @@ export class Crew {
 export function freshStats() {
 	return {
 		pens: 0,
-		/** Penetrations from LONG_SHOT metres or more. */
+		/** Penetrations from COMBAT.longShot metres or more. */
 		longPens: 0,
 		crits: 0,
 		tracks: 0,

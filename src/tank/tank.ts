@@ -1,7 +1,6 @@
 import * as THREE from 'three'
-import { AMMO, COMBAT, DRIVE, SPOTTING, type AmmoId, type TankDef } from '../config'
-import { howitzerSolve, rangeSpeedScale, solveElevation } from '../combat/ballistics'
-import { AXIS_Y, wrapAngle } from '../core/math'
+import { AMMO, COMBAT, DRIVE, MORTAR, SPOTTING, type AmmoId, type TankDef } from '../config'
+import { wrapAngle } from '../core/math'
 import { type OBB } from '../world/obb'
 import type { Props } from '../world/props'
 import type { Terrain } from '../world/terrain'
@@ -9,8 +8,8 @@ import { AmmoRack } from './ammo'
 import { createBoxes, placeBoxes } from './hitBoxes'
 import { resolveCollisions } from './collisions'
 import { Crew, freshStats } from './crew'
-import { disperse, scatter } from './dispersion'
 import { drive } from './drive'
+import { launch, layGun, updateBloom } from './gunnery'
 import { hullPose } from './suspension'
 import { TankView } from './tankView'
 import type { ShotParams, WorldRefs } from './types'
@@ -18,20 +17,13 @@ import type { ShotParams, WorldRefs } from './types'
 export type { ShotParams, WorldRefs } from './types'
 
 const { clamp } = THREE.MathUtils
-const tmpDir = new THREE.Vector3()
-const tmpQ = new THREE.Quaternion()
-const tmpQ2 = new THREE.Quaternion()
-const tmpE = new THREE.Euler()
-
-const MAX_BLOOM = 4
-const GUN_PITCH_RATE = 1.5 // rad/s
-const POSE_SMOOTHING = 14 // 1/s
-const SWAP_RELOAD_MAX = 2.5 // s: changing shells costs at most this much reload
-const DEFAULT_SALVO_INTERVAL = 0.1
 
 let nextUid = 0
 
-/** A vehicle: driving physics, turret and gun laying, modules and consumables, ammunition and firing. */
+/**
+ * A vehicle: its state, modules and consumables, ammunition and firing. Driving is in `drive.ts`, laying the gun,
+ * the reticle bloom and the shot itself in `gunnery.ts`, collisions in `collisions.ts`.
+ */
 export class Tank {
 	/** Creation order; pairwise effects (ramming) are resolved once, by the lower uid. */
 	readonly uid = nextUid++
@@ -108,11 +100,12 @@ export class Tank {
 	private salvoTimer = 0
 	/** s spent at the base restocking used consumables. */
 	kitTimer = 0
-	private roll = 0
-	private pitch = 0
-	private turretRate = 0
-	/** rad/s of laying for range: the gun's pitch, or a howitzer's range change seen as an angle. */
-	private elevRate = 0
+	/** Hull roll and pitch on the ground (eased toward the suspension's pose). */
+	roll = 0
+	pitch = 0
+	/** rad/s of turret traverse, and of laying for range (the gun's pitch, or a howitzer's range change as an angle). */
+	turretRate = 0
+	elevRate = 0
 
 	static onDestroyed: ((t: Tank, by: Tank | null) => void) | null = null
 
@@ -159,7 +152,12 @@ export class Tank {
 	}
 	/** Reticle radius in metres at 100 m. */
 	get reticle() {
-		return this.def.gun.dispersion * (1 + this.bloom) * (this.gunDamaged > 0 ? 1.5 : 1) * this.crew.aim
+		return (
+			this.def.gun.dispersion *
+			(1 + this.bloom) *
+			(this.gunDamaged > 0 ? COMBAT.gunDamageDispersion : 1) *
+			this.crew.aim
+		)
 	}
 	/** Convergence for the reticle's colour: green once aimed, yellow while settling, red wide open. */
 	get aimClass(): 'green' | 'yellow' | 'red' {
@@ -196,9 +194,14 @@ export class Tank {
 	get worldTurretYaw() {
 		return this.yaw + this.turretYaw
 	}
-	/** The stock shell for this gun: HE for howitzers and derp guns, AP otherwise. */
+	/** The stock shell for this gun: HE for howitzers, derp guns and the rocket mortar, AP otherwise. */
 	get stockAmmo(): AmmoId {
-		return this.def.gun.howitzer || this.def.gun.derp ? 'he' : 'ap'
+		const g = this.def.gun
+		return g.howitzer || g.derp || g.mortar ? 'he' : 'ap'
+	}
+	/** Rocket mortar: the round is loaded at a halt; true while driving holds the loading back. */
+	get loadingStalled(): boolean {
+		return !!this.def.gun.mortar && this.reload > 0 && Math.abs(this.speed) > MORTAR.standSpeed
 	}
 	turretForward() {
 		const a = this.worldTurretYaw
@@ -230,7 +233,7 @@ export class Tank {
 		this.hp = this.def.hp
 		this.alive = true
 		this.reload = 0
-		this.bloom = 2
+		this.bloom = DRIVE.spawnBloom
 		this.tracked = this.burning = this.gunDamaged = this.rackDamaged = this.camoFire = 0
 		this.engineDamaged = this.ringDamaged = 0
 		this.crew.reset()
@@ -318,7 +321,7 @@ export class Tank {
 		if (this.ammo === id || this.ammoCount[id] <= 0 || (this.def.gun.salvo && id !== 'he')) return false
 		this.ammo = id
 		// Swapping a loaded gun costs part of the reload
-		const swap = Math.min(this.reloadTime, SWAP_RELOAD_MAX)
+		const swap = Math.min(this.reloadTime, COMBAT.swapReloadMax)
 		if (swap > this.reload) this.reload = this.reloadFull = swap
 		return true
 	}
@@ -339,9 +342,9 @@ export class Tank {
 		this.camoFire = SPOTTING.firePenaltyTime
 		if (g.salvo) {
 			this.salvoLeft = g.salvo - 1
-			this.salvoTimer = g.salvoInterval ?? DEFAULT_SALVO_INTERVAL
+			this.salvoTimer = g.salvoInterval ?? COMBAT.salvoInterval
 		}
-		return this.launch()
+		return launch(this)
 	}
 
 	/** Rocket launchers: the rest of the salvo leaves the rails on its own; polled every frame by the game loop. */
@@ -353,44 +356,15 @@ export class Tank {
 		}
 		this.salvoTimer -= dt
 		if (this.salvoTimer > 0) return null
-		this.salvoTimer += this.def.gun.salvoInterval ?? DEFAULT_SALVO_INTERVAL
+		this.salvoTimer += this.def.gun.salvoInterval ?? COMBAT.salvoInterval
 		this.salvoLeft--
-		return this.launch()
+		return launch(this)
 	}
 
-	/** One projectile along the barrel as it points right now, with the reticle's dispersion. */
-	private launch(): ShotParams {
+	/** Blast radius of the loaded shell, m (0 unless it is high explosive). */
+	get splashRadius(): number {
 		const g = this.def.gun
-		const am = this.ammoDef
-		this.view.group.updateMatrixWorld(true)
-		const origin = new THREE.Vector3()
-		const dir = new THREE.Vector3()
-		this.view.muzzle(origin, dir)
-		const sigma = this.reticle / 100 / 2 // the reticle radius is 2σ at 100 m
-		let speed = g.shellSpeed * am.speedMult
-		if (g.howitzer) {
-			// A lobbed shell scatters on the ground in a circle: across by the azimuth, along by the charge
-			// The range is from the muzzle, where the shell starts, not from the hull centre
-			const dy = this.aimTarget.y - origin.y
-			const range = Math.max(5, Math.hypot(this.aimTarget.x - origin.x, this.aimTarget.z - origin.z))
-			const s = scatter(sigma * range)
-			dir.applyAxisAngle(AXIS_Y, s.across / range)
-			speed =
-				(howitzerSolve(range, dy)?.speed ?? 100) * rangeSpeedScale(Math.asin(dir.y), dy, range, range + s.along)
-		} else disperse(dir, sigma)
-		this.bloom += g.bloomShot ?? DRIVE.bloomShot
-		return {
-			origin,
-			dir,
-			speed,
-			ammo: am,
-			pen: this.shellPen,
-			dmg: this.shellDmg,
-			caliber: g.caliber,
-			splash: am.he ? (g.splash ?? Math.max(1.5, g.caliber / 40)) : 0,
-			howitzer: !!g.howitzer,
-			rocket: !!g.salvo,
-		}
+		return this.ammoDef.he ? (g.splash ?? Math.max(COMBAT.splashMin, g.caliber * COMBAT.splashPerCaliber)) : 0
 	}
 
 	// ---------------------------------------------------------------- simulation
@@ -406,15 +380,15 @@ export class Tank {
 		this.stillTime = Math.abs(this.speed) < 0.5 ? this.stillTime + dt : 0
 		resolveCollisions(this, w, dt)
 		this.view.spin(this.speed * dt)
-		this.layGun(dt)
-		this.updateBloom(dt)
+		layGun(this, dt)
+		updateBloom(this, dt)
 		this.updatePose(w.terrain, dt)
 		placeBoxes(this)
 	}
 
 	/** Reload, repairs and fire damage. Returns true when the fire destroyed the tank. */
 	private tickModules(dt: number): boolean {
-		this.reload = Math.max(0, this.reload - dt)
+		this.reload = Math.max(0, this.reload - dt * (this.loadingStalled ? MORTAR.movingReload : 1))
 		this.camoFire = Math.max(0, this.camoFire - dt)
 		this.gunDamaged = Math.max(0, this.gunDamaged - dt)
 		this.rackDamaged = Math.max(0, this.rackDamaged - dt)
@@ -426,72 +400,11 @@ export class Tank {
 		return this.damage(COMBAT.fireDps * dt, this.lastHitBy, false)
 	}
 
-	/** Turret traverse toward the aim point (within the arc for casemates) and the gun elevation for the range. */
-	private layGun(dt: number) {
-		const def = this.def
-		const s = def.shape
-		const want = wrapAngle(Math.atan2(this.aimTarget.x - this.pos.x, this.aimTarget.z - this.pos.z) - this.yaw)
-		const arc = def.gun.arc
-		const goal = s.turret ? want : clamp(want, -arc, arc)
-		const d = wrapAngle(goal - this.turretYaw)
-		const step = Math.sign(d) * Math.min(Math.abs(d), this.traverse * dt)
-		this.turretRate = step / Math.max(dt, 1e-4)
-		this.turretYaw = s.turret ? wrapAngle(this.turretYaw + step) : clamp(this.turretYaw + step, -arc, arc)
-		const lastDist = this.aimDist
-		this.pitchWant = this.elevationInTurretFrame()
-		const wantPitch = clamp(this.pitchWant, def.gun.elevMin, def.gun.elevMax)
-		const pitchStep = clamp(wantPitch - this.gunPitch, -GUN_PITCH_RATE * dt, GUN_PITCH_RATE * dt)
-		this.gunPitch += pitchStep
-		// A howitzer's barrel barely moves over hundreds of metres, so for it the range change itself is the angle
-		const laid = def.gun.howitzer
-			? Math.abs(this.aimDist - lastDist) / Math.max(this.aimDist, 50)
-			: Math.abs(pitchStep)
-		this.elevRate = laid / Math.max(dt, 1e-4)
-	}
-
-	/**
-	 * Gun pitch that puts the shell on the aim point. The ballistic solution is a world elevation; the gun pitches
-	 * inside a turret that itself rides the hull's pitch and roll, so express that direction in the turret frame.
-	 */
-	private elevationInTurretFrame(): number {
-		const def = this.def
-		const dx = this.aimTarget.x - this.pos.x
-		const dz = this.aimTarget.z - this.pos.z
-		this.aimDist = Math.hypot(dx, dz)
-		const muzzleY = this.pos.y + this.view.hullTop + this.view.gun.position.y
-		const dy = this.aimTarget.y - muzzleY
-		const solved = def.gun.howitzer
-			? howitzerSolve(this.aimDist, dy)?.elev
-			: solveElevation(Math.max(5, this.aimDist), dy, def.gun.shellSpeed * this.ammoDef.speedMult)
-		const elev = solved ?? Math.atan2(dy, this.aimDist)
-		const ty = this.worldTurretYaw
-		const ce = Math.cos(elev)
-		tmpDir.set(Math.sin(ty) * ce, Math.sin(elev), Math.cos(ty) * ce)
-		tmpQ.setFromEuler(tmpE.set(-this.pitch, this.yaw, this.roll, 'YXZ'))
-			.multiply(tmpQ2.setFromAxisAngle(AXIS_Y, this.turretYaw))
-			.invert()
-		tmpDir.applyQuaternion(tmpQ)
-		return Math.atan2(tmpDir.y, Math.hypot(tmpDir.x, tmpDir.z))
-	}
-
-	/** Reticle bloom: grows with hull speed, hull and turret rotation and laying for range; shrinks back over the aim time. */
-	private updateBloom(dt: number) {
-		const moveBloom =
-			DRIVE.bloomMove * Math.abs(this.speed) +
-			DRIVE.bloomTurn * Math.abs(this.yawRate) +
-			DRIVE.bloomTurret * (Math.abs(this.turretRate) + this.elevRate)
-		this.bloom = Math.max(
-			moveBloom,
-			this.bloom - this.bloom * Math.min(1, (3 / (this.def.gun.aimTime * this.crew.aim)) * dt),
-		)
-		this.bloom = Math.min(this.bloom, MAX_BLOOM)
-	}
-
 	/** Hull pitch, roll and height on the terrain, eased in, and the model's transform. */
 	private updatePose(t: Terrain, dt = 1 / 60) {
 		const s = this.def.shape
 		const pose = hullPose(t, this.pos.x, this.pos.z, this.fx, this.fz, s.hullL, s.hullW)
-		const k = Math.min(1, POSE_SMOOTHING * dt)
+		const k = Math.min(1, DRIVE.poseSmoothing * dt)
 		this.pitch += (pose.pitch - this.pitch) * k
 		this.roll += (pose.roll - this.roll) * k
 		this.pos.y = pose.y
