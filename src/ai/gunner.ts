@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { AMMO, BOTS, type AmmoId } from '../config'
+import { AMMO, BOT_AI, BOTS, type AmmoId } from '../config'
 import { HOWITZER, flightTime, howitzerSolve, solveElevation } from '../combat/ballistics'
 import { penChance } from '../combat/armor'
 import type { Shells } from '../combat/shells'
@@ -9,25 +9,12 @@ import { friendInLine, gunSight, losBlocker, turretPoint } from './lineOfFire'
 import { facingArmor } from './targeting'
 import type { Pt } from './types'
 
-const AIM_ERROR_REROLL = 1.5 // s
-const MIN_REACTION = 0.3 // s after a target appears
-const ARTY_MIN_RANGE = 60
-const ARTY_MAX_MOVING_SPEED = 2.5 // m/s: faster targets are not worth a slow shell
-const HOPELESS_PEN_CHANCE = 0.12
-/** rad: a long arc magnifies elevation errors, so a howitzer waits until the barrel is right on. */
-const ARTY_PITCH_TOLERANCE = 0.006
-
-/** Scouts give their position away for a target this weak: it may die. */
-const SCOUT_FINISH_HP = 0.25
-/** |cos| of our bearing off the target's heading below which its side (and running gear) faces us. */
-const SIDE_ON = 0.75
-
 /** Which side of `t` faces `me` (+1 right, −1 left), or 0 when we see its front or rear. */
 function trackSide(me: Tank, t: Tank): number {
 	const dx = me.pos.x - t.pos.x
 	const dz = me.pos.z - t.pos.z
 	const l = Math.hypot(dx, dz) || 1
-	if (Math.abs((dx * t.fx + dz * t.fz) / l) > SIDE_ON) return 0
+	if (Math.abs((dx * t.fx + dz * t.fz) / l) > BOT_AI.gunner.sideOn) return 0
 	return dx * t.fz - dz * t.fx > 0 ? 1 : -1
 }
 
@@ -39,6 +26,7 @@ export type HoldFire =
 	| 'arty-range'
 	| 'moving'
 	| 'friend-near'
+	| 'too-close'
 	| 'reload'
 	| 'bloom'
 	| 'reaction'
@@ -90,7 +78,7 @@ export class BotGunner {
 
 	update(w: WorldRefs, shells: Shells, target: Tank | null, dt: number) {
 		if (!target) {
-			this.reaction = Math.max(this.reaction, MIN_REACTION)
+			this.reaction = Math.max(this.reaction, BOT_AI.gunner.minReaction)
 			this.why = 'no-target'
 			this.noLosTimer = 0
 			this.elevTimer = 0
@@ -102,12 +90,19 @@ export class BotGunner {
 		const d = Math.hypot(target.pos.x - me.pos.x, target.pos.z - me.pos.z)
 		const side = this.trackHunter ? trackSide(me, target) : 0
 		this.lay(target, d, side)
-		if (this.trackHunter && !(side && target.tracked <= 0) && target.hpFrac > SCOUT_FINISH_HP) {
+		if (this.trackHunter && !(side && target.tracked <= 0) && target.hpFrac > BOT_AI.gunner.scoutFinishHp) {
 			this.why = 'stealth'
 			return
 		}
 		if (g.howitzer) {
 			const hold = this.artilleryHold(w, target, d)
+			if (hold) {
+				this.why = hold
+				return
+			}
+		}
+		if (g.mortar) {
+			const hold = this.blastHold(w, target, d)
 			if (hold) {
 				this.why = hold
 				return
@@ -145,7 +140,7 @@ export class BotGunner {
 	private elevationHold(d: number, dt: number): HoldFire | null {
 		const me = this.me
 		const g = me.def.gun
-		const tol = g.howitzer ? ARTY_PITCH_TOLERANCE : 0.004 + 1.5 / d
+		const tol = g.howitzer ? BOT_AI.gunner.artyPitchTolerance : 0.004 + 1.5 / d
 		if (Math.abs(me.pitchWant - me.gunPitch) <= tol) {
 			this.elevTimer = 0
 			return null
@@ -160,7 +155,7 @@ export class BotGunner {
 		const me = this.me
 		const g = me.def.gun
 		if (this.aimErrTimer <= 0) {
-			this.aimErrTimer = AIM_ERROR_REROLL
+			this.aimErrTimer = BOT_AI.gunner.aimErrorReroll
 			const e = BOTS.aimErrorMax * (1 - this.skill) * (g.howitzer ? 0.4 : 1)
 			this.aimErr = {
 				x: (Math.random() - 0.5) * 2 * e,
@@ -202,9 +197,20 @@ export class BotGunner {
 	 */
 	private artilleryHold(w: WorldRefs, t: Tank, d: number): HoldFire | null {
 		const me = this.me
-		if (d > HOWITZER.maxRange * 0.95 || d < ARTY_MIN_RANGE) return 'arty-range'
-		if (Math.abs(t.speed) > ARTY_MAX_MOVING_SPEED && t.tracked <= 0) return 'moving'
+		if (d > HOWITZER.maxRange * 0.95 || d < BOT_AI.gunner.artyMinRange) return 'arty-range'
+		if (Math.abs(t.speed) > BOT_AI.gunner.artyMaxMovingSpeed && t.tracked <= 0) return 'moving'
 		const r = (me.def.gun.splash ?? 4) + 4
+		const friend = w.tanks.some(
+			(f) => f !== me && f.alive && f.team === me.team && Math.hypot(f.pos.x - t.pos.x, f.pos.z - t.pos.z) < r,
+		)
+		return friend ? 'friend-near' : null
+	}
+
+	/** Rocket mortar: the blast must catch neither a friend next to the target nor, point blank, the vehicle itself. */
+	private blastHold(w: WorldRefs, t: Tank, d: number): HoldFire | null {
+		const me = this.me
+		const r = me.def.gun.splash ?? 0
+		if (d < r * BOT_AI.gunner.mortarMinRange) return 'too-close'
 		const friend = w.tanks.some(
 			(f) => f !== me && f.alive && f.team === me.team && Math.hypot(f.pos.x - t.pos.x, f.pos.z - t.pos.z) < r,
 		)
@@ -215,8 +221,9 @@ export class BotGunner {
 	private chooseAmmo(facing: number) {
 		const me = this.me
 		const g = me.def.gun
-		let want: AmmoId = g.derp ? 'he' : 'ap'
-		if (!g.derp) {
+		const heGun = !!g.derp || !!g.mortar
+		let want: AmmoId = heGun ? 'he' : 'ap'
+		if (!heGun) {
 			if (facing <= g.pen * AMMO.he.penMult * 0.85)
 				want = 'he' // thin plate: HE goes through and hits 45 % harder
 			else if (penChance(g.pen, facing) < 0.35 && me.ammoCount.apcr > 0) want = 'apcr'
@@ -253,7 +260,12 @@ export class BotGunner {
 		}
 		if (friendInLine(w, me, t, d)) return 'friend'
 		// Wait for a better angle
-		if (penChance(me.shellPen, facing) < HOPELESS_PEN_CHANCE && !me.ammoDef.he && this.skill > 0.5 && d > 120) {
+		if (
+			penChance(me.shellPen, facing) < BOT_AI.gunner.hopelessPenChance &&
+			!me.ammoDef.he &&
+			this.skill > 0.5 &&
+			d > 120
+		) {
 			return 'hopeless'
 		}
 		return null

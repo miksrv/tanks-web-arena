@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type { Nation, TankDef } from '../config'
+import { GRAVITY, TANK_VIEW, type Nation, type TankDef } from '../config'
 import { AXIS_X, AXIS_Y } from '../core/math'
 import { MergedGeometryBuilder } from '../render/geometryBuilder'
 import { C, TankBuilder, camoPainter, hullDims } from './model/builder'
@@ -9,12 +9,7 @@ import { addMarkings } from './model/markings'
 import { buildCasemate, buildTurret, turretLook } from './model/turret'
 import { wheelLayout, type Wheel } from './model/wheels'
 
-const HIT_FLASH = 0.12 // s
-const WRECK_COLOR = '#2e2a26'
-const GRAVITY = 9.8
-const BLOWN_UP = [9, 13] as const // m/s: launch speed of a turret thrown by its ammunition
-const BLOWN_OUT = [1.5, 4] as const // m/s sideways
-const WHEEL_SEGMENTS = 10
+const { wreckColor, blownUp, blownOut, wheelSegments, recoilPerMm, recoilLimits, recoilTime } = TANK_VIEW
 
 /**
  * Procedural WW2 tank: hull from a side profile, turret or casemate, gun, running gear, nation paint and markings.
@@ -40,6 +35,11 @@ export class TankView {
 	private readonly flipQ = new THREE.Quaternion().setFromAxisAngle(AXIS_Y, Math.PI)
 	private travelled = 0
 	private flashTimer = 0
+	/** The gun's own mesh: it slides along the barrel on recoil, the pivot (and the muzzle point) stay put. */
+	private readonly barrel: THREE.Mesh
+	private readonly recoilLength: number
+	/** 1 right after a shot, running down to 0 as the barrel returns. */
+	private recoilLeft = 0
 	private spun = false
 	/** Where the turret sits on the hull. */
 	private readonly turretHome = new THREE.Vector3()
@@ -79,7 +79,9 @@ export class TankView {
 		}
 		this.turretHome.copy(this.turret.position)
 		this.turret.add(this.gun)
-		this.gun.add(this.mesh(gun))
+		this.barrel = this.mesh(gun)
+		this.gun.add(this.barrel)
+		this.recoilLength = THREE.MathUtils.clamp(def.gun.caliber * recoilPerMm, ...recoilLimits)
 		this.group.add(this.mesh(body, true), this.turret)
 
 		this.wheelList = layout.wheels
@@ -102,9 +104,9 @@ export class TankView {
 	 */
 	private buildWheels(base: THREE.Color): THREE.InstancedMesh {
 		const b = new MergedGeometryBuilder()
-		const tyre = new THREE.CylinderGeometry(1, 1, 1, WHEEL_SEGMENTS, 1, true).rotateZ(Math.PI / 2)
-		const face = new THREE.CircleGeometry(1, WHEEL_SEGMENTS).rotateY(Math.PI / 2)
-		const hub = new THREE.CircleGeometry(0.72, WHEEL_SEGMENTS).rotateY(Math.PI / 2)
+		const tyre = new THREE.CylinderGeometry(1, 1, 1, wheelSegments, 1, true).rotateZ(Math.PI / 2)
+		const face = new THREE.CircleGeometry(1, wheelSegments).rotateY(Math.PI / 2)
+		const hub = new THREE.CircleGeometry(0.72, wheelSegments).rotateY(Math.PI / 2)
 		b.add(tyre, C.rubber)
 		b.add(face, C.rubber, new THREE.Matrix4().makeTranslation(0.5, 0, 0))
 		b.add(hub, base, new THREE.Matrix4().makeTranslation(0.52, 0, 0))
@@ -143,13 +145,22 @@ export class TankView {
 	}
 
 	hitFlash() {
-		this.flashTimer = HIT_FLASH
+		this.flashTimer = TANK_VIEW.hitFlash
 		this.material.emissive.set('#ff9955')
 		this.material.emissiveIntensity = 0.6
 	}
 
+	/** A shot: the barrel jumps back and runs out again (looks only: the muzzle point does not move). */
+	recoil() {
+		this.recoilLeft = 1
+	}
+
 	update(dt: number) {
 		if (this.flight) this.fly(dt)
+		if (this.recoilLeft > 0) {
+			this.recoilLeft = Math.max(0, this.recoilLeft - dt / recoilTime)
+			this.barrel.position.z = -this.recoilLength * this.recoilLeft * this.recoilLeft
+		}
 		if (this.flashTimer <= 0) return
 		this.flashTimer -= dt
 		if (this.flashTimer <= 0) this.material.emissiveIntensity = 0
@@ -157,7 +168,7 @@ export class TankView {
 
 	/** Burnt-out wreck: dark paint, turret knocked askew. */
 	setWreck(on: boolean) {
-		this.material.color.set(on ? WRECK_COLOR : '#ffffff')
+		this.material.color.set(on ? wreckColor : '#ffffff')
 		this.flight = null
 		if (this.def.shape.turret) {
 			this.turret.position.copy(this.turretHome)
@@ -171,8 +182,8 @@ export class TankView {
 	blowTurret() {
 		if (!this.def.shape.turret) return
 		const a = Math.random() * Math.PI * 2
-		const out = BLOWN_OUT[0] + Math.random() * (BLOWN_OUT[1] - BLOWN_OUT[0])
-		const up = BLOWN_UP[0] + Math.random() * (BLOWN_UP[1] - BLOWN_UP[0])
+		const out = blownOut[0] + Math.random() * (blownOut[1] - blownOut[0])
+		const up = blownUp[0] + Math.random() * (blownUp[1] - blownUp[0])
 		const spin = () => (Math.random() - 0.5) * 7
 		this.flight = {
 			v: new THREE.Vector3(Math.cos(a) * out, up, Math.sin(a) * out),

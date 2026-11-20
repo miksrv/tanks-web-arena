@@ -1,22 +1,13 @@
+import { BOT_AI } from '../config'
 import * as THREE from 'three'
 import { wrapAngle } from '../core/math'
 import type { Tank, WorldRefs } from '../tank/tank'
 import type { BotGunner } from './gunner'
-import { TD_HEIGHT, coverFrom, vantage } from './positions'
+import { coverFrom, vantage } from './positions'
 import { driveToSpot, faceToward, friendSpots, reverseTo, steerTo } from './steering'
 import type { DriveCommand, Pt } from './types'
 
 const { clamp } = THREE.MathUtils
-/** Preferred engagement distance by vehicle class. */
-const IDEAL_RANGE = { light: 150, medium: 170, td: 230, heavy: 120, spg: 120 }
-/** Late in the battle the preferred range shrinks to this share. */
-const CLOSE_IN = 0.7
-/** s between re-picks of a firing position; sooner when the target stays hidden from it. */
-const FIRE_POS_INTERVAL = 9
-const FIRE_POS_BLIND = 2.5
-/** Guns that reload faster than this keep shooting from the spot instead of ducking into cover. */
-const DUCK_MIN_RELOAD = 3
-const REVERSE_SPEED = 3 // m/s, rough, to time the way back out of cover
 
 /**
  * A bot's gunfight: take a firing position (high ground with a view of the target) at about the ideal range, angle
@@ -67,7 +58,7 @@ export class Fighter {
 		const me = this.me
 		if (this.duck(w, cmd, t, time)) return
 		const d = this.dist(t.pos)
-		const ideal = IDEAL_RANGE[me.def.role] * (closeIn ? CLOSE_IN : 1)
+		const ideal = BOT_AI.fight.idealRange[me.def.role] * (closeIn ? BOT_AI.fight.closeIn : 1)
 		if (me.def.role === 'light') {
 			// Lights keep moving: straight in to range, then circle
 			if (d > ideal + 40 || (this.gunner.noLosTimer > 1.5 && d > 70)) steerTo(me, cmd, t.pos, 0.9)
@@ -76,7 +67,7 @@ export class Fighter {
 		}
 		const there = !this.firePos || this.dist(this.firePos) < 8
 		const moveUp = there && !holdBack && d > ideal + 40
-		if (!this.firePos || this.firePosTimer <= 0 || (there && this.blind > FIRE_POS_BLIND) || moveUp) {
+		if (!this.firePos || this.firePosTimer <= 0 || (there && this.blind > BOT_AI.fight.firePosBlind) || moveUp) {
 			this.pickFirePos(w, t, d, ideal, holdBack)
 		}
 		if (driveToSpot(w, me, cmd, this.firePos, 5, 0.85)) return
@@ -94,16 +85,16 @@ export class Fighter {
 		let step = 0
 		if (!holdBack) {
 			if (d > ideal + 40) step = Math.min(d - ideal, 70)
-			else if (this.blind > FIRE_POS_BLIND) step = Math.min(25, d * 0.3)
+			else if (this.blind > BOT_AI.fight.firePosBlind) step = Math.min(25, d * 0.3)
 		}
 		const around = { x: me.pos.x + dx * step, z: me.pos.z + dz * step }
 		this.firePos = vantage(w, around, step > 40 ? 40 : 28, {
 			watch: { x: t.pos.x, y: t.pos.y + t.view.hullTop * 0.7, z: t.pos.z },
 			bushes: me.def.role === 'td',
-			height: me.def.role === 'td' ? TD_HEIGHT : 1,
+			height: me.def.role === 'td' ? BOT_AI.positions.tdHeight : 1,
 			avoid: friendSpots(w, me),
 		})
-		this.firePosTimer = FIRE_POS_INTERVAL
+		this.firePosTimer = BOT_AI.fight.firePosInterval
 		this.gunner.noLosTimer = this.gunner.elevTimer = 0
 	}
 
@@ -134,7 +125,8 @@ export class Fighter {
 	 */
 	duck(w: WorldRefs, cmd: DriveCommand, t: Tank, time: number): boolean {
 		const me = this.me
-		if (me.def.role === 'light' || me.def.role === 'spg' || me.def.gun.reload < DUCK_MIN_RELOAD) return false
+		if (me.def.role === 'light' || me.def.role === 'spg' || me.def.gun.reload < BOT_AI.fight.duckMinReload)
+			return false
 		if (this.gunner.shots !== this.coverShot) {
 			this.coverShot = this.gunner.shots
 			this.coverReturn = this.gunner.fireSpot
@@ -148,7 +140,8 @@ export class Fighter {
 			return false
 		}
 		// Back on the spot early enough for the reticle to settle before the gun is loaded
-		const wayBack = Math.hypot(back.x - cover.x, back.z - cover.z) / REVERSE_SPEED + 0.5 + me.def.gun.aimTime * 0.7
+		const wayBack =
+			Math.hypot(back.x - cover.x, back.z - cover.z) / BOT_AI.fight.reverseSpeed + 0.5 + me.def.gun.aimTime * 0.7
 		if (me.reload > wayBack) {
 			if (this.dist(cover) > 3) reverseTo(me, cmd, cover)
 			else faceToward(me, cmd, t.pos)

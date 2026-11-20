@@ -6,21 +6,12 @@ import { reticleClass } from '../combat/armor'
 import type { Tank } from '../tank/tank'
 import type { CameraRig } from '../camera'
 import type { Shells } from '../combat/shells'
+import { ARTY_VIEW } from '../config'
+import { colorTable } from '../render/geometryBuilder'
 
-const RING_N = 64
-const ARC_N = 48
-const GUN_N = 32
-const MARKERS = 16
-/** m: the planned arc counts as blocked when it comes down further than this (or the splash) from the aim point. */
-const BLOCK_SLACK = 5
-const COLORS = {
-	white: new THREE.Color('#f4f1e8'),
-	green: new THREE.Color('#7fe07f'),
-	yellow: new THREE.Color('#f2d65a'),
-	orange: new THREE.Color('#f0b040'),
-	red: new THREE.Color('#ff5a5a'),
-}
-const ARC_COLOR = new THREE.Color('#ffd080')
+const { ringSegments, arcSegments, gunSegments, markers: markerCount, blockSlack } = ARTY_VIEW
+const colors = colorTable(ARTY_VIEW.colors)
+const arcColor = new THREE.Color(ARTY_VIEW.arcColor)
 
 /**
  * Artillery (satellite) view, WoT-style: the reticle is the dispersion circle drawn on the ground (shells land inside
@@ -61,19 +52,19 @@ export class ArtyView {
 		}
 		const mat = (color: THREE.ColorRepresentation, opacity: number) =>
 			new THREE.LineBasicMaterial({ color, transparent: true, opacity, depthTest: false })
-		this.ringMat = mat(COLORS.white, 0.95)
-		this.crossMat = mat(COLORS.white, 0.8)
-		this.arcMat = mat(ARC_COLOR, 0.45)
-		this.ring = line(new THREE.Line(geo(RING_N + 1), this.ringMat))
-		this.minRing = line(new THREE.Line(geo(RING_N + 1), mat(COLORS.white, 0.35)))
-		this.splashRing = line(new THREE.Line(geo(RING_N + 1), mat('#ff9a40', 0.3)))
+		this.ringMat = mat(colors.white, 0.95)
+		this.crossMat = mat(colors.white, 0.8)
+		this.arcMat = mat(arcColor, 0.45)
+		this.ring = line(new THREE.Line(geo(ringSegments + 1), this.ringMat))
+		this.minRing = line(new THREE.Line(geo(ringSegments + 1), mat(colors.white, 0.35)))
+		this.splashRing = line(new THREE.Line(geo(ringSegments + 1), mat('#ff9a40', 0.3)))
 		this.cross = line(new THREE.LineSegments(geo(4), this.crossMat))
-		this.arc = line(new THREE.Line(geo(ARC_N + 1), this.arcMat))
-		this.gunRing = line(new THREE.Line(geo(GUN_N + 1), mat('#ffdc96', 0.95)))
+		this.arc = line(new THREE.Line(geo(arcSegments + 1), this.arcMat))
+		this.gunRing = line(new THREE.Line(geo(gunSegments + 1), mat('#ffdc96', 0.95)))
 		this.group.add(this.ring, this.minRing, this.splashRing, this.cross, this.arc, this.gunRing)
 		const mg = new THREE.SphereGeometry(1, 10, 8)
 		const mm = new THREE.MeshBasicMaterial({ color: '#ffb347', depthTest: false, transparent: true, opacity: 0.95 })
-		for (let i = 0; i < MARKERS; i++) {
+		for (let i = 0; i < markerCount; i++) {
 			const m = new THREE.Mesh(mg, mm)
 			m.renderOrder = 21
 			m.visible = false
@@ -103,7 +94,7 @@ export class ArtyView {
 		const r = (player.reticle / 100) * d
 		this.circle(this.ring, terrain, aim.x, aim.z, r, 0.4)
 		this.circle(this.minRing, terrain, aim.x, aim.z, r / (1 + player.bloom), 0.35)
-		this.circle(this.splashRing, terrain, aim.x, aim.z, player.def.gun.splash ?? 0, 0.3)
+		this.circle(this.splashRing, terrain, aim.x, aim.z, player.splashRadius, 0.3)
 		this.minRing.visible = player.bloom > 0.05
 		const cp = this.cross.geometry.attributes.position as THREE.BufferAttribute
 		const c = Math.max(1.5, r * 0.35)
@@ -114,13 +105,13 @@ export class ArtyView {
 		cp.setXYZ(3, aim.x + c * ux, y, aim.z + c * uz)
 		cp.needsUpdate = true
 		const at = rig.aimedTank
-		this.ringMat.color.copy(inRange ? COLORS[player.aimClass] : COLORS.red)
+		this.ringMat.color.copy(inRange ? colors[player.aimClass] : colors.red)
 		this.crossMat.color.copy(
 			!inRange
-				? COLORS.red
+				? colors.red
 				: at && at.alive && at.team !== player.team
-					? COLORS[reticleClass(player, at)]
-					: COLORS.white,
+					? colors[reticleClass(player, at)]
+					: colors.white,
 		)
 		// Planned trajectory from the muzzle to the aim point; does it get there, or is a hill or a house in the way?
 		const mx = aim.x - this.muzzle.x
@@ -133,8 +124,8 @@ export class ArtyView {
 			const px = (mx / md) * plan.vx
 			const pz = (mz / md) * plan.vx
 			const ap = this.arc.geometry.attributes.position as THREE.BufferAttribute
-			for (let i = 0; i <= ARC_N; i++) {
-				const t = (i / ARC_N) * plan.time
+			for (let i = 0; i <= arcSegments; i++) {
+				const t = (i / arcSegments) * plan.time
 				ap.setXYZ(
 					i,
 					this.muzzle.x + px * t,
@@ -146,16 +137,16 @@ export class ArtyView {
 			this.planDir.set(px, plan.vy, pz).normalize()
 			traceShot(w, this.muzzle, this.planDir, plan.speed, HOWITZER.gravity, plan.time + 2, player, this.land)
 			const miss = Math.hypot(this.land.x - aim.x, this.land.z - aim.z)
-			this.blocked = miss > Math.max(BLOCK_SLACK, player.def.gun.splash ?? 0)
+			this.blocked = miss > Math.max(blockSlack, player.def.gun.splash ?? 0)
 		}
-		this.arcMat.color.copy(this.blocked ? COLORS.red : ARC_COLOR)
+		this.arcMat.color.copy(this.blocked ? colors.red : arcColor)
 		this.arcMat.opacity = this.blocked ? 0.8 : 0.45
 		// Gun marker: the real fall of shot for the barrel's current lay (the turret and the gun lag behind the aim point)
 		traceShot(w, this.muzzle, this.muzzleDir, sol?.speed ?? 100, HOWITZER.gravity, 12, player, this.land)
 		const gp = this.gunRing.geometry.attributes.position as THREE.BufferAttribute
 		const gr = Math.max(2, r * 0.25)
-		for (let i = 0; i <= GUN_N; i++) {
-			const a = (i / GUN_N) * Math.PI * 2
+		for (let i = 0; i <= gunSegments; i++) {
+			const a = (i / gunSegments) * Math.PI * 2
 			const x = this.land.x + Math.cos(a) * gr
 			const z = this.land.z + Math.sin(a) * gr
 			gp.setXYZ(i, x, terrain.height(x, z) + 0.5, z)
@@ -164,20 +155,20 @@ export class ArtyView {
 		// The player's shells in flight: a marker whose size holds steady on screen
 		let k = 0
 		for (const s of shells.list) {
-			if (s.owner !== player || k >= MARKERS) continue
+			if (s.owner !== player || k >= markerCount) continue
 			const m = this.markers[k++]
 			m.visible = true
 			m.position.set(s.x, s.y, s.z)
 			m.scale.setScalar(Math.max(0.6, m.position.distanceTo(rig.camera.position) * 0.0045))
 		}
-		for (; k < MARKERS; k++) this.markers[k].visible = false
+		for (; k < markerCount; k++) this.markers[k].visible = false
 	}
 
 	/** A ring of radius `r` around (x, z) laid on the ground, `lift` m above it. */
 	private circle(l: THREE.Line, terrain: WorldRefs['terrain'], x: number, z: number, r: number, lift: number) {
 		const p = l.geometry.attributes.position as THREE.BufferAttribute
-		for (let i = 0; i <= RING_N; i++) {
-			const a = (i / RING_N) * Math.PI * 2
+		for (let i = 0; i <= ringSegments; i++) {
+			const a = (i / ringSegments) * Math.PI * 2
 			const px = x + Math.cos(a) * r
 			const pz = z + Math.sin(a) * r
 			p.setXYZ(i, px, terrain.height(px, pz) + lift, pz)

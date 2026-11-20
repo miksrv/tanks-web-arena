@@ -83,6 +83,7 @@ function targetScore(w: WorldRefs, me: Tank, o: Tank, current: Tank | null, d: n
 	const howitzer = !!me.def.gun.howitzer
 	let score = d
 	score *= 0.6 + 0.4 * o.hpFrac // finish the wounded
+	if (o.hp <= me.def.gun.dmg * BOTS.oneShotMargin) score *= BOTS.oneShotScore // one more hit takes it off the field
 	if (!howitzer) {
 		// prefer what we can actually hurt
 		const pen = me.def.gun.pen * (me.ammoCount.apcr > 0 ? AMMO.apcr.penMult : 1)

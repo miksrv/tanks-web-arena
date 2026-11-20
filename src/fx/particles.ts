@@ -1,32 +1,15 @@
 import * as THREE from 'three'
+import { PARTICLES } from '../config'
 import { GroundMarks } from './groundMarks'
 import { PARTICLE_FRAGMENT, PARTICLE_VERTEX } from './particleShader'
 
-const MAX = 4000
-/** Largest sprite on screen, as a share of the drawing buffer's height. */
-const MAX_SCREEN_SHARE = 0.45
+const { max: maxParticles, maxScreenShare, defaults } = PARTICLES
 const ATTRIBUTES = [
 	['position', 3],
 	['aSize', 1],
 	['aColor', 3],
 	['aAlpha', 1],
 ] as const
-
-/** Field values of a fresh particle; `emit` overrides what it is given. */
-const DEFAULTS = {
-	vx: 0,
-	vy: 0,
-	vz: 0,
-	life: 1,
-	size: 1,
-	grow: 0,
-	r: 1,
-	g: 1,
-	b: 1,
-	gravity: 0,
-	drag: 0,
-	alpha: 1,
-}
 
 /** One particle: position, velocity, life, size growth, colour, gravity, drag and opacity. */
 interface P {
@@ -54,10 +37,10 @@ export class Particles {
 	/** Particle objects are pooled: the first `live` entries are alive, the rest wait to be reused. */
 	private readonly list: P[] = []
 	private live = 0
-	private pos = new Float32Array(MAX * 3)
-	private size = new Float32Array(MAX)
-	private col = new Float32Array(MAX * 3)
-	private alpha = new Float32Array(MAX)
+	private pos = new Float32Array(maxParticles * 3)
+	private size = new Float32Array(maxParticles)
+	private col = new Float32Array(maxParticles * 3)
+	private alpha = new Float32Array(maxParticles)
 	private mat: THREE.ShaderMaterial
 	/** Splash rings on the ground. */
 	readonly marks = new GroundMarks()
@@ -85,16 +68,16 @@ export class Particles {
 	/** `bufferHeight`: drawing-buffer height in pixels (CSS height × pixel ratio). */
 	setScale(bufferHeight: number, fovDeg: number) {
 		this.mat.uniforms.uScale.value = bufferHeight / (2 * Math.tan((fovDeg * Math.PI) / 360))
-		this.mat.uniforms.uMaxSize.value = bufferHeight * MAX_SCREEN_SHARE
+		this.mat.uniforms.uMaxSize.value = bufferHeight * maxScreenShare
 	}
 
 	emit(p: Partial<P> & { x: number; y: number; z: number }) {
 		let q: P
-		if (this.live < MAX) {
-			q = this.list[this.live] ??= { ...DEFAULTS, x: 0, y: 0, z: 0, maxLife: 1 }
+		if (this.live < maxParticles) {
+			q = this.list[this.live] ??= { ...defaults, x: 0, y: 0, z: 0, maxLife: 1 }
 			this.live++
-		} else q = this.list[Math.floor(Math.random() * MAX)]
-		Object.assign(q, DEFAULTS, p)
+		} else q = this.list[Math.floor(Math.random() * maxParticles)]
+		Object.assign(q, defaults, p)
 		q.maxLife = q.life
 	}
 

@@ -17,6 +17,7 @@ export interface GunDef {
 	elevMax: number // rad, elevation
 	howitzer?: boolean // indirect fire (SPG): HE by default, satellite view, high arc
 	derp?: boolean // direct-fire howitzer (KV-2, StuH 42): HE by default, big splash, no indirect view
+	mortar?: boolean // rocket mortar (Sturmtiger): HE only, shock-wave blast, loads only while standing (MORTAR)
 	salvo?: number // rocket launcher: one trigger pull fires this many rockets in a ripple (HE only)
 	salvoInterval?: number // s between rockets of a salvo
 	bloomShot?: number // reticle bloom per shot (default DRIVE.bloomShot); small for autocannons
@@ -95,6 +96,10 @@ export interface GunLook {
 	brake: MuzzleBrake
 	/** Thick recoil sleeve in front of the mantlet, m (howitzers, ML-20S). */
 	sleeve?: number
+	/** Radius of a ball mount, m (default from the barrel radius). */
+	ballR?: number
+	/** A wide open tube (rocket mortar): a straight barrel with a dark bore and a thick muzzle ring. */
+	bore?: boolean
 }
 
 export interface RunningGear {

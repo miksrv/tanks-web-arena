@@ -1,3 +1,4 @@
+import { HUD } from '../config'
 import type { Signal } from '../game/playerController'
 import { $, createEl, setClass, setStyle, show } from './dom'
 
@@ -7,9 +8,7 @@ const OPTIONS: { sig: Signal; angle: number; label: string; key: string }[] = [
 	{ sig: 'defend', angle: Math.PI / 6, label: 'Защищайте базу!', key: 'B' },
 	{ sig: 'help', angle: (Math.PI * 5) / 6, label: 'Нужна помощь!', key: 'G' },
 ]
-const ITEM_R = 105 // px from the centre to an option
-const POINTER_MAX = 120 // px the pointer may stray from the centre
-const DEAD_ZONE = 28 // px: closer to the centre nothing is picked (release = cancel)
+const R = HUD.radial
 
 /**
  * Hold-to-open radial menu of team signals (WoT-style): the mouse moves a pointer from the centre, the option in its
@@ -28,7 +27,7 @@ export class RadialMenu {
 		this.items = OPTIONS.map((o) => {
 			const el = createEl('div', 'opt', root)
 			el.innerHTML = `${o.label}<kbd>${o.key}</kbd>`
-			setStyle(el, 'transform', `translate(${Math.cos(o.angle) * ITEM_R}px, ${Math.sin(o.angle) * ITEM_R}px)`)
+			setStyle(el, 'transform', `translate(${Math.cos(o.angle) * R.itemR}px, ${Math.sin(o.angle) * R.itemR}px)`)
 			return el
 		})
 		this.pointer = createEl('div', 'pointer', root)
@@ -47,12 +46,12 @@ export class RadialMenu {
 		this.x += dx
 		this.y += dy
 		const d = Math.hypot(this.x, this.y)
-		if (d > POINTER_MAX) {
-			this.x *= POINTER_MAX / d
-			this.y *= POINTER_MAX / d
+		if (d > R.pointerMax) {
+			this.x *= R.pointerMax / d
+			this.y *= R.pointerMax / d
 		}
 		this.picked = null
-		if (d >= DEAD_ZONE) {
+		if (d >= R.deadZone) {
 			const a = Math.atan2(this.y, this.x)
 			let best = Infinity
 			for (const o of OPTIONS) {

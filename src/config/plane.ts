@@ -17,6 +17,9 @@ export const PLANE = {
 	edge: 420, // m from the centre: past it the plane turns back over the map
 	spotRadius: 220, // m on the ground around the plane where enemies are spotted for the team
 	cooldown: 6, // s after a crash before the plane can be called in again
+	sightStep: 0.1, // s per step of the bomb sight's fall prediction
+	sightSteps: 300, // steps of that prediction (30 s of fall)
+	propSpin: 60, // rad/s at full throttle
 	camera: { distance: 22, min: 12, max: 60, height: 4 },
 	bomb: {
 		max: 6, // bombs in the bays
@@ -28,4 +31,19 @@ export const PLANE = {
 		splash: 14, // m blast radius
 		life: 30, // s of free fall before the bomb is dropped from the list
 	},
+}
+
+/** The aircraft model, its bomb sight ring and the bombs in the air. */
+export const PLANE_VIEW = {
+	colors: {
+		ussr: '#4d5a34',
+		germany: '#5d6457',
+		belly: '#8fa3ad',
+		glass: '#2c3640',
+		dark: '#2a2724',
+		white: '#e8e8e8',
+		red: '#c62828',
+	},
+	ringSegments: 48, // line segments of the bomb sight ring
+	bombMeshes: 24, // falling bombs drawn at once
 }

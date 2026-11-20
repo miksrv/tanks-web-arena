@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { HUD } from '../config'
 import { Spotting } from '../game/spotting'
 import type { Tank } from '../tank/tank'
 import { $, createEl, ndcToScreen, setStyle, show } from './dom'
@@ -9,9 +10,6 @@ interface LabelEl {
 	bar: HTMLDivElement
 	last: string
 }
-
-const ABOVE_TURRET = 1.2 // m above the turret roof
-const COLORS = { allyName: '#8fd36b', enemyName: '#ff8a80', allyBar: '#8fd36b', enemyBar: '#ff5a5a' }
 
 /** Name and health bar floating over every visible tank except the player's own. */
 export class TankLabels {
@@ -47,7 +45,7 @@ export class TankLabels {
 	/** Screen point over the turret, or null when it is behind the camera or off screen. */
 	private project(t: Tank, camera: THREE.Camera): { x: number; y: number } | null {
 		const p = this.tmp
-			.set(t.pos.x, t.pos.y + t.view.hullTop + t.def.shape.tH + ABOVE_TURRET, t.pos.z)
+			.set(t.pos.x, t.pos.y + t.view.hullTop + t.def.shape.tH + HUD.labels.aboveTurret, t.pos.z)
 			.project(camera)
 		if (p.z > 1 || Math.abs(p.x) > 1.05 || Math.abs(p.y) > 1.05) return null
 		return ndcToScreen(p.x, p.y)
@@ -59,9 +57,9 @@ export class TankLabels {
 		if (el.last !== txt) {
 			el.name.textContent = txt
 			el.last = txt
-			el.name.style.color = ally ? COLORS.allyName : COLORS.enemyName
+			el.name.style.color = ally ? HUD.labels.colors.allyName : HUD.labels.colors.enemyName
 		}
 		setStyle(el.bar, 'width', `${(t.hpFrac * 100).toFixed(0)}%`)
-		setStyle(el.bar, 'background', ally ? COLORS.allyBar : COLORS.enemyBar)
+		setStyle(el.bar, 'background', ally ? HUD.labels.colors.allyBar : HUD.labels.colors.enemyBar)
 	}
 }

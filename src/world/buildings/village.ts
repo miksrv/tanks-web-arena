@@ -1,9 +1,10 @@
 import * as THREE from 'three'
+import { STRUCTURES } from '../../config'
 import type { Settlement } from '../terrain'
 import { C, isWetOrRoad, type BuildContext } from './builder'
 import { brickHouse, chapel, footprintClear, warehouse, waterTower } from './kit'
 
-/** Log house or barn with a gable roof, windows on the long sides and a chimney. */
+/** House or barn with a gable roof, windows on the long sides and a chimney, in the style of the map's country. */
 export function house(ctx: BuildContext, x: number, z: number, rot: number, kind: 'house' | 'barn') {
 	const { t, b, rnd } = ctx
 	const barn = kind === 'barn'
@@ -11,8 +12,9 @@ export function house(ctx: BuildContext, x: number, z: number, rot: number, kind
 	const w = barn ? 7 + rnd() * 3 : 5 + rnd() * 2.5
 	const d = barn ? 10 + rnd() * 4 : 6 + rnd() * 3
 	const h = barn ? 3.2 : 2.8
-	b.box(w, h, d, barn ? C.wallDark : C.log, x, y + h / 2, z, rot)
-	b.prism(w + 0.8, barn ? 2.2 : 2, d + 0.6, barn ? C.roofGrey : C.roof, x, y + h, z, rot)
+	const [wall, roof, barnWall, barnRoof] = STRUCTURES.houseStyle[t.archetype].map((k) => C[k])
+	b.box(w, h, d, barn ? barnWall : wall, x, y + h / 2, z, rot)
+	b.prism(w + 0.8, barn ? 2.2 : 2, d + 0.6, barn ? barnRoof : roof, x, y + h, z, rot)
 	const c = Math.cos(rot)
 	const s = Math.sin(rot)
 	for (const side of [1, -1]) {
@@ -79,10 +81,11 @@ function farm(ctx: BuildContext, s: Settlement) {
 	const { rnd } = ctx
 	const c = Math.cos(rot)
 	const sn = Math.sin(rot)
-	const hrot = rot + (rnd() - 0.5) * 0.2
+	// Positions use the street frame (angle `rot` from +x toward +z); a box turns the other way, hence the minus
+	const hrot = -rot + (rnd() - 0.5) * 0.2
 	if (rnd() < ctx.t.kit.brick) brickHouse(ctx, cx + c * 9, cz + sn * 9, hrot)
 	else house(ctx, cx + c * 9, cz + sn * 9, hrot, 'house')
-	house(ctx, cx - c * 10, cz - sn * 10, rot + Math.PI / 2 + (rnd() - 0.5) * 0.2, 'barn')
+	house(ctx, cx - c * 10, cz - sn * 10, -rot + Math.PI / 2 + (rnd() - 0.5) * 0.2, 'barn')
 	if (s.walls) stoneWall(ctx, cx - sn * 12, cz + c * 12, rot, 18)
 }
 
@@ -95,9 +98,10 @@ export function village(ctx: BuildContext, s: Settlement) {
 	const { t, rnd } = ctx
 	const { kit } = t
 	const { x: cx, z: cz, r, rot } = s
-	if (s.church && kit.chapel) chapel(ctx, cx, cz, rot)
-	else if (s.church) church(ctx, cx, cz, rot, false)
-	else well(ctx, cx, cz, rot)
+	// Boxes turn opposite to the street frame's angle: `-rot` squares a building with the lanes
+	if (s.church && kit.chapel) chapel(ctx, cx, cz, -rot)
+	else if (s.church) church(ctx, cx, cz, -rot, false)
+	else well(ctx, cx, cz, -rot)
 	// Each placed building keeps `room` metres to the next one's (houses 7, a warehouse 11)
 	const placed: { x: number; z: number; room: number }[] = [{ x: cx, z: cz, room: 7 }]
 	const n = 8 + Math.floor(rnd() * 4)
@@ -107,7 +111,7 @@ export function village(ctx: BuildContext, s: Settlement) {
 		const side = (rnd() < 0.5 ? 1 : -1) * (9 + rnd() * 6)
 		const x = cx + Math.cos(lane) * along - Math.sin(lane) * side
 		const z = cz + Math.sin(lane) * along + Math.cos(lane) * side
-		const hrot = lane + (rnd() - 0.5) * 0.3
+		const hrot = -lane + (rnd() - 0.5) * 0.3
 		const barn = rnd() < 0.25
 		const store = barn && kit.warehouse
 		const room = store ? 11 : 7
@@ -149,8 +153,8 @@ function villageTower(ctx: BuildContext, s: Settlement, placed: readonly { x: nu
 		const x = s.x + Math.cos(a) * d
 		const z = s.z + Math.sin(a) * d
 		if (placed.some((p) => Math.hypot(p.x - x, p.z - z) < p.room + 5)) continue
-		if (!footprintClear(t, x, z, 6, 6, a)) continue
-		waterTower(ctx, x, z, a)
+		if (!footprintClear(t, x, z, 6, 6, -a)) continue
+		waterTower(ctx, x, z, -a)
 		return
 	}
 }

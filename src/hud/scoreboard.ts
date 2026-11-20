@@ -1,9 +1,6 @@
-import { NATION_LABEL } from '../config'
+import { HUD, NATION_LABEL, SCOREBOARD_HEADER } from '../config'
 import type { Tank } from '../tank/tank'
 import { $, show } from './dom'
-
-const REFRESH = 0.25 // s
-const HEADER = ['Команда', 'Танкист', 'Машина', 'Урон', 'По засвету', 'Броня', 'Уничтожил', 'Обнаружил']
 
 function rowHtml(t: Tank, player: Tank): string {
 	const cls = `${t === player ? 'me' : ''} ${t.alive ? '' : 'dead'}`
@@ -32,11 +29,11 @@ export class Scoreboard {
 			return
 		}
 		if (this.timer > 0) return
-		this.timer = REFRESH
+		this.timer = HUD.scoreboard.refresh
 		const el = $('scores')
 		show(el, true)
 		const rows = [...tanks].sort((a, b) => a.team - b.team || b.damageDealt - a.damageDealt)
-		const head = `<tr>${HEADER.map((h) => `<th>${h}</th>`).join('')}</tr>`
+		const head = `<tr>${SCOREBOARD_HEADER.map((h) => `<th>${h}</th>`).join('')}</tr>`
 		el.innerHTML = `<table>${head}${rows.map((t) => rowHtml(t, player)).join('')}</table>`
 	}
 }

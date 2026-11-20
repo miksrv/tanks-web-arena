@@ -44,6 +44,8 @@
 				--bad: #ff5a5a;
 				--red: #e04b3f;
 				--blue: #5aa0e0;
+				--on-accent: #16190f;
+				--radius: 3px;
 			}
 			html,
 			body {
@@ -56,6 +58,76 @@
 			}
 			canvas {
 				display: block;
+			}
+			/* loading screen: covers the bare HUD until the first frame is drawn */
+			#loader {
+				position: fixed;
+				inset: 0;
+				z-index: 100;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				gap: 14px;
+				background: radial-gradient(ellipse at center, #1a211c 0%, #0e1210 70%);
+				color: var(--ink);
+				text-align: center;
+				user-select: none;
+				transition: opacity 0.4s ease;
+			}
+			#loader.done {
+				opacity: 0;
+				pointer-events: none;
+			}
+			#loader h1 {
+				margin: 0;
+				font-size: 44px;
+				letter-spacing: 0.12em;
+				text-transform: uppercase;
+				color: var(--khaki);
+				text-shadow: 0 2px 2px #000;
+			}
+			#loader .sub {
+				font-size: 13px;
+				letter-spacing: 0.1em;
+				text-transform: uppercase;
+				color: var(--dim);
+			}
+			#loader .bar {
+				position: relative;
+				width: 260px;
+				height: 4px;
+				margin-top: 18px;
+				overflow: hidden;
+				background: rgba(236, 230, 210, 0.1);
+			}
+			#loader .bar::after {
+				content: '';
+				position: absolute;
+				top: 0;
+				bottom: 0;
+				width: 40%;
+				background: var(--khaki);
+				animation: loader-slide 1.2s ease-in-out infinite;
+			}
+			@keyframes loader-slide {
+				from {
+					left: -40%;
+				}
+				to {
+					left: 100%;
+				}
+			}
+			#loader .msg {
+				font-size: 12px;
+				letter-spacing: 0.08em;
+				color: var(--dim);
+			}
+			#loader.failed .bar {
+				display: none;
+			}
+			#loader.failed .msg {
+				color: var(--bad);
 			}
 			#hud {
 				position: fixed;
@@ -73,7 +145,7 @@
 				padding: 8px 12px;
 				font-size: 13px;
 				line-height: 1.45;
-				clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+				border-radius: var(--radius);
 			}
 			.cap {
 				font-size: 11px;
@@ -192,23 +264,22 @@
 				background: var(--ok);
 				transition: width 0.1s;
 			}
+			/* only broken modules and wounded crew are listed */
 			#modules span,
 			#crew span {
-				display: inline-block;
+				display: none;
 				margin-right: 10px;
 				font-size: 11px;
 				letter-spacing: 0.06em;
 				text-transform: uppercase;
-				color: var(--dim);
+				color: var(--warn);
 			}
+			#modules,
 			#crew {
-				margin: -2px 0 5px;
+				display: none;
+				margin-bottom: 5px;
 			}
 			#crew span {
-				margin-right: 8px;
-				font-size: 10px;
-			}
-			#crew span.bad {
 				color: var(--bad);
 			}
 			#modules span::before {
@@ -217,14 +288,8 @@
 				width: 7px;
 				height: 7px;
 				margin-right: 5px;
-				background: #4a4a46;
-				vertical-align: 1px;
-			}
-			#modules span.bad {
-				color: var(--warn);
-			}
-			#modules span.bad::before {
 				background: var(--warn);
+				vertical-align: 1px;
 			}
 			#consum span {
 				display: inline-block;
@@ -241,6 +306,7 @@
 				color: var(--khaki);
 			}
 			#speedText {
+				opacity: 0.75;
 				font-size: 11px;
 				letter-spacing: 0.06em;
 				text-transform: uppercase;
@@ -295,13 +361,13 @@
 				font-size: 11px;
 			}
 			#radial .opt.on {
-				color: #16190f;
+				color: var(--on-accent);
 				background: var(--khaki);
 				border-color: var(--khaki);
 				font-weight: bold;
 			}
 			#radial .opt.on kbd {
-				color: #16190f;
+				color: var(--on-accent);
 			}
 			#radial .pointer {
 				position: absolute;
@@ -328,7 +394,7 @@
 				color: var(--dim);
 			}
 			.chip.on {
-				color: #16190f;
+				color: var(--on-accent);
 				background: var(--khaki);
 				border-color: var(--khaki);
 				font-weight: bold;
@@ -338,7 +404,7 @@
 				border-color: var(--bad);
 			}
 			.chip.on.empty {
-				color: #16190f;
+				color: var(--on-accent);
 				background: var(--bad);
 			}
 			#resupply {
@@ -363,7 +429,11 @@
 				bottom: 58px;
 				transform: translateX(-50%);
 				display: flex;
+				flex-wrap: wrap-reverse;
+				justify-content: center;
 				gap: 4px;
+				width: max-content;
+				max-width: 40vw;
 				white-space: nowrap;
 			}
 			.ribbon {
@@ -374,6 +444,10 @@
 				background: var(--panel);
 				border-left: 2px solid var(--khaki);
 				clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+			}
+			.ribbon.out {
+				opacity: 0;
+				transition: opacity 0.5s;
 			}
 			.ribbon b {
 				margin-right: 4px;
@@ -417,6 +491,9 @@
 			}
 			#ring.ready .arc {
 				stroke: var(--ok);
+			}
+			#ring.stalled .arc {
+				stroke: var(--bad);
 			}
 			#cross {
 				position: absolute;
@@ -678,6 +755,17 @@
 				padding: 10px 28px;
 				border-top: 2px solid var(--khaki);
 			}
+			/* after a few seconds the message shrinks to one line low on the screen */
+			#center.slim {
+				top: auto;
+				bottom: 150px;
+				transform: translateX(-50%);
+				padding: 4px 16px 6px;
+				border-top: 0;
+			}
+			#center.slim small {
+				margin-top: 0;
+			}
 			#center small {
 				display: block;
 				font-size: 13px;
@@ -764,7 +852,8 @@
 				border: 1px solid var(--line);
 				font-size: 12px;
 			}
-			#report summary {
+			#report summary,
+			#garage .controls summary {
 				cursor: pointer;
 				letter-spacing: 0.06em;
 				text-transform: uppercase;
@@ -933,7 +1022,7 @@
 				background: rgba(255, 255, 255, 0.08);
 			}
 			#garage .opt.on {
-				color: #16190f;
+				color: var(--on-accent);
 				background: var(--khaki);
 				border-color: var(--khaki);
 				font-weight: bold;
@@ -1053,7 +1142,7 @@
 				letter-spacing: 0.16em;
 				text-transform: uppercase;
 				background: var(--khaki);
-				color: #16190f;
+				color: var(--on-accent);
 				border: 0;
 				cursor: pointer;
 				font-weight: bold;
@@ -1166,8 +1255,7 @@
 				position: fixed;
 				inset: 0;
 				display: none;
-				border: 60px solid rgba(0, 0, 0, 0.55);
-				box-sizing: border-box;
+				background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.6) 100%);
 			}
 			.popup {
 				position: absolute;
@@ -1202,9 +1290,30 @@
 				font-family: inherit;
 				font-weight: bold;
 			}
+			button:focus-visible,
+			summary:focus-visible {
+				outline: 2px solid var(--khaki);
+				outline-offset: 2px;
+			}
+			@media (prefers-reduced-motion: reduce) {
+				*,
+				*::before,
+				*::after {
+					animation-duration: 0.01ms !important;
+					animation-iteration-count: 1 !important;
+					transition-duration: 0.01ms !important;
+					scroll-behavior: auto !important;
+				}
+			}
 		</style>
 	</head>
 	<body>
+		<div id="loader">
+			<h1>Стальной фронт</h1>
+			<div class="sub">командный бой 7 × 7 · СССР против Германии · 1943</div>
+			<div class="bar"></div>
+			<div class="msg" id="loaderMsg">Загрузка…</div>
+		</div>
 		<div id="hud">
 			<div id="hit"></div>
 			<div id="vignette"></div>
@@ -1235,8 +1344,7 @@
 				<div class="bar"><div id="hpBar"></div></div>
 				<div id="modules">
 					<span id="mTrack">гусеница</span><span id="mEngine">двигатель</span><span id="mFire">пожар</span
-					><span id="mGun">орудие</span><span id="mRing">погон</span><span id="mRack">боеукладка</span
-					><span id="mSpot">вас видят</span>
+					><span id="mGun">орудие</span><span id="mRing">погон</span><span id="mRack">боеукладка</span>
 				</div>
 				<div id="crew">
 					<span data-crew="commander">командир</span><span data-crew="gunner">наводчик</span
@@ -1246,7 +1354,7 @@
 					<span id="cRepair"><kbd>R</kbd> ремкомплект</span><span id="cMed"><kbd>E</kbd> аптечка</span
 					><span id="cExt"><kbd>F</kbd> огнетушитель</span>
 				</div>
-				<div id="speedText" style="opacity: 0.75"></div>
+				<div id="speedText"></div>
 			</div>
 			<div id="ribbons"></div>
 			<div id="ammoRow" class="panel">
@@ -1316,7 +1424,10 @@
 						<summary>Разбор последнего боя</summary>
 						<div id="reportBody"></div>
 					</details>
-					<div class="controls" id="garageHelp"></div>
+					<details class="controls" id="garageControls" open>
+						<summary>Управление</summary>
+						<div id="garageHelp"></div>
+					</details>
 				</div>
 			</div>
 		</div>

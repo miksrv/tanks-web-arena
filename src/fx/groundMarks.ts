@@ -1,7 +1,7 @@
 import * as THREE from 'three'
+import { GROUND_MARKS } from '../config'
 
-const MAX_RINGS = 32
-const RING_LIFE = 0.9 // s
+const { maxRings, ringLife } = GROUND_MARKS
 
 interface Ring {
 	x: number
@@ -27,7 +27,7 @@ export class GroundMarks {
 			depthTest: false,
 			depthWrite: false,
 		})
-		this.rings = new THREE.InstancedMesh(rg, ringMat, MAX_RINGS)
+		this.rings = new THREE.InstancedMesh(rg, ringMat, maxRings)
 		this.rings.count = 0
 		this.rings.frustumCulled = false
 		this.rings.renderOrder = 19
@@ -35,8 +35,8 @@ export class GroundMarks {
 
 	/** Expanding ring on the ground at (x,y,z) reaching radius r. */
 	splashRing(x: number, y: number, z: number, r: number) {
-		if (this.ringList.length >= MAX_RINGS) this.ringList.shift()
-		this.ringList.push({ x, y: y + 0.3, z, r, life: RING_LIFE })
+		if (this.ringList.length >= maxRings) this.ringList.shift()
+		this.ringList.push({ x, y: y + 0.3, z, r, life: ringLife })
 	}
 
 	update(dt: number) {
@@ -46,7 +46,7 @@ export class GroundMarks {
 		this.ringList = this.ringList.filter((q) => q.life > 0)
 		for (let i = 0; i < this.ringList.length; i++) {
 			const q = this.ringList[i]
-			const k = 1 - q.life / RING_LIFE
+			const k = 1 - q.life / ringLife
 			const s = q.r * Math.min(1, k * 2.2 + 0.15)
 			this.tmp.makeScale(s, 1, s).setPosition(q.x, q.y, q.z)
 			this.rings.setMatrixAt(i, this.tmp)

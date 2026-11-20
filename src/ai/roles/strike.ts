@@ -1,22 +1,14 @@
+import { BOT_AI } from '../../config'
 import type { WorldRefs } from '../../tank/tank'
 import type { LanePoint } from '../../world/terrain'
 import { vantage } from '../positions'
 import { CENTRE_INDEX, leaveBase, pickLane, watchPoint } from '../routes'
 import { driveToSpot, faceToward, friendSpots } from '../steering'
 import type { DriveCommand, Pt } from '../types'
-import { IdleClock, LATE_IDLE, SEEK_IDLE, joinFight } from './common'
+import { IdleClock, joinFight } from './common'
 import type { Bot, Frame, RoleAi, RoundPlan } from './types'
 
-/** Contact closer than this (m) while moving up turns into a fight. */
-const CONTACT_RANGE = 180
-/** Nobody waits for the group while still leaving the base. */
-const REGROUP_MIN_PROGRESS = 80
-/** Resume once this far back inside the allowed lead (no stop-go at the limit). */
-const REGROUP_HYSTERESIS = 12
-const REGROUP_MAX = 25 // s waiting for the group before going on anyway
-const REGROUP_COOLDOWN = 15
-/** s a strike group holds the centre with nobody in reach before pushing on along its lane. */
-const CENTRE_IDLE = 12
+const cfg = BOT_AI.roles.strike
 
 const rand = (k: number) => (Math.random() - 0.5) * k
 
@@ -79,7 +71,7 @@ export abstract class StrikeAi implements RoleAi {
 	think(bot: Bot, f: Frame) {
 		this.regroupCooldown -= f.dt
 		this.survive(bot, f)
-		joinFight(bot, CONTACT_RANGE)
+		joinFight(bot, cfg.contactRange)
 		// Holding the centre is a fight for it, not sitting under fire (a base circle is held from inside it; a tank
 		// that fell back hurt shoots from its cover instead of driving out again)
 		if (bot.mode === 'hold' && bot.target && !bot.onObjective && !bot.fellBack) bot.mode = 'engage'
@@ -93,7 +85,7 @@ export abstract class StrikeAi implements RoleAi {
 		if (bot.hunting || bot.onObjective) return -Infinity
 		const me = bot.tank
 		const p = bot.tactics.progress(w, me.pos.x, me.pos.z)
-		if (p < REGROUP_MIN_PROGRESS) return -Infinity
+		if (p < cfg.regroupMinProgress) return -Infinity
 		const max = this.limit(bot, w, engaged)
 		return max === null ? -Infinity : p - max
 	}
@@ -122,10 +114,10 @@ export abstract class StrikeAi implements RoleAi {
 		}
 		if (bot.mode !== 'regroup') return
 		this.regroupTimer += f.dt
-		if (this.aheadBy(bot, w, false) < -REGROUP_HYSTERESIS || this.regroupTimer > REGROUP_MAX || bot.hunting) {
+		if (this.aheadBy(bot, w, false) < -cfg.regroupHysteresis || this.regroupTimer > cfg.regroupMax || bot.hunting) {
 			bot.mode = 'advance'
 			this.regroupSpot = null
-			this.regroupCooldown = REGROUP_COOLDOWN
+			this.regroupCooldown = cfg.regroupCooldown
 		}
 	}
 
@@ -133,9 +125,9 @@ export abstract class StrikeAi implements RoleAi {
 	private moveOnWhenQuiet(bot: Bot, f: Frame) {
 		const idle = this.idle.tick(bot, f.dt)
 		if (bot.defending || bot.capturing || (this.defence && !bot.tactics.late)) return
-		const patience = bot.tactics.late ? LATE_IDLE : 1
+		const patience = bot.tactics.late ? BOT_AI.roles.common.lateIdle : 1
 		if (this.push) {
-			if (idle <= CENTRE_IDLE * patience) return
+			if (idle <= cfg.centreIdle * patience) return
 			// The assault's attack goes in as one wave, once the battle turns late, not tank by tank into the guns
 			if (this.attack && !bot.tactics.late) return
 			// Past the middle, a base to take beats driving on: the neutral one, or the defence's in an assault
@@ -145,7 +137,7 @@ export abstract class StrikeAi implements RoleAi {
 			}
 			this.push = null
 			this.idle.reset()
-		} else if (idle > SEEK_IDLE * patience) {
+		} else if (idle > BOT_AI.roles.common.seekIdle * patience) {
 			bot.seek(f.w, f.time)
 			this.idle.reset()
 		}

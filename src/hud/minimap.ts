@@ -1,4 +1,4 @@
-import { CAPTURE, WORLD_HALF } from '../config'
+import { CAPTURE, HUD, WORLD_HALF } from '../config'
 import type { CaptureZone } from '../game/capture'
 import { Spotting } from '../game/spotting'
 import type { Tank } from '../tank/tank'
@@ -6,11 +6,8 @@ import { PALETTE, type Biome, type Terrain } from '../world/terrain'
 
 type Rgb = [number, number, number]
 
-/** Minimap size in canvas pixels. */
-export const MINIMAP_SIZE = 220
-const REDRAW_INTERVAL = 1 / 20 // s: nothing on the map moves faster than that
-const PING_LIFE = 3 // s
-const SCALE = MINIMAP_SIZE / (WORLD_HALF * 2)
+const SIZE = HUD.minimap.size // canvas pixels
+const SCALE = SIZE / (WORLD_HALF * 2)
 const mx = (x: number) => (x + WORLD_HALF) * SCALE
 const mz = (z: number) => (z + WORLD_HALF) * SCALE
 
@@ -78,19 +75,19 @@ function context2d(c: HTMLCanvasElement): CanvasRenderingContext2D {
 /** Paint the minimap backdrop for a terrain (≈ 50k samples); install it with `Minimap.setBackdrop`. */
 export function bakeMinimap(terrain: Terrain): HTMLCanvasElement {
 	const c = document.createElement('canvas')
-	c.width = c.height = MINIMAP_SIZE
+	c.width = c.height = SIZE
 	const ctx = context2d(c)
-	const img = ctx.createImageData(MINIMAP_SIZE, MINIMAP_SIZE)
+	const img = ctx.createImageData(SIZE, SIZE)
 	const d = img.data
 	const col = biomeColors(terrain)
-	for (let j = 0; j < MINIMAP_SIZE; j++) {
-		for (let i = 0; i < MINIMAP_SIZE; i++) {
-			const x = -WORLD_HALF + (i / MINIMAP_SIZE) * WORLD_HALF * 2
-			const z = -WORLD_HALF + (j / MINIMAP_SIZE) * WORLD_HALF * 2
+	for (let j = 0; j < SIZE; j++) {
+		for (let i = 0; i < SIZE; i++) {
+			const x = -WORLD_HALF + (i / SIZE) * WORLD_HALF * 2
+			const z = -WORLD_HALF + (j / SIZE) * WORLD_HALF * 2
 			const b = terrain.biome(x, z)
 			const shade = shadeOf(b, terrain.height(x, z))
 			const [r, g, bb] = col[b]
-			const k = (j * MINIMAP_SIZE + i) * 4
+			const k = (j * SIZE + i) * 4
 			d[k] = r * shade
 			d[k + 1] = g * shade
 			d[k + 2] = bb * shade
@@ -111,7 +108,7 @@ export class Minimap {
 	private pings: { x: number; z: number; color: string; life: number }[] = []
 
 	constructor(canvas: HTMLCanvasElement) {
-		canvas.width = canvas.height = MINIMAP_SIZE
+		canvas.width = canvas.height = SIZE
 		this.ctx = context2d(canvas)
 	}
 
@@ -121,7 +118,7 @@ export class Minimap {
 	}
 
 	ping(x: number, z: number, color: string) {
-		this.pings.push({ x, z, color, life: PING_LIFE })
+		this.pings.push({ x, z, color, life: HUD.minimap.pingLife })
 		this.timer = 0
 	}
 
@@ -130,7 +127,7 @@ export class Minimap {
 		this.pings = this.pings.filter((p) => p.life > 0)
 		this.timer -= dt
 		if (this.timer > 0) return
-		this.timer = REDRAW_INTERVAL
+		this.timer = HUD.minimap.redrawInterval
 		this.draw(player, tanks, zones, cameraYaw, time)
 	}
 
@@ -148,7 +145,7 @@ export class Minimap {
 
 	private drawPing(p: { x: number; z: number; color: string; life: number }) {
 		const ctx = this.ctx
-		const k = 1 - p.life / PING_LIFE
+		const k = 1 - p.life / HUD.minimap.pingLife
 		ctx.globalAlpha = Math.min(1, p.life)
 		ctx.strokeStyle = p.color
 		ctx.lineWidth = 2

@@ -1,3 +1,4 @@
+import { HUD } from '../config'
 import type { Tank } from '../tank/tank'
 import { $, createEl, setText } from './dom'
 
@@ -21,19 +22,20 @@ const RIBBONS: RibbonDef[] = [
 	{ label: 'Захват', count: (t) => (t.stats.capture > 0 ? 1 : 0) },
 	{ label: 'Защита базы', count: (t) => (t.stats.defense > 0 ? 1 : 0) },
 ]
-const PULSE = 0.6 // s a ribbon stays highlighted after it counts up
 
-/** Ribbons above the ammo row: each appears with its first event and counts up for the rest of the battle. */
+/** Ribbons above the ammo row: each appears with an event, keeps its running count and leaves after `HUD.ribbons.life`. */
 export class Ribbons {
 	private readonly els: (HTMLElement | null)[] = RIBBONS.map(() => null)
 	private readonly last = RIBBONS.map(() => 0)
 	private readonly pulse = RIBBONS.map(() => 0)
+	private readonly life = RIBBONS.map(() => 0)
 
 	reset() {
 		$('ribbons').innerHTML = ''
 		this.els.fill(null)
 		this.last.fill(0)
 		this.pulse.fill(0)
+		this.life.fill(0)
 	}
 
 	update(dt: number, player: Tank) {
@@ -47,6 +49,13 @@ export class Ribbons {
 				this.pulse[i] -= dt
 				if (this.pulse[i] <= 0) this.els[i]?.classList.remove('new')
 			}
+			const el = this.els[i]
+			if (!el) return
+			this.life[i] -= dt
+			if (this.life[i] <= 0) {
+				el.remove()
+				this.els[i] = null
+			} else if (this.life[i] <= HUD.ribbons.fade) el.classList.add('out')
 		})
 	}
 
@@ -61,9 +70,10 @@ export class Ribbons {
 			this.els[i] = el
 		}
 		setText(el.firstElementChild as HTMLElement, n > 1 ? `×${n}` : '')
-		el.classList.remove('new')
+		el.classList.remove('new', 'out')
 		void el.offsetWidth // restart the pulse animation
 		el.classList.add('new')
-		this.pulse[i] = PULSE
+		this.pulse[i] = HUD.ribbons.pulse
+		this.life[i] = HUD.ribbons.life
 	}
 }

@@ -2,14 +2,10 @@ import { BOTS } from '../../config'
 import { planRetreat } from '../routes'
 import type { Bot, Frame } from './types'
 
-/** s at the end of the route with nobody in reach before going to look for the enemy. */
-export const SEEK_IDLE = 10
-/** Late in the battle (enemy thinned out, or two minutes gone) the idle waits shrink to this share. */
-export const LATE_IDLE = 0.35
-
 /**
  * Low health: fall back toward our base, behind cover on the way; stop once out of danger (not while hunting, nor
- * from a base circle it is taking or defending: the capture is worth more than the tank). It falls back once and
+ * from a base circle it is taking or defending: the capture is worth more than the tank). It drives the whole route
+ * to its cover (stopping halfway left it parked in the open with a route it never finished), falls back once and
  * holds the spot it reached; only another hit sends it further back.
  */
 export function fallBackWhenHurt(bot: Bot, f: Frame) {
@@ -21,7 +17,7 @@ export function fallBackWhenHurt(bot: Bot, f: Frame) {
 		bot.mode = 'retreat'
 		bot.fellBack = true
 	}
-	if (bot.mode === 'retreat' && (bot.pathDone || (f.enemyNear > 180 && me.hpFrac > 0.15))) bot.mode = 'hold'
+	if (bot.mode === 'retreat' && bot.pathDone) bot.mode = 'hold'
 }
 
 /**

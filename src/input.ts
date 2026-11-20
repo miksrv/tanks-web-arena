@@ -20,10 +20,12 @@ export class Input {
 	/** Set by the HUD while an overlay (garage, result) wants plain mouse input. */
 	overlay = false
 
-	constructor(el: HTMLElement) {
+	constructor(private readonly el: HTMLElement) {
 		window.addEventListener('keydown', (e) => {
 			if (!this.keys.has(e.code)) this.pressed.add(e.code)
 			this.keys.add(e.code)
+			// In battle these would scroll the page or move focus; in the garage Tab and Space still work the buttons
+			if (this.overlay && (e.code === 'Tab' || e.code === 'Space')) return
 			if (['Space', 'Tab', 'ShiftLeft', 'ShiftRight'].includes(e.code) || e.code.startsWith('Arrow'))
 				e.preventDefault()
 		})
@@ -36,12 +38,7 @@ export class Input {
 		el.addEventListener('mousedown', (e) => {
 			if (this.overlay) return
 			if (!this.locked) {
-				try {
-					const r = el.requestPointerLock() as unknown as Promise<void> | undefined
-					r?.catch?.(() => undefined)
-				} catch {
-					/* headless or unsupported */
-				}
+				this.lock()
 				return
 			}
 			if (e.button === 0) {
@@ -75,6 +72,15 @@ export class Input {
 	}
 	justPressed(code: string) {
 		return this.pressed.has(code)
+	}
+	/** Ask for the pointer lock (needs a user gesture; a refusal is not an error). */
+	lock() {
+		try {
+			const r = this.el.requestPointerLock() as unknown as Promise<void> | undefined
+			r?.catch?.(() => undefined)
+		} catch {
+			/* headless or unsupported */
+		}
 	}
 	unlock() {
 		if (this.locked) document.exitPointerLock()

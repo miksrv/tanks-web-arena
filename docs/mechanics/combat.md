@@ -59,7 +59,7 @@ The hitboxes stayed the same (hull and turret) plus a small commander's cupola b
 ## Ammunition (`AMMO_LOAD`, `src/tank/ammo.ts`)
 
 - Shells are finite. The whole load is enough for 240 s of continuous fire (`240 / reload`, from 8 to 250 rounds, or `gun.rounds`): T-34-85 43, Tiger 33, IS-2 21, KV-2 12, autocannons 250.
-- Layout: APCR 20 % (no more than 12), the second running shell 25 % (HE on guns, AP on howitzers), the rest is the standard one. Howitzers and "derp guns" have no APCR; rocket artillery carries only HE salvoes.
+- Layout: APCR 20 % (no more than 12), the second running shell 25 % (HE on guns, AP on howitzers), the rest is the standard one. Howitzers and "derp guns" have no APCR; rocket artillery and the rocket mortar carry only HE (the Sturmtiger 10 rounds).
 - When the selected shell runs out, the gun switches to the standard one, and if there is none — to the one with the most rounds. Completely empty — the gun is silent.
 - Resupply: standing still (up to 2 m/s) within 35 m of the centre of own base, every 0.5 s adds 5 % of the full stock of each type (from zero to full takes about 10 s). The shell panel shows counters, an empty type is red, plus the line «боекомплект на исходе» (ammunition running low) (below 15 %).
 - Used consumables are returned there too: repair kit, first aid kit and fire extinguisher — all together after 5 s on the base (`kitTime`). The panel line is «пополнение: снаряды и расходники» (resupply: shells and consumables), on completion the log says «Пополнение завершено» (Resupply complete).
@@ -70,7 +70,7 @@ The hitboxes stayed the same (hull and turret) plus a small commander's cupola b
 - A penetration wounds, with a 30 % chance, one crew member from the compartment behind the penetrated plate: turret — commander, gunner, loader; hull front — driver; hull side — driver or loader; roof — anyone; rear (engine) and running gear — nobody. HE fragments through the roof — 12 % × proximity to the burst (×2.5 on open casemates).
 - A wounded member (until a first aid kit) degrades the vehicle: commander — view range ×0.85, gunner — dispersion and aim time ×1.25, driver — speed, acceleration and hull rotation ×0.85, loader — reload ×1.25.
 - First aid kit (E), 1 pc., heals everyone. Bots use it on their own after 3–8 s × (1.3 − skill).
-- The status shows a crew line (wounded in red); crit counts are kept for ribbons: wound, ammo rack, gun.
+- The status lists only what is damaged: broken modules and wounded crew members (a healthy vehicle shows neither line); crit counts are kept for ribbons: wound, ammo rack, gun.
 
 - Ramming: closing speed > 3 m/s → damage `1.4 · speed · mass ratio` (mass = hit points), doubled for the rammed vehicle. The rammer is the one that brought more of the closing speed; it gets the ram ribbon. A pair is resolved once per frame, both vehicles lose speed.
 - Rocket artillery (`gun.salvo`): a shot launches a salvo, the remaining rockets leave on their own at `salvoInterval` intervals (`Tank.salvoTick`, polled by the game loop), each along the current position of the rails with its own dispersion; the reload counts from the first rocket. HE only, an attempt to switch the shell is rejected.
@@ -83,7 +83,7 @@ The hitboxes stayed the same (hull and turret) plus a small commander's cupola b
 Code: `src/fx/artyView.ts`, `src/fx/groundMarks.ts` (`splashRing`), `src/game/combatFeedback.ts` (the «Мимо» (Miss) marker)
 
 - A "satellite" camera looks at the aim point from above; the on-screen reticle circle is hidden, instead a dispersion ellipse is drawn on the ground: radius = `reticle · range / 100`, stretched along the line of fire by `1 / sin(angle of fall)`. Colour: white, by the penetration chance over a target (green / orange / red), red when out of range.
-- Howitzer ballistics are gamey (`HOWITZER` in `ballistics.ts`): flight time = 2 s + range / 150 (300 m → 4 s, 900 m → 8 s), "gravity" 40 m/s², velocity and angle are computed for that time (angle 47–55°, apex 80–320 m, over any hills). Range 1150 m — the whole map. Bots and the player use the same law.
+- Howitzer ballistics are gamey (`HOWITZER` in `src/config/combat.ts`): flight time = 2 s + range / 150 (300 m → 4 s, 900 m → 8 s), "gravity" 40 m/s², velocity and angle are computed for that time (angle 47–55°, apex 80–320 m, over any hills). Range 1150 m — the whole map. Bots and the player use the same law.
 - The trajectory from the muzzle to the aim point is shown as an arc; `aimInfo` shows the flight time or «ВНЕ ДОСЯГАЕМОСТИ» (OUT OF RANGE).
 - Camera: height 90–520 m (wheel), 260 by default; the mouse moves the aim point 1:1 over the ground (screen "right" = (−cos yaw, sin yaw)); fog in this mode is pushed back (900–2400 m). Enter: Shift or wheel forward from the closest arcade distance; exit: Shift or wheel back from the maximum height.
 - Own shells in flight are marked with a marker of constant screen size. Any HE shell with splash > 3 m draws an expanding ring of the splash radius on the ground (0.9 s).

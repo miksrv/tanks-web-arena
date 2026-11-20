@@ -1,5 +1,8 @@
 import * as THREE from 'three'
+import { HUD } from '../config'
 import { $, createEl, ndcToScreen, setStyle } from './dom'
+
+const N = HUD.notifications
 
 interface Timed {
 	el: HTMLDivElement
@@ -8,15 +11,6 @@ interface Timed {
 interface Popup extends Timed {
 	pos: THREE.Vector3
 }
-
-const FEED_LIFE = 8
-const FEED_MAX = 6
-const LOG_LIFE = 2.6
-const LOG_MAX = 4
-const ARROW_LIFE = 2
-const ARROW_FADE = 0.8
-const POPUP_LIFE = 1.6
-const POPUP_RISE = 2.5 // m/s
 
 /** A list of DOM lines that fade out over their last second and drop off the top when there are too many. */
 class FadingList {
@@ -50,9 +44,9 @@ class FadingList {
 
 /** Kill feed, battle log, floating damage numbers and hit-direction arrows. */
 export class Notifications {
-	private readonly feed = new FadingList('feed', 'feed', FEED_LIFE, FEED_MAX)
-	private readonly logs = new FadingList('log', 'log', LOG_LIFE, LOG_MAX)
-	private readonly arrows = new FadingList('hitdir', 'arrow', ARROW_LIFE, Infinity)
+	private readonly feed = new FadingList('feed', 'feed', N.feedLife, N.feedMax)
+	private readonly logs = new FadingList('log', 'log', N.logLife, N.logMax)
+	private readonly arrows = new FadingList('hitdir', 'arrow', N.arrowLife, Infinity)
 	private popups: Popup[] = []
 	private readonly tmp = new THREE.Vector3()
 
@@ -80,14 +74,14 @@ export class Notifications {
 		const el = createEl('div', 'popup', $('labels'))
 		el.textContent = text
 		el.style.color = color
-		this.popups.push({ el, pos: pos.clone(), life: POPUP_LIFE })
+		this.popups.push({ el, pos: pos.clone(), life: N.popupLife })
 	}
 
 	update(dt: number, camera: THREE.Camera) {
 		this.updatePopups(dt, camera)
 		this.feed.update(dt)
 		this.logs.update(dt)
-		this.arrows.update(dt, ARROW_FADE)
+		this.arrows.update(dt, N.arrowFade)
 	}
 
 	private updatePopups(dt: number, camera: THREE.Camera) {
@@ -99,7 +93,7 @@ export class Notifications {
 				this.popups.splice(i, 1)
 				continue
 			}
-			pp.pos.y += dt * POPUP_RISE
+			pp.pos.y += dt * N.popupRise
 			const p = this.tmp.copy(pp.pos).project(camera)
 			if (p.z > 1) {
 				pp.el.style.display = 'none'

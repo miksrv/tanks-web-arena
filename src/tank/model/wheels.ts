@@ -1,3 +1,4 @@
+import { TANK_VIEW } from '../../config'
 import type { HullDims } from './builder'
 
 export interface Wheel {
@@ -37,7 +38,7 @@ export interface WheelLayout {
 	rollers: TrackEnd[]
 }
 
-const OUTSET = 0.03 // wheels stand proud of the track side so their faces show
+const { wheelOutset } = TANK_VIEW
 
 /** Road wheels, sprocket, idler and return rollers from the vehicle's running gear description. */
 export function wheelLayout(d: HullDims): WheelLayout {
@@ -64,13 +65,13 @@ export function wheelLayout(d: HullDims): WheelLayout {
 	const zRear = -L * 0.48
 	const zFront = half ? -L * 0.04 : L * 0.48
 	// Steered front wheels: outer face flush with the road wheels behind.
-	if (half) both((g.frontAxle ?? 0.33) * L, g.wheelR * 1.5, g.wheelR * 1.5, 0.3, d.trackW / 2 + OUTSET - 0.15)
+	if (half) both((g.frontAxle ?? 0.33) * L, g.wheelR * 1.5, g.wheelR * 1.5, 0.3, d.trackW / 2 + wheelOutset - 0.15)
 
 	const span = (g.span ?? 0.8) * (half ? 0.5 : 1) * L
 	const mid = (g.shift ?? 0) * L + (half ? (zRear + zFront) / 2 : 0)
 	const n = g.wheels
 	const r = g.wheelR
-	const tyreW = d.trackW + 2 * OUTSET
+	const tyreW = d.trackW + 2 * wheelOutset
 	const zs: number[] = []
 	if (g.layout === 'paired') {
 		const pairs = n / 2

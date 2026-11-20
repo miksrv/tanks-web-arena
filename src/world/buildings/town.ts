@@ -54,7 +54,7 @@ export function town(ctx: BuildContext, cx: number, cz: number, r: number, rot: 
 	let [chx, chz] = at((t.hasRiver ? w + 36 : 20) * side, 18)
 	// A railway through the middle of the town: the church moves along the main street, off the track
 	for (let k = 1; k < 4 && nearRailway(t, chx, chz, 18); k++) [chx, chz] = at((20 + k * 14) * side, 18)
-	church(ctx, chx, chz, rot + 0.2, true)
+	church(ctx, chx, chz, -rot + 0.2, true)
 	for (let ga = -3; ga <= 3; ga++) {
 		for (let gs = -3; gs <= 3; gs++) {
 			if (gs === 0) continue // the main street

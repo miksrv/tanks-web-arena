@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { TREES, type TreeLook } from '../../config'
 import type { Season, TreeSpecies } from '../terrain'
 
 /** One geometry from several parts, positions only (normals recomputed). */
@@ -14,99 +15,80 @@ export function mergePositions(parts: THREE.BufferGeometry[]): THREE.BufferGeome
 const ellipsoid = (r: number, seg: number, sy: number, y: number) =>
 	new THREE.SphereGeometry(r, seg, seg - 1).scale(1, sy, 1).translate(0, y, 0)
 
-interface SpeciesDef {
-	conifer: boolean
-	/** Scale of the shared 5 m trunk: [girth, height]. */
-	trunk: readonly [number, number]
-	bark: string
-	/** Summer crown colour (conifers: also autumn). */
-	leaf: string
-	/** Autumn leaves: hue range and lightness of the HSL colour. */
-	autumn: readonly [h0: number, h1: number, l: number]
-	/** Winter: the snow-dusted needles or the bare branches. */
-	winter: string
+interface SpeciesDef extends TreeLook {
 	crown(): THREE.BufferGeometry
 	/** Winter crown of a leafy species: smaller, branches only (conifers keep their needles). */
 	bare?: () => THREE.BufferGeometry
 }
 
-/** Tree species: the trunk is shared (scaled and tinted per instance), each species has its own crown mesh. */
+/**
+ * Tree species: the trunk is shared (scaled and tinted per instance), each species has its own crown mesh. Trunk
+ * proportions and colours come from the config (TREES).
+ */
 export const SPECIES: Record<TreeSpecies, SpeciesDef> = {
 	pine: {
-		conifer: true,
-		trunk: [1, 1],
-		bark: '#6a4630',
-		leaf: '#2d5a2a',
-		autumn: [0, 0, 0],
-		winter: '#4f6a52',
+		...TREES.pine,
 		crown: () => new THREE.ConeGeometry(2.4, 7, 7).translate(0, 7.5, 0),
 	},
 	spruce: {
-		conifer: true,
-		trunk: [0.9, 0.8],
-		bark: '#4a3a2e',
-		leaf: '#22432a',
-		autumn: [0, 0, 0],
-		winter: '#4a6252',
+		...TREES.spruce,
 		crown: spruce,
 	},
+	// Larch: an airy two-tier cone that turns gold in autumn and drops its needles for the winter
+	larch: {
+		...TREES.larch,
+		crown: () => larch(1),
+		bare: () => larch(0.7),
+	},
+	// Cypress: a dark, narrow column
+	cypress: {
+		...TREES.cypress,
+		crown: () => ellipsoid(1.05, 6, 5.2, 6.4),
+	},
+	// Umbrella pine: a flat crown on a tall bare trunk
+	stonepine: {
+		...TREES.stonepine,
+		crown: () => ellipsoid(3.3, 7, 0.42, 8.3),
+	},
 	linden: {
-		conifer: false,
-		trunk: [1, 1],
-		bark: '#5a4030',
-		leaf: '#4f8a33',
-		autumn: [0.02, 0.14, 0.4],
-		winter: '#5a4a3c',
+		...TREES.linden,
 		crown: () => ellipsoid(2.8, 7, 1.15, 6.6),
 		bare: () => ellipsoid(2.2, 6, 1.3, 6.4),
 	},
 	birch: {
-		conifer: false,
-		trunk: [0.7, 1.1],
-		bark: '#e4e0d6',
-		leaf: '#76a03e',
-		autumn: [0.11, 0.15, 0.5],
-		winter: '#6a5654',
+		...TREES.birch,
 		crown: () => ellipsoid(1.9, 7, 1.7, 7.4),
 		bare: () => ellipsoid(1.5, 6, 1.8, 7.2),
 	},
 	oak: {
-		conifer: false,
-		trunk: [1.5, 0.75],
-		bark: '#4a3c30',
-		leaf: '#3c6a2a',
-		autumn: [0.05, 0.09, 0.32],
-		winter: '#4e4034',
+		...TREES.oak,
 		crown: () => mergePositions([ellipsoid(3.4, 8, 0.75, 5.4), ellipsoid(2.2, 6, 0.8, 6.9)]),
 		bare: () => ellipsoid(2.9, 6, 0.8, 5.3),
 	},
+	// White acacia: a wide, flat-topped crown on a short trunk
+	acacia: {
+		...TREES.acacia,
+		crown: () => ellipsoid(3.4, 7, 0.45, 5.4),
+		bare: () => ellipsoid(2.8, 6, 0.45, 5.2),
+	},
+	// Alder: a dark, narrow egg
+	alder: {
+		...TREES.alder,
+		crown: () => ellipsoid(1.7, 6, 1.9, 6.6),
+		bare: () => ellipsoid(1.3, 6, 2, 6.4),
+	},
 	poplar: {
-		conifer: false,
-		trunk: [0.9, 1.4],
-		bark: '#6a6458',
-		leaf: '#557f30',
-		autumn: [0.12, 0.15, 0.45],
-		winter: '#5e5040',
+		...TREES.poplar,
 		crown: () => ellipsoid(1.4, 6, 4.2, 8.6),
 		bare: () => ellipsoid(1.1, 6, 4.2, 8.6),
 	},
 	willow: {
-		conifer: false,
-		trunk: [1.4, 0.6],
-		bark: '#5a5040',
-		leaf: '#7f9a52',
-		autumn: [0.13, 0.16, 0.45],
-		winter: '#7a6a48',
+		...TREES.willow,
 		crown: () => willow(1),
 		bare: () => willow(0.82),
 	},
 	apple: {
-		conifer: false,
-		trunk: [0.9, 0.45],
-		bark: '#5a4636',
-		leaf: '#5a8f36',
-		autumn: [0.06, 0.2, 0.38],
-		winter: '#5a4a3c',
+		...TREES.apple,
 		crown: () => ellipsoid(2.6, 7, 0.8, 3.6),
 		bare: () => ellipsoid(2.1, 6, 0.85, 3.5),
 	},
@@ -121,6 +103,14 @@ function spruce(): THREE.BufferGeometry {
 	])
 }
 
+/** Larch: two open cones, scaled `k` about the trunk top for the bare winter crown. */
+function larch(k: number): THREE.BufferGeometry {
+	return mergePositions([
+		new THREE.ConeGeometry(2.1 * k, 6, 6).translate(0, 6, 0),
+		new THREE.ConeGeometry(1.2 * k, 4.2, 6).translate(0, 9.6, 0),
+	])
+}
+
 /** Willow: a drooping skirt of branches under a low dome, scaled `k`. */
 function willow(k: number): THREE.BufferGeometry {
 	return mergePositions([
@@ -129,16 +119,17 @@ function willow(k: number): THREE.BufferGeometry {
 	]).scale(k, k, k)
 }
 
-/** Crown colour of one tree: summer greens with a little spread, autumn yellow to red, winter needles or branches. */
 /** The crown a species wears in a season. */
 export function crownGeometry(sp: TreeSpecies, season: Season): THREE.BufferGeometry {
 	const d = SPECIES[sp]
 	return season === 'winter' && d.bare ? d.bare() : d.crown()
 }
 
+/** Crown colour of one tree: summer greens with a little spread, autumn yellow to red, winter needles or branches. */
 export function crownColor(sp: TreeSpecies, season: Season, rnd: () => number, out: THREE.Color): THREE.Color {
 	const d = SPECIES[sp]
-	if (season === 'autumn' && !d.conifer) {
+	// Evergreens have no autumn colour (lightness 0); a larch is a conifer that does
+	if (season === 'autumn' && d.autumn[2] > 0) {
 		const [h0, h1, l] = d.autumn
 		return out.setHSL(h0 + rnd() * (h1 - h0), 0.65, l + rnd() * 0.12)
 	}

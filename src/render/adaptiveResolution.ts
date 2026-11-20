@@ -1,13 +1,7 @@
 import type * as THREE from 'three'
+import { ADAPTIVE_RESOLUTION } from '../config'
 
-const WINDOW_FRAMES = 60
-const STEP = 0.125
-/** Frames this much longer than the target on average (≈ 30 % missed vsyncs at 60 Hz) lower the scale. */
-const SLOW_RATIO = 1.3
-/** Within 5 % of the target on average: room to raise the scale again. */
-const CLEAN_RATIO = 1.05
-const COOLDOWN_AFTER_DROP = 1.5
-const MAX_RETRY = 90
+const { windowFrames, step, slowRatio, cleanRatio, cooldownAfterDrop, maxRetry } = ADAPTIVE_RESOLUTION
 
 /**
  * Dynamic resolution. Compares the average frame time of one-second windows with the frame-rate target; a slow
@@ -44,20 +38,20 @@ export class AdaptiveResolution {
 		this.spent += raw
 		this.budget += 1 / targetFps
 		this.cooldown -= raw
-		if (this.frames < WINDOW_FRAMES) return
+		if (this.frames < windowFrames) return
 		const ratio = this.spent / this.budget
 		this.frames = this.spent = this.budget = 0
 		if (this.cooldown > 0) return
-		if (ratio > SLOW_RATIO && this.current > this.min) {
-			this.setScale(Math.max(this.min, this.current - STEP))
-			this.cooldown = COOLDOWN_AFTER_DROP
-			this.retry = Math.min(MAX_RETRY, this.retry * 2)
-		} else if (ratio > SLOW_RATIO && !this.lowShadow) {
+		if (ratio > slowRatio && this.current > this.min) {
+			this.setScale(Math.max(this.min, this.current - step))
+			this.cooldown = cooldownAfterDrop
+			this.retry = Math.min(maxRetry, this.retry * 2)
+		} else if (ratio > slowRatio && !this.lowShadow) {
 			this.lowShadow = true
-			this.cooldown = COOLDOWN_AFTER_DROP
+			this.cooldown = cooldownAfterDrop
 			this.onLowestScaleTooSlow()
-		} else if (ratio < CLEAN_RATIO && this.current < this.max) {
-			this.setScale(Math.min(this.max, this.current + STEP))
+		} else if (ratio < cleanRatio && this.current < this.max) {
+			this.setScale(Math.min(this.max, this.current + step))
 			this.cooldown = this.retry
 		}
 	}

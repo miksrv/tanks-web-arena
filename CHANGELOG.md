@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.3
+
+Two new tank destroyers, a lake country map and a cleaner battle screen.
+
+### Patch Changes
+
+- New vehicles: ISU-152 and Sturmtiger with a 380 mm rocket mortar that loads only at a halt
+- New terrain type, lake country, and the map "Karelia": conifer forests, lakes and rocks
+- Every terrain type has its own trees and house style: steppe acacia, mountain larch, coast cypress
+- Status panel lists only broken modules and wounded crew; ribbons fade out 7 s after their last event
+- Starting places in the line-up are dealt at random every battle
+- Bots: a retreating tank drives all the way to cover and fights from there
+- Bots: scouts shoot back when spotted up close; a target one shot from death goes first
+- Bots do not fire into rocks and hedgehogs, or a rocket mortar round next to a friend
+- Small obstacles no longer let a fast shell slip through
+- Guns recoil when fired; the sound mute setting is remembered
+
 ## 0.1.2
 
 Smarter bots, a round of combat fixes and smoother frames.

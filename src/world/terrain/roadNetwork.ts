@@ -1,10 +1,9 @@
-import { WORLD_HALF } from '../../config'
+import { TERRAIN_GEN, WORLD_HALF } from '../../config'
 import type { Point } from './types'
 
 type Segment = [ax: number, az: number, bx: number, bz: number]
 
-const CELL = 48 // m
-const REACH = 24 // m: the grid answers exactly within this distance of a road
+const { roadCell: CELL, roadReach: REACH } = TERRAIN_GEN
 
 /** Smoothed dirt roads: polylines for props, dense segments with a spatial grid for distance queries. */
 export class RoadNetwork {

@@ -20,11 +20,6 @@ export interface CaptureZone {
 	contested: boolean
 }
 
-const TEAM_FLAG = ['#b8312a', '#4a6d8c'] as const
-const NEUTRAL_FLAG = '#e8e2cc'
-const POLE_H = 9
-const STAKES = 28
-
 /** The base circles of a map for its battle mode. */
 export function zonesFor(t: Terrain, mode: BattleMode): CaptureZone[] {
 	const zone = (x: number, z: number, owner: CaptureZone['owner']): CaptureZone => ({
@@ -128,13 +123,13 @@ export class ZoneMarkers {
 /** Flags and the ring of stakes for each circle; the ring band lies on the ground. */
 function buildZoneMeshes(zones: CaptureZone[], t: Terrain): THREE.Group {
 	const g = new THREE.Group()
-	const pole = new THREE.CylinderGeometry(0.08, 0.1, POLE_H, 6).translate(0, POLE_H / 2, 0)
-	const flag = new THREE.PlaneGeometry(2.6, 1.6).translate(1.3, POLE_H - 1, 0)
+	const pole = new THREE.CylinderGeometry(0.08, 0.1, CAPTURE.poleHeight, 6).translate(0, CAPTURE.poleHeight / 2, 0)
+	const flag = new THREE.PlaneGeometry(2.6, 1.6).translate(1.3, CAPTURE.poleHeight - 1, 0)
 	const stake = new THREE.CylinderGeometry(0.07, 0.07, 1.2, 5).translate(0, 0.6, 0)
 	const wood = new THREE.MeshStandardMaterial({ color: '#5a4a36', roughness: 0.9 })
 	for (const z of zones) {
 		const y = t.height(z.x, z.z)
-		const colour = z.owner === -1 ? NEUTRAL_FLAG : TEAM_FLAG[z.owner]
+		const colour = z.owner === -1 ? CAPTURE.neutralFlag : CAPTURE.teamFlag[z.owner]
 		const p = new THREE.Mesh(pole, wood)
 		p.position.set(z.x, y, z.z)
 		p.castShadow = true
@@ -143,10 +138,10 @@ function buildZoneMeshes(zones: CaptureZone[], t: Terrain): THREE.Group {
 		f.position.copy(p.position)
 		f.rotation.y = Math.random() * Math.PI * 2
 		f.castShadow = true
-		const stakes = new THREE.InstancedMesh(stake, wood, STAKES)
+		const stakes = new THREE.InstancedMesh(stake, wood, CAPTURE.stakes)
 		const m = new THREE.Matrix4()
-		for (let i = 0; i < STAKES; i++) {
-			const a = (i / STAKES) * Math.PI * 2
+		for (let i = 0; i < CAPTURE.stakes; i++) {
+			const a = (i / CAPTURE.stakes) * Math.PI * 2
 			const sx = z.x + Math.cos(a) * CAPTURE.radius
 			const sz = z.z + Math.sin(a) * CAPTURE.radius
 			stakes.setMatrixAt(i, m.makeTranslation(sx, t.height(sx, sz), sz))

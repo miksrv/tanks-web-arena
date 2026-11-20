@@ -3,17 +3,11 @@ import type { CameraRig, CamMode } from '../camera'
 import { aimedArmor, estimateArmor, plateClass, reticleClass } from '../combat/armor'
 import { HOWITZER, howitzerSolve } from '../combat/ballistics'
 import { traceShot } from '../combat/trace'
-import { GRAVITY } from '../config'
+import { ARMOR_ZONE_LABEL, GRAVITY, HUD } from '../config'
 import type { Tank, WorldRefs } from '../tank/tank'
 import { $, ndcToScreen, setAttr, setClass, setStyle, setText, show } from './dom'
 
-const MIN_RETICLE_PX = 14
-const MAX_RETICLE_SHARE = 0.6 // of the window height
-const ARTY_RING_PX = 30
-const RING_GAP_PX = 9
-const READY_FLASH = 0.45 // s of the green "loaded" flash
-const TRACE_TIME = { direct: 4, howitzer: 12 } // s of flight the gun marker follows
-const ZONE_LABEL = { lower: 'нижний лист', mantlet: 'маска', cupola: 'башенка', screen: 'экран' } as const
+const R = HUD.reticle
 
 /** Aiming aids: the dispersion circle, reload ring, aim readout and the gun marker. */
 export class Reticle {
@@ -33,7 +27,7 @@ export class Reticle {
 		artyBlocked: boolean,
 	) {
 		const sizePx = this.updateCircle(player, rig)
-		this.updateReloadRing(player, mode === 'arty' ? ARTY_RING_PX : sizePx, dt, player.alive && locked)
+		this.updateReloadRing(player, mode === 'arty' ? R.artyRingPx : sizePx, dt, player.alive && locked)
 		this.updateInfo(player, rig, artyBlocked)
 		// In the artillery view the reticle is the dispersion circle drawn on the ground (ArtyView), not this one
 		const aiming = player.alive && locked
@@ -50,7 +44,7 @@ export class Reticle {
 		const cross = $('cross')
 		const ang = player.reticle / 100
 		const px = (Math.tan(ang) / Math.tan((rig.camera.fov * Math.PI) / 360)) * (window.innerHeight / 2)
-		const sizePx = Math.max(MIN_RETICLE_PX, Math.min(window.innerHeight * MAX_RETICLE_SHARE, px * 2))
+		const sizePx = Math.max(R.minPx, Math.min(window.innerHeight * R.maxShare, px * 2))
 		const size = `${sizePx.toFixed(0)}px`
 		setStyle(cross, 'width', size)
 		setStyle(cross, 'height', size)
@@ -73,7 +67,7 @@ export class Reticle {
 			const plate = player.def.gun.howitzer ? null : aimedArmor(player, at, this.tmp, rig.aimPoint)
 			cls = plate ? plateClass(player, plate) : reticleClass(player, at)
 			const mm = plate ? (plate.ricochet ? 'рикошет' : `${Math.round(plate.effective)} мм`) : null
-			const spot = plate?.zone ? ` (${ZONE_LABEL[plate.zone]})` : ''
+			const spot = plate?.zone ? ` (${ARMOR_ZONE_LABEL[plate.zone]})` : ''
 			info += ` · ${at.def.name} · броня ${mm ?? `≈${Math.round(estimateArmor(player, at))} мм`}${spot}`
 		}
 		if (player.def.gun.howitzer) {
@@ -82,6 +76,11 @@ export class Reticle {
 			const sol = howitzerSolve(dist, rig.aimPoint.y - muzzleY)
 			info += !sol ? ' · ВНЕ ДОСЯГАЕМОСТИ' : blocked ? ' · ПРЕПЯТСТВИЕ' : ` · полёт ${sol.time.toFixed(1)} с`
 			info += ` · сведение ${Math.round(100 / (1 + player.bloom))}%`
+		}
+		if (player.def.gun.mortar) {
+			// A slow rocket: the flight time matters for the lead; and the round is loaded only at a halt
+			info += ` · полёт ≈${(dist / (player.def.gun.shellSpeed * player.ammoDef.speedMult)).toFixed(1)} с`
+			if (player.loadingStalled) info += ' · ЗАРЯЖАНИЕ ТОЛЬКО НА МЕСТЕ'
 		}
 		setClass($('dot'), cls)
 		setClass($('aimInfo'), cls)
@@ -104,7 +103,7 @@ export class Reticle {
 			? (howitzerSolve(player.aimDist, player.aimTarget.y - this.gunO.y)?.speed ?? 100)
 			: g.shellSpeed * player.ammoDef.speedMult
 		const gravity = g.howitzer ? HOWITZER.gravity : GRAVITY
-		const maxTime = g.howitzer ? TRACE_TIME.howitzer : TRACE_TIME.direct
+		const maxTime = g.howitzer ? R.traceTime.howitzer : R.traceTime.direct
 		traceShot(w, this.gunO, this.gunD, speed, gravity, maxTime, player, this.gunP)
 		const p = this.tmp.copy(this.gunP).project(rig.camera)
 		if (p.z > 1) {
@@ -124,18 +123,18 @@ export class Reticle {
 		const ring = $('ring')
 		const [track, arc] = Array.from(ring.children)
 		const loading = player.reload > 0
-		this.ringReady = loading ? READY_FLASH : Math.max(0, this.ringReady - dt)
+		this.ringReady = loading ? R.readyFlash : Math.max(0, this.ringReady - dt)
 		const visible = aiming && (loading || this.ringReady > 0)
 		show(ring, visible)
 		if (!visible) return
-		const r = reticlePx / 2 + RING_GAP_PX
+		const r = reticlePx / 2 + R.ringGapPx
 		const circ = 2 * Math.PI * r
 		const progress = loading ? 1 - player.reload / player.reloadFull : 1
 		setAttr(track, 'r', r.toFixed(1))
 		setAttr(arc, 'r', r.toFixed(1))
 		setAttr(arc, 'stroke-dasharray', circ.toFixed(1))
 		setAttr(arc, 'stroke-dashoffset', (circ * (1 - progress)).toFixed(1))
-		setAttr(ring, 'class', loading ? '' : 'ready') // SVG: className is read-only, so the attribute is set directly
-		setStyle(ring, 'opacity', loading ? '1' : (this.ringReady / READY_FLASH).toFixed(2))
+		setAttr(ring, 'class', !loading ? 'ready' : player.loadingStalled ? 'stalled' : '') // SVG: className is read-only, so the attribute is set directly
+		setStyle(ring, 'opacity', loading ? '1' : (this.ringReady / R.readyFlash).toFixed(2))
 	}
 }

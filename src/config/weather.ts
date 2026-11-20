@@ -1,4 +1,4 @@
-// Weather and time of day: rolled per map; the look lives in src/render/environment.ts.
+// Weather and time of day: rolled per map; the look lives in WEATHER_LOOK (render.ts).
 
 export type Weather = 'clear' | 'overcast' | 'dawn' | 'dusk' | 'fog' | 'rain' | 'snow'
 

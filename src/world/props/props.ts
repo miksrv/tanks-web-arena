@@ -1,24 +1,19 @@
 import type * as THREE from 'three'
-import { DRIVE } from '../../config'
+import { DRIVE, PROPS } from '../../config'
 import { SpatialGrid } from '../../core/spatialGrid'
 import type { Terrain, TreeSpecies } from '../terrain'
 import { PropMeshes } from './meshes'
 import { scatterProps } from './scatter'
 import type { Bush, Fence, Hay, Rock, Tree } from './types'
 
-const CELL = 24 // m, spatial hash cell
-const FALL_SPEED = 0.9 // fallT per second
-const HAY_SLOW = 0.85
-
 function gridOf<T extends { x: number; z: number }>(items: T[]): SpatialGrid<T> {
-	const g = new SpatialGrid<T>(CELL)
+	const g = new SpatialGrid<T>(PROPS.gridCell)
 	for (const it of items) g.add(it)
 	return g
 }
 
 /** Height of a rock's top above the ground (the stone mesh rises to ~1.1 r; hedgehogs and teeth stand ~1.5 m). */
 const rockTop = (rk: Rock) => (rk.kind === 'rock' ? rk.r * 1.1 : 1.5)
-const ROCK_TOP_MAX = 4
 
 /**
  * Vegetation and clutter: trees that tanks knock flat, bushes that hide tanks, rocks that stop them,
@@ -91,6 +86,21 @@ export class Props {
 		return slow
 	}
 
+	/** A heavy blast at (x,z): trees within r fall away from it, haystacks and fences there are flattened. */
+	blast(x: number, z: number, r: number) {
+		for (const t of this.treeGrid.near(x, z, r + 2, this.scratch as Tree[])) {
+			const d = Math.hypot(t.x - x, t.z - z)
+			if (t.fallen || d > r) continue
+			t.fallen = true
+			t.fallT = 0
+			t.dirX = d > 0.01 ? (t.x - x) / d : 1
+			t.dirZ = d > 0.01 ? (t.z - z) / d : 0
+			this.falling.push(t)
+		}
+		this.crushHay(x, z, Math.max(0, r - 1.5))
+		this.flattenFences(x, z, Math.max(0, r - 1.2))
+	}
+
 	private pushOutOfRocks(x: number, z: number, r: number, out: { x: number; z: number }) {
 		for (const rk of this.rockGrid.near(x, z, r + 4, this.scratch as Rock[])) {
 			const d = Math.hypot(rk.x - x, rk.z - z)
@@ -108,7 +118,7 @@ export class Props {
 			if (h.crushed || Math.hypot(h.x - x, h.z - z) > r + 1.5) continue
 			h.crushed = true
 			this.meshes.writeHay(h, this.hay.indexOf(h))
-			slow = HAY_SLOW
+			slow = PROPS.haySlow
 		}
 		return slow
 	}
@@ -132,15 +142,22 @@ export class Props {
 	 * Trees and bushes do not stop shells.
 	 */
 	blocksSegment(ax: number, ay: number, az: number, bx: number, by: number, bz: number): boolean {
-		const n = Math.ceil(Math.hypot(bx - ax, bz - az) / 3)
+		const dx = bx - ax
+		const dz = bz - az
+		const len2 = dx * dx + dz * dz
+		// Samples only pick the rocks to test (each lookup covers 4 m around it); the test itself is against the
+		// segment, so a small obstacle between two samples still stops the shell
+		const n = Math.max(1, Math.ceil(Math.sqrt(len2) / 3))
 		for (let i = 0; i <= n; i++) {
-			const t = i / n
-			const x = ax + (bx - ax) * t
-			const z = az + (bz - az) * t
-			const above = ay + (by - ay) * t - this.terrain.height(x, z)
-			if (above > ROCK_TOP_MAX) continue
-			const near = this.rockGrid.near(x, z, 4, this.scratch as Rock[])
-			if (near.some((rk) => Math.hypot(rk.x - x, rk.z - z) < rk.r * 0.8 && above < rockTop(rk))) return true
+			const s = i / n
+			for (const rk of this.rockGrid.near(ax + dx * s, az + dz * s, 4, this.scratch as Rock[])) {
+				const t = len2 > 0 ? Math.max(0, Math.min(1, ((rk.x - ax) * dx + (rk.z - az) * dz) / len2)) : 0
+				const x = ax + dx * t
+				const z = az + dz * t
+				if (Math.hypot(rk.x - x, rk.z - z) >= rk.r * 0.8) continue
+				const above = ay + (by - ay) * t - this.terrain.height(x, z)
+				if (above <= PROPS.rockTopMax && above < rockTop(rk)) return true
+			}
 		}
 		return false
 	}
@@ -158,7 +175,7 @@ export class Props {
 		dirty.clear()
 		for (let i = this.falling.length - 1; i >= 0; i--) {
 			const t = this.falling[i]
-			t.fallT = Math.min(1, t.fallT + dt * FALL_SPEED)
+			t.fallT = Math.min(1, t.fallT + dt * PROPS.fallSpeed)
 			this.meshes.writeTree(t)
 			dirty.add(t.species)
 			if (t.fallT >= 1) this.falling.splice(i, 1)

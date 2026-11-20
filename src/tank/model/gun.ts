@@ -46,7 +46,7 @@ function cannon(gb: TankBuilder, def: TankDef, base: THREE.Color) {
 			break
 		case 'ball':
 			gb.part(
-				new THREE.SphereGeometry(r * 3 + 0.18, 8, 6),
+				new THREE.SphereGeometry(look.ballR ?? r * 3 + 0.18, 8, 6),
 				base,
 				new THREE.Matrix4().makeTranslation(0, 0, 0.05),
 				true,
@@ -63,8 +63,13 @@ function cannon(gb: TankBuilder, def: TankDef, base: THREE.Color) {
 			break
 	}
 	if (look.sleeve) gb.cyl(r * 1.9, r * 2, look.sleeve, 8, base, 0, 0, 0.25 + look.sleeve / 2, true, Math.PI / 2)
-	gb.cyl(r, r * 1.35, s.gunLen, 8, base, 0, 0, s.gunLen / 2, true, Math.PI / 2)
 	const end = s.gunLen
+	if (look.bore) {
+		// A wide open tube: straight walls, a thick ring at the muzzle and the dark bore inside it
+		gb.cyl(r, r, end, 12, base, 0, 0, end / 2, true, Math.PI / 2)
+		gb.cyl(r * 1.15, r * 1.15, 0.22, 12, base, 0, 0, end - 0.11, true, Math.PI / 2)
+		gb.cyl(r * 0.76, r * 0.76, 0.04, 12, C.rubber, 0, 0, end + 0.005, false, Math.PI / 2)
+	} else gb.cyl(r, r * 1.35, end, 8, base, 0, 0, end / 2, true, Math.PI / 2)
 	switch (look.brake) {
 		case 'single':
 			gb.cyl(r * 1.7, r * 1.7, 0.3, 8, base, 0, 0, end - 0.15, true, Math.PI / 2)

@@ -1,4 +1,4 @@
-import { COAST, WORLD_HALF } from '../../config'
+import { BOT_AI, COAST, WORLD_HALF } from '../../config'
 import { Spotting } from '../../game/spotting'
 import type { Tank, WorldRefs } from '../../tank/tank'
 import { vantage } from '../positions'
@@ -10,18 +10,11 @@ import type { Pt } from '../types'
 import { fallBackWhenHurt, joinFight } from './common'
 import type { Bot, Frame, RoleAi, RoundPlan } from './types'
 
-/** An enemy this close (m) is reason enough to move off. */
-const DANGER = 110
-/** A scout only fights (when it fights at all) closer than this (m). */
-const CONTACT_RANGE = 230
-/** s between two slips away from danger (a shot always moves it at once). */
-const SLIP_COOLDOWN = 5
-/** s a scout stops at a lookout before driving on. */
-const PAUSE: readonly [number, number] = [2, 5]
-/** s between re-plans of a raid route (the enemy artillery may have moved). */
-const RAID_REPLAN = 10
-/** m off the straight line a raid swings round a flank. */
-const FLANK = 150
+const cfg = BOT_AI.roles.light
+
+/** A scout saves its shots for tracks, unless it hunts the last enemy or is seen already with the enemy on top of it. */
+const holdsFire = (bot: Bot, f: Frame) =>
+	!bot.hunting && !(bot.tank.spottedBy[1 - bot.tank.team] && f.enemyNear < cfg.danger)
 
 const rand = (k: number) => (Math.random() - 0.5) * k
 
@@ -69,18 +62,18 @@ export class LightAi implements RoleAi {
 		const raid = LightAi.raiding(tac)
 		// Taking or defending a base, or on the player's order, it is no scout for now: it stays put and shoots freely
 		const sent = bot.onObjective || bot.defending
-		bot.gunner.trackHunter = !raid && !bot.hunting && !sent
+		bot.gunner.trackHunter = !raid && !sent && holdsFire(bot, f)
 		const shot = bot.gunner.shots !== this.shots
 		this.shots = bot.gunner.shots
 		fallBackWhenHurt(bot, f)
 		// It fights only when raiding, or to get at the enemy artillery
-		if (bot.target && (raid || bot.target.def.role === 'spg')) joinFight(bot, CONTACT_RANGE, true)
+		if (bot.target && (raid || bot.target.def.role === 'spg')) joinFight(bot, cfg.contactRange, true)
 		if (bot.mode === 'retreat' || bot.mode === 'hunt' || bot.mode === 'engage' || sent) return
 		if (raid) {
 			this.raid(bot, f)
 			return
 		}
-		const threat = shot || ((f.hurt || f.enemyNear < DANGER) && this.slipCooldown <= 0)
+		const threat = shot || ((f.hurt || f.enemyNear < cfg.danger) && this.slipCooldown <= 0)
 		if (threat) {
 			const me = bot.tank
 			const from = bot.target ?? (me.lastHitBy?.alive ? me.lastHitBy : null)
@@ -90,7 +83,7 @@ export class LightAi implements RoleAi {
 		if (!bot.pathDone && bot.mode !== 'hold') return
 		this.pause -= dt
 		if (this.pause > 0) return
-		this.pause = PAUSE[0] + Math.random() * (PAUSE[1] - PAUSE[0])
+		this.pause = cfg.pause[0] + Math.random() * (cfg.pause[1] - cfg.pause[0])
 		this.nextLookout(bot, w)
 	}
 
@@ -103,7 +96,7 @@ export class LightAi implements RoleAi {
 	/** Off 40–60 m further away from `from` and to one side, onto ground that still sees it. */
 	private slipAway(bot: Bot, w: WorldRefs, from: Pt) {
 		const me = bot.tank
-		this.slipCooldown = SLIP_COOLDOWN
+		this.slipCooldown = cfg.slipCooldown
 		this.pause = 0
 		const dx = me.pos.x - from.x
 		const dz = me.pos.z - from.z
@@ -135,7 +128,7 @@ export class LightAi implements RoleAi {
 	 */
 	private raid(bot: Bot, f: Frame) {
 		if (this.raidReplan > 0 && !bot.pathDone) return
-		this.raidReplan = RAID_REPLAN
+		this.raidReplan = cfg.raidReplan
 		const { w, time } = f
 		const tac = bot.tactics
 		const me = bot.tank
@@ -149,6 +142,11 @@ export class LightAi implements RoleAi {
 		const dx = goal.x - from.x
 		const dz = goal.z - from.z
 		const l = Math.hypot(dx, dz) || 1
+		// At the place it was last seen and it is gone: look for it rather than plan the same arrived route again
+		if (l < cfg.raidArrived && !Spotting.visibleTo(me.team, arty, time)) {
+			bot.seek(w, time)
+			return
+		}
 		bot.mode = 'advance'
 		if (l < 200) {
 			bot.setPath(routeAcross(w.terrain, from, goal), null)
@@ -156,8 +154,8 @@ export class LightAi implements RoleAi {
 		}
 		const half = WORLD_HALF - 40
 		const bendAt = (side: number) => ({
-			x: Math.max(-half, Math.min(half, from.x + dx * 0.6 - (dz / l) * FLANK * side)),
-			z: Math.max(-half, Math.min(half, from.z + dz * 0.6 + (dx / l) * FLANK * side)),
+			x: Math.max(-half, Math.min(half, from.x + dx * 0.6 - (dz / l) * cfg.flank * side)),
+			z: Math.max(-half, Math.min(half, from.z + dz * 0.6 + (dx / l) * cfg.flank * side)),
 		})
 		let side = this.flankSide(bot, w, goal)
 		// The outer flank of a coast map may be the sea: go round the landward side instead

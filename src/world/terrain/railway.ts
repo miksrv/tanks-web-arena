@@ -1,11 +1,9 @@
 import * as THREE from 'three'
-import { RAIL, WORLD, WORLD_HALF } from '../../config'
+import { RAIL, TERRAIN_GEN, WORLD, WORLD_HALF } from '../../config'
 import type { Point } from './types'
 
 const { smoothstep, clamp } = THREE.MathUtils
-const STEP = 8 // m between profile samples
-const SMOOTH = 10 // samples each side in the box filter (±80 m), applied three times
-const END_FADE = 40 // m over which the bank runs out at each end
+const { railStep: STEP, railSmooth: SMOOTH, railEndFade: END_FADE } = TERRAIN_GEN
 
 /**
  * A straight railway on the line equally far from both bases, from mountain foot to mountain foot. Its rail top

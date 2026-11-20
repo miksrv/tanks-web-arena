@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { CREW, type CrewRole } from '../config'
+import { CREW, MORTAR, type CrewRole } from '../config'
 import type { CameraRig } from '../camera'
 import type { HitResult } from '../combat/armor'
 import type { Impact, Shells } from '../combat/shells'
@@ -48,6 +48,7 @@ export class CombatFeedback {
 		d.shells.onTankHit = (target, by, hit) => this.onTankHit(target, by, hit)
 		d.shells.onImpact = (imp, by) => this.onImpact(imp, by)
 		d.shells.onSplashDamage = (target, by, dmg) => this.onSplash(target, by, dmg)
+		d.shells.onTrail = (x, y, z) => d.particles.smoke(x, y, z, 0.6)
 		Tank.onDestroyed = (t, by) => this.onDestroyed(t, by)
 	}
 
@@ -65,9 +66,9 @@ export class CombatFeedback {
 		const at = owner === player ? null : p.origin
 		if (owner === player) this.d.report.shot()
 		particles.muzzle(p.origin, p.dir, p.rocket ? p.caliber * 0.6 : p.caliber)
-		if (p.rocket) audio.rocket(at)
-		else audio.shot(p.caliber, at)
-		if (owner === player) rig.addShake(p.rocket ? 0.12 : 0.3 + p.caliber / 300)
+		if (p.rocket || p.shock) audio.rocket(at)
+		if (!p.rocket) audio.shot(p.caliber, at)
+		if (owner === player) rig.addShake(p.shock ? MORTAR.shake : p.rocket ? 0.12 : 0.3 + p.caliber / 300)
 	}
 
 	private onTankHit(target: Tank, by: Tank, hit: HitResult) {
@@ -120,6 +121,11 @@ export class CombatFeedback {
 		particles.impact(imp.x, imp.y, imp.z, imp.he ? Math.min(1.5, imp.splash / 4) : 0.2)
 		if (big) particles.marks.splashRing(imp.x, imp.y, imp.z, imp.splash)
 		audio.impact(imp, big)
+		if (imp.shock) {
+			// A rocket mortar round: a fireball and a column of smoke, as when a tank goes up
+			particles.explosion(imp.x, imp.y, imp.z)
+			audio.explosion(imp)
+		}
 		if (by === player) {
 			if (player.def.gun.howitzer) {
 				this.playerImpact = { x: imp.x, y: imp.y, z: imp.z, damage: this.pendingDirect }
@@ -157,7 +163,10 @@ export class CombatFeedback {
 		hud.announce(killHtml(t, by))
 		if (t === player) {
 			hud.log('Ваш танк уничтожен', COLOR.bad)
-			hud.center(`Танк уничтожен<br><small>Пробел — следующий союзник · бой продолжается</small>`)
+			hud.center(
+				'Танк уничтожен<br><small>Пробел — следующий союзник · бой продолжается</small>',
+				'<small>Наблюдение · Пробел — следующий союзник</small>',
+			)
 		}
 		if (by === player) hud.log(`Уничтожен ${t.def.name}!${t.detonated ? ' Боеукладка!' : ''}`, COLOR.good)
 		if (t === player && t.detonated) hud.log('Детонация боеукладки', COLOR.bad)

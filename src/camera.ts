@@ -5,15 +5,6 @@ import { CAMERA, PLANE } from './config'
 
 export type CamMode = 'chase' | 'sniper' | 'arty' | 'spectate' | 'plane'
 
-/** Wheel pixels per notch (a mouse click is ~100; see `Input`). */
-const WHEEL_NOTCH = 90
-/** A burst of small wheel deltas ends after this long without wheel input (ms). */
-const WHEEL_QUIET_MS = 120
-/** After the wheel switched the camera mode, it does not switch again for this long. */
-const WHEEL_MODE_LOCK_MS = 350
-/** Mouse sensitivity per sniper zoom step. */
-const SNIPER_SENSITIVITY = [0.35, 0.18, 0.09]
-
 /**
  * Third-person orbit camera with sniper zoom and the SPG satellite view. The reticle is always the screen centre;
  * `aimPoint` is where that ray meets the world and `aimedTank` is the tank under it (for the armour indicator).
@@ -28,7 +19,7 @@ export class CameraRig {
 	aimPoint = new THREE.Vector3()
 	aimedTank: Tank | null = null
 	artyPoint = new THREE.Vector3()
-	sensitivity = 0.0022
+	sensitivity = CAMERA.sensitivity
 	private shake = 0
 	private pos = new THREE.Vector3()
 	private look = new THREE.Vector3()
@@ -77,7 +68,7 @@ export class CameraRig {
 			}
 			return
 		}
-		const sens = this.sensitivity * (this.mode === 'sniper' ? SNIPER_SENSITIVITY[this.zoomLevel] : 1)
+		const sens = this.sensitivity * (this.mode === 'sniper' ? CAMERA.sniperSensitivity[this.zoomLevel] : 1)
 		const sniper = this.mode === 'sniper'
 		this.yaw -= dx * sens
 		this.pitch = THREE.MathUtils.clamp(this.pitch + dy * sens, sniper ? -0.3 : -0.15, sniper ? 0.35 : 1.2)
@@ -117,13 +108,13 @@ export class CameraRig {
 	private wheelNotches(wheel: number): number {
 		const now = performance.now()
 		if (!wheel) {
-			if (!this.wheelAcc || now - this.wheelAt < WHEEL_QUIET_MS) return 0
+			if (!this.wheelAcc || now - this.wheelAt < CAMERA.wheelQuietMs) return 0
 			const n = this.burstNotched ? 0 : Math.sign(this.wheelAcc)
 			this.wheelAcc = 0
 			this.burstNotched = false
 			return now < this.wheelLockUntil ? 0 : n
 		}
-		if (now - this.wheelAt >= WHEEL_QUIET_MS) this.burstNotched = false
+		if (now - this.wheelAt >= CAMERA.wheelQuietMs) this.burstNotched = false
 		if (Math.sign(wheel) !== Math.sign(this.wheelAcc)) this.wheelAcc = 0
 		this.wheelAcc += wheel
 		this.wheelAt = now
@@ -131,8 +122,8 @@ export class CameraRig {
 			this.wheelAcc = 0
 			return 0
 		}
-		const n = Math.trunc(this.wheelAcc / WHEEL_NOTCH)
-		this.wheelAcc -= n * WHEEL_NOTCH
+		const n = Math.trunc(this.wheelAcc / CAMERA.wheelNotch)
+		this.wheelAcc -= n * CAMERA.wheelNotch
 		if (n) this.burstNotched = true
 		return n
 	}
@@ -140,7 +131,7 @@ export class CameraRig {
 	private switchByWheel(m: CamMode, tank: Tank | null) {
 		this.setMode(m, tank)
 		this.wheelAcc = 0
-		this.wheelLockUntil = performance.now() + WHEEL_MODE_LOCK_MS
+		this.wheelLockUntil = performance.now() + CAMERA.wheelModeLockMs
 	}
 
 	setMode(m: CamMode, tank: Tank | null) {
@@ -157,7 +148,7 @@ export class CameraRig {
 		}
 		if (m === 'chase') this.distance = Math.max(this.distance, CAMERA.distance * 0.8)
 		this.mode = m
-		this.camera.fov = m === 'sniper' ? CAMERA.sniperFov[this.zoomLevel] : m === 'arty' ? 45 : CAMERA.fov
+		this.camera.fov = m === 'sniper' ? CAMERA.sniperFov[this.zoomLevel] : m === 'arty' ? CAMERA.artyFov : CAMERA.fov
 		this.camera.updateProjectionMatrix()
 	}
 
@@ -252,7 +243,7 @@ export class CameraRig {
 	private raycastAim(w: WorldRefs, self: Tank) {
 		const o = this.camera.position
 		const d = this.dir
-		const maxD = this.mode === 'sniper' ? 1500 : 900
+		const maxD = this.mode === 'sniper' ? CAMERA.sniperAimRange : CAMERA.aimRange
 		let bestT = maxD
 		this.aimedTank = null
 		const ex = o.x + d.x * maxD

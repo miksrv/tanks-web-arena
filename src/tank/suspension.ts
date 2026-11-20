@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { SUSPENSION } from '../config'
 import type { Terrain } from '../world/terrain'
 
 export interface HullPose {
@@ -8,10 +9,7 @@ export interface HullPose {
 	y: number
 }
 
-const MAX_ROLL = 0.6
-const TRACK_SAMPLES = 5
-const TRACK_INSET = 0.42 // track centre-line, fraction of the hull width from the axis
-const SINK = 0.15 // the hull may settle this far below the ground under its centre
+const { maxRoll, trackSamples, trackInset, sink } = SUSPENSION
 
 /**
  * Suspension: each track is sampled at five points along its length and a straight line is fitted through them,
@@ -31,8 +29,8 @@ export function hullPose(t: Terrain, x: number, z: number, fx: number, fz: numbe
 	let cR = 0
 	let slope = 0
 	for (const side of SIDES) {
-		const sx = x + rx * side * W * TRACK_INSET
-		const sz = z + rz * side * W * TRACK_INSET
+		const sx = x + rx * side * W * trackInset
+		const sz = z + rz * side * W * trackInset
 		const line = fitLine(hAt, sx, sz, fx, fz, L)
 		if (side < 0) cL = line.c
 		else cR = line.c
@@ -41,8 +39,8 @@ export function hullPose(t: Terrain, x: number, z: number, fx: number, fz: numbe
 	return {
 		pitch: Math.atan(slope),
 		// Positive roll (rotation about the forward axis) lifts the right side
-		roll: THREE.MathUtils.clamp(Math.atan2(cR - cL, W * TRACK_INSET * 2), -MAX_ROLL, MAX_ROLL),
-		y: Math.max(hAt(x, z) - SINK, (cL + cR) / 2),
+		roll: THREE.MathUtils.clamp(Math.atan2(cR - cL, W * trackInset * 2), -maxRoll, maxRoll),
+		y: Math.max(hAt(x, z) - sink, (cL + cR) / 2),
 	}
 }
 
@@ -62,7 +60,7 @@ function fitLine(h: (x: number, z: number) => number, sx: number, sz: number, fx
 		suu += u * u
 		suh += u * v
 	}
-	const n = TRACK_SAMPLES
+	const n = trackSamples
 	const s = (n * suh - su * sh) / (n * suu - su * su)
 	return { s, c: (sh - s * su) / n }
 }

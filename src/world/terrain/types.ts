@@ -1,6 +1,6 @@
 // Map data types shared by the terrain modules, the props and the buildings.
 
-import type { Archetype, BattleMode, TreeSpecies, Weather } from '../../config'
+import { TERRAIN_GEN, type Archetype, type BattleMode, type TreeSpecies, type Weather } from '../../config'
 
 export type Biome =
 	| 'field'
@@ -15,20 +15,8 @@ export type Biome =
 	| 'base'
 	| 'sand'
 	| 'rail'
-export const BIOME_SPEED: Record<Biome, number> = {
-	field: 1,
-	meadow: 1,
-	forest: 0.85,
-	mountain: 0.7,
-	road: 1.15,
-	water: 0.35,
-	mud: 0.6,
-	village: 1,
-	town: 0.75,
-	base: 1,
-	sand: 0.85,
-	rail: 1,
-}
+/** Ground speed multiplier per surface (the numbers are in the config). */
+export const BIOME_SPEED: Record<Biome, number> = TERRAIN_GEN.biomeSpeed
 /** Biome ↔ byte code of the baked biome grid. */
 export const BIOME_ID: Biome[] = [
 	'field',
@@ -125,7 +113,8 @@ export interface Crossing {
 	ramp: number // bridge: embankment length past each deck end
 	style: 'stone' | 'wood'
 }
-export const WATER_LEVEL = -1.5
+/** Height of the water plane, m. */
+export const WATER_LEVEL = TERRAIN_GEN.waterLevel
 
 export type Rnd = () => number
 

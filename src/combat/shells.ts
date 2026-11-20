@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { COMBAT, CREW, CREW_ROLES, GRAVITY } from '../config'
+import { COMBAT, CREW, CREW_ROLES, GRAVITY, MORTAR } from '../config'
 import type { ShotParams, Tank, WorldRefs } from '../tank/tank'
 import { testShell, type HitResult, type ShellSpec } from './armor'
 import { HOWITZER } from './ballistics'
@@ -22,6 +22,10 @@ interface Shell {
 	dist: number
 	/** An aircraft bomb: drawn as a bomb by the plane view, not as a tracer. */
 	bomb: boolean
+	/** Rocket mortar round: leaves a smoke trail and bursts with a shock wave. */
+	shock: boolean
+	/** s until the next puff of its trail. */
+	trail: number
 }
 
 export interface Impact {
@@ -30,6 +34,8 @@ export interface Impact {
 	z: number
 	he: boolean
 	splash: number
+	/** The burst of a rocket mortar round. */
+	shock: boolean
 }
 
 type ContactKind = 'tank' | 'wreck' | 'building' | 'ground'
@@ -42,11 +48,6 @@ interface Contact {
 	hit: HitResult | null
 }
 
-const GROUND_STEP = 2.5 // m between ground samples along a step
-/** m: a penetration from this far counts toward the sniper medal. */
-export const LONG_SHOT = 250
-const OUT_OF_WORLD = 2000 // m
-
 /** Shells in flight: segment-swept each frame against tanks (alive or wrecked), buildings, rocks and the ground. */
 export class Shells {
 	readonly lines: THREE.LineSegments
@@ -57,6 +58,8 @@ export class Shells {
 	onTankHit?: (target: Tank, by: Tank, hit: HitResult, shell: ShellSpec) => void
 	onImpact?: (imp: Impact, by: Tank) => void
 	onSplashDamage?: (target: Tank, by: Tank, dmg: number) => void
+	/** A puff of the smoke trail behind a rocket mortar round. */
+	onTrail?: (x: number, y: number, z: number) => void
 	/** Debug counters for balancing. */
 	stats = { fired: 0, tank: 0, wreck: 0, building: 0, ground: 0, pen: 0, nonpen: 0, ricochet: 0, expired: 0 }
 
@@ -88,6 +91,8 @@ export class Shells {
 			life: p.howitzer ? COMBAT.howitzerShellLife : COMBAT.shellLife,
 			dist: 0,
 			bomb: false,
+			shock: p.shock,
+			trail: 0,
 		})
 		this.onFire?.(owner, p)
 	}
@@ -112,6 +117,8 @@ export class Shells {
 			life,
 			dist: 0,
 			bomb: true,
+			shock: false,
+			trail: 0,
 		})
 	}
 
@@ -133,7 +140,11 @@ export class Shells {
 				s.x = bx
 				s.y = by
 				s.z = bz
-				if (s.life <= 0 || Math.abs(s.x) > OUT_OF_WORLD || Math.abs(s.z) > OUT_OF_WORLD) {
+				if (s.shock && (s.trail -= dt) <= 0) {
+					s.trail = MORTAR.trailStep
+					this.onTrail?.(s.x, s.y, s.z)
+				}
+				if (s.life <= 0 || Math.abs(s.x) > COMBAT.outOfWorld || Math.abs(s.z) > COMBAT.outOfWorld) {
 					this.list.splice(i, 1)
 					this.stats.expired++
 				}
@@ -147,6 +158,7 @@ export class Shells {
 				z: az + (bz - az) * c.t,
 				he: s.he,
 				splash: s.splash,
+				shock: s.shock,
 			}
 			this.onImpact?.(imp, s.owner)
 			if (s.he && s.splash > 0) this.splash(imp, s, w, c.tank)
@@ -189,7 +201,7 @@ export class Shells {
 
 	/** First sample along the step that is under the ground (parameter 0..1), or −1. */
 	private groundContact(w: WorldRefs, ax: number, ay: number, az: number, bx: number, by: number, bz: number) {
-		const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / GROUND_STEP))
+		const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / COMBAT.groundStep))
 		for (let k = 1; k <= steps; k++) {
 			const tt = k / steps
 			if (ay + (by - ay) * tt < w.terrain.height(ax + (bx - ax) * tt, az + (bz - az) * tt)) return tt
@@ -234,7 +246,7 @@ export class Shells {
 		const enemy = s.owner.team !== target.team
 		if (enemy && hit.penetrated) {
 			by.pens++
-			if (Math.hypot(target.pos.x - s.owner.pos.x, target.pos.z - s.owner.pos.z) >= LONG_SHOT) by.longPens++
+			if (Math.hypot(target.pos.x - s.owner.pos.x, target.pos.z - s.owner.pos.z) >= COMBAT.longShot) by.longPens++
 			if (hit.crew || hit.ammoRack || hit.gunHit || hit.engine || hit.ring) by.crits++
 			if (hit.fire && target.burning <= 0) by.fires++
 		}
@@ -245,19 +257,27 @@ export class Shells {
 		}
 	}
 
-	/** HE blast: every tank within the radius takes falling damage through its roof armour. */
+	/**
+	 * HE blast: every tank within the radius takes falling damage through its roof armour. A rocket mortar round adds
+	 * a shock wave: tracks and crews suffer far more often, even where the armour took all the damage, and the trees
+	 * around go down.
+	 */
 	private splash(imp: Impact, s: Shell, w: WorldRefs, direct: Tank | null) {
+		if (s.shock) w.props.blast(imp.x, imp.z, s.splash * MORTAR.fellRadius)
+		const trackChance = s.shock ? MORTAR.trackChance : COMBAT.splashTrackChance
+		const crewChance = s.shock ? MORTAR.crewChance : CREW.splashChance
 		for (const t of w.tanks) {
 			if (!t.alive || t === direct) continue
-			const d = Math.hypot(t.pos.x - imp.x, t.pos.z - imp.z) - t.radius * 0.5
+			const d = Math.hypot(t.pos.x - imp.x, t.pos.z - imp.z) - t.radius * COMBAT.splashHullShare
 			if (d > s.splash) continue
 			const k = 1 - Math.max(0, d) / s.splash
-			const raw = s.spec.dmg * 0.6 * k * (1 + (Math.random() - 0.5) * 0.5)
-			const dmg = Math.max(0, raw - t.def.armor.top * 1.1)
-			if (dmg <= 0) continue
-			if (Math.random() < 0.3 * k && t.tracked <= 0) t.tracked = COMBAT.trackRepair
-			const crewK = CREW.splashChance * k * (t.def.shape.openTop ? CREW.openTopSplash : 1)
+			const raw = s.spec.dmg * COMBAT.splashDamage * k * (1 + (Math.random() - 0.5) * COMBAT.splashRng)
+			const dmg = Math.max(0, raw - t.def.armor.top * COMBAT.heArmorFactor)
+			if (dmg <= 0 && !s.shock) continue
+			if (Math.random() < trackChance * k && t.tracked <= 0) t.tracked = COMBAT.trackRepair
+			const crewK = crewChance * k * (t.def.shape.openTop ? CREW.openTopSplash : 1)
 			if (Math.random() < crewK) t.crew.wound(CREW_ROLES[Math.floor(Math.random() * CREW_ROLES.length)])
+			if (dmg <= 0) continue
 			t.damage(dmg, s.owner)
 			this.onSplashDamage?.(t, s.owner, dmg)
 		}

@@ -19,8 +19,8 @@
 ## Features
 
 - **Three game modes**: Standard (a base on each side), Encounter (one neutral base) and Assault (one side defends). Two teams of 7, no respawn, 6-minute rounds, WoT-style base capture.
-- **A new map every battle**: 900 × 900 m, five terrain types (central Russia, steppe, swamps, mountain pass, coast), eight named maps, seven kinds of weather and time of day, three seasons. Rivers with bridges and fords, railways, villages, a ruined town or a factory district, pillboxes, Czech hedgehogs, forests where trees fall under your tank.
-- **28 historical vehicles** in five classes: light, medium and heavy tanks, tank destroyers and SPGs. T-34, KV-1, IS-2, SU-152, Katyusha; Pz. IV, Panther, Tiger I, StuG III, Ferdinand, Nebelwerfer and more. Each has its own armour layout, gun, speed, view range and camouflage.
+- **A new map every battle**: 900 × 900 m, six terrain types (central Russia, steppe, swamps, mountain pass, coast, lake country), nine named maps, seven kinds of weather and time of day, three seasons. Rivers with bridges and fords, railways, villages, a ruined town or a factory district, pillboxes, Czech hedgehogs, forests where trees fall under your tank.
+- **30 historical vehicles** in five classes: light, medium and heavy tanks, tank destroyers and SPGs. T-34, KV-1, IS-2, SU-152, Katyusha; Pz. IV, Panther, Tiger I, StuG III, Ferdinand, Sturmtiger, Nebelwerfer and more. Each has its own armour layout, gun, speed, view range and camouflage.
 - **World of Tanks style armour model**: hull and turret plates by projection, impact angle, normalisation, ricochet, the three-calibre rule, weak zones (lower glacis, cupola, mantlet), side skirts against HE. Three shell types: AP, APCR, HE with splash.
 - **Modules and crew**: tracks, engine, turret ring, gun, ammo rack (with detonation), fire; wounded commander, gunner, driver and loader. Repair kit, first aid kit and fire extinguisher. Ramming.
 - **Spotting**: view range vs camouflage, line of sight through terrain and buildings, bushes and forests, shared team vision, sixth sense. Unspotted enemies are not drawn.
@@ -67,7 +67,7 @@ Useful URL parameters for testing: `?autostart&seed=N&tank=t34_85&map=steppe&mod
 ```
 src/
   main.ts       entry point
-  config/       all game numbers: vehicles (one file per vehicle), guns, shells, combat, bots, match, world
+  config/       all game numbers: vehicles (one file per vehicle), guns, shells, combat, bots, match, world and map generation, HUD, effects, rendering
   core/         math, noise, spatial grid
   game/         game loop, match flow, player controller, spotting, capture, medals, battle report
   world/        procedural terrain, rivers, roads, railways, villages, towns, props

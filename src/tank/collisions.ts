@@ -1,19 +1,14 @@
-import { COMBAT } from '../config'
+import { COLLISION, COMBAT } from '../config'
 import type { Tank } from './tank'
 import type { WorldRefs } from './types'
 
 const push = { x: 0, z: 0 }
-const RAM_MIN_SPEED = 3 // m/s closing speed for a ram
-const NUDGE_SLIDE = 1.5 // m/s sideways slide around a hull in the way
 
 /** Buildings, props and other tanks against the hull: push-outs, slowdowns, crushed trees and rams. */
 export function resolveCollisions(me: Tank, w: WorldRefs, dt: number) {
 	collideWithWorld(me, w, dt)
 	for (const o of w.tanks) if (o !== me) collideWithTank(me, o, dt)
 }
-
-/** How fast speed into an obstacle bleeds off (1/s, scaled by how head-on the contact is). */
-const WALL_DAMPING = 4
 
 /**
  * Three circles along the hull against buildings and props. The push-outs move the hull back out, which by itself
@@ -22,7 +17,7 @@ const WALL_DAMPING = 4
  */
 function collideWithWorld(me: Tank, w: WorldRefs, dt: number) {
 	const s = me.def.shape
-	const r = s.hullW / 2 + 0.15
+	const r = s.hullW / 2 + COLLISION.hullPad
 	let nx = 0
 	let nz = 0
 	for (const o of [s.hullL * 0.33, 0, -s.hullL * 0.33]) {
@@ -41,7 +36,7 @@ function collideWithWorld(me: Tank, w: WorldRefs, dt: number) {
 			nx += push.x
 			nz += push.z
 		}
-		if (slow < 1) me.speed *= 1 - (1 - slow) * Math.min(1, dt * 4)
+		if (slow < 1) me.speed *= 1 - (1 - slow) * Math.min(1, dt * COLLISION.crushRate)
 	}
 	dampIntoObstacle(me, nx, nz, dt)
 }
@@ -53,7 +48,7 @@ function dampIntoObstacle(me: Tank, nx: number, nz: number, dt: number) {
 	// The push points away from the obstacle: moving into it means the velocity opposes the push
 	const c = ((me.fx * nx + me.fz * nz) / l) * Math.sign(me.speed)
 	if (c >= 0) return
-	me.speed *= 1 - c * c * Math.min(1, WALL_DAMPING * dt)
+	me.speed *= 1 - c * c * Math.min(1, COLLISION.wallDamping * dt)
 }
 
 function collideWithTank(me: Tank, o: Tank, dt: number) {
@@ -73,25 +68,25 @@ function collideWithTank(me: Tank, o: Tank, dt: number) {
 		o.pos.z += nz * pen * wb
 	}
 	const rel = me.speed * (me.fx * nx + me.fz * nz) - (o.alive ? o.speed * (o.fx * nx + o.fz * nz) : 0)
-	if (rel > RAM_MIN_SPEED && me.alive && (me.uid < o.uid || !o.alive)) {
+	if (rel > COLLISION.ramMinSpeed && me.alive && (me.uid < o.uid || !o.alive)) {
 		// Ram: resolved once per pair (the other tank's update sees the same closing speed and would double it)
 		const mine = me.speed * (me.fx * nx + me.fz * nz)
-		me.speed *= 0.3
+		me.speed *= COLLISION.ramSpeedKept
 		if (o.alive) {
 			// The rammer is the one that brought more of the closing speed: it deals double and takes the plain hit
 			const rammer = mine >= rel - mine ? me : o
 			const victim = rammer === me ? o : me
-			o.speed *= 0.3
+			o.speed *= COLLISION.ramSpeedKept
 			if (o.team !== me.team) rammer.stats.rams++
 			const dmg = rel * COMBAT.ramDamageMult
-			victim.damage(dmg * (rammer.mass / victim.mass) * 2, rammer)
+			victim.damage(dmg * (rammer.mass / victim.mass) * COLLISION.rammerBonus, rammer)
 			rammer.damage(dmg * (victim.mass / rammer.mass), victim)
 		}
-	} else if (rel > 0 && rel <= RAM_MIN_SPEED) {
+	} else if (rel > 0 && rel <= COLLISION.ramMinSpeed) {
 		// Nudging: bleed a little speed and slide sideways around the other hull instead of grinding to a halt
-		me.speed *= Math.pow(0.92, dt * 60)
+		me.speed *= Math.pow(COLLISION.nudgeDrag, dt * 60)
 		const side = me.fx * nz - me.fz * nx > 0 ? -1 : 1
-		me.pos.x += me.fz * side * NUDGE_SLIDE * dt
-		me.pos.z += -me.fx * side * NUDGE_SLIDE * dt
+		me.pos.x += me.fz * side * COLLISION.nudgeSlide * dt
+		me.pos.z += -me.fx * side * COLLISION.nudgeSlide * dt
 	}
 }

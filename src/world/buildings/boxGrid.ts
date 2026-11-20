@@ -1,9 +1,8 @@
-import { WORLD_HALF } from '../../config'
+import { STRUCTURES, WORLD_HALF } from '../../config'
 import type { OBB } from '../obb'
 
-const CELL = 32 // m
-const PAD = 1 // m added around every footprint, so rounding at a cell edge never drops a box
-const EXTENT = WORLD_HALF + 80 // m: the grid reaches past the playable edge (bunkers and bridges sit near it)
+const { gridCell: CELL, gridPad: PAD } = STRUCTURES
+const EXTENT = WORLD_HALF + STRUCTURES.gridMargin // m: the grid reaches past the playable edge
 const SIZE = Math.ceil((2 * EXTENT) / CELL)
 
 const index = (v: number) => Math.floor((v + EXTENT) / CELL)
