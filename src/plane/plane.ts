@@ -6,9 +6,6 @@ import type { Tank, WorldRefs } from '../tank/tank'
 import { PlaneView } from './planeView'
 
 const { clamp } = THREE.MathUtils
-const SIGHT_STEP = 0.1 // s per step of the bomb sight's fall prediction
-const SIGHT_STEPS = 300
-const PROP_SPIN = 60 // rad/s at full throttle
 
 const BOMB_SPEC = {
 	pen: PLANE.bomb.pen,
@@ -96,7 +93,7 @@ export class Plane {
 		}
 		this.altitude = this.pos.y - w.terrain.height(this.pos.x, this.pos.z)
 		this.updateSight(w)
-		this.spin = (this.spin + PROP_SPIN * (0.4 + this.throttle * 0.6) * dt) % (Math.PI * 2)
+		this.spin = (this.spin + PLANE.propSpin * (0.4 + this.throttle * 0.6) * dt) % (Math.PI * 2)
 		this.view.place(this.pos, this.yaw, this.pitch, this.roll, this.spin)
 		this.view.sight(this.sightOk ? this.sight : null, PLANE.bomb.splash, w.terrain)
 		return false
@@ -149,9 +146,9 @@ export class Plane {
 		p.copy(this.pos)
 		v.copy(this.vel)
 		this.sightOk = false
-		for (let i = 0; i < SIGHT_STEPS; i++) {
-			v.y -= GRAVITY * SIGHT_STEP
-			p.addScaledVector(v, SIGHT_STEP)
+		for (let i = 0; i < PLANE.sightSteps; i++) {
+			v.y -= GRAVITY * PLANE.sightStep
+			p.addScaledVector(v, PLANE.sightStep)
 			if (p.y < w.terrain.height(p.x, p.z)) {
 				this.sight.copy(p)
 				this.sightOk = Math.max(Math.abs(p.x), Math.abs(p.z)) < WORLD_HALF

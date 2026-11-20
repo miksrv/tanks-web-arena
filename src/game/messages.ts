@@ -1,34 +1,21 @@
-import { ARCHETYPES, NATION_LABEL, WEATHER } from '../config'
+import { ARCHETYPES, HIT_PART_LABEL, HIT_ZONE_LABEL, HUD, NATION_LABEL, SEASON_LABEL, WEATHER } from '../config'
+import { RAD_TO_DEG } from '../core/math'
 import type { Terrain } from '../world/terrain'
 import type { Outcome } from './match'
 import type { Medal } from './medals'
 import type { HitResult } from '../combat/armor'
 import type { Tank } from '../tank/tank'
 
-/** HUD texts and colours of the battle log. */
-export const COLOR = {
-	good: '#8fd36b',
-	bad: '#ff5a5a',
-	warn: '#ff9f6b',
-	info: '#9ad1ff',
-	damage: '#ffd166',
-	fire: '#ff7a1a',
-} as const
-
-const ZONE: Record<string, string> = { hull: 'корпус', turret: 'башня', tracks: 'гусеница' }
-const SPOT: Record<string, string> = {
-	lower: 'нижний лист',
-	mantlet: 'маска орудия',
-	cupola: 'командирская башенка',
-	screen: 'экран',
-}
+/** Colours of the battle log (the table is `HUD.logColors`). */
+export const COLOR = HUD.logColors
+const ZONE: Record<string, string> = HIT_PART_LABEL
+const SPOT: Record<string, string> = HIT_ZONE_LABEL
 
 /** "башня", "нижний лист", "корпус (экран)": where a hit landed, for the log and the battle report. */
 export function hitPlace(hit: HitResult): string {
 	if (hit.zone === 'screen') return `${ZONE[hit.part]} (экран)`
 	return hit.zone ? SPOT[hit.zone] : ZONE[hit.part]
 }
-const RAD_TO_DEG = 57.3
 const r = Math.round
 
 /** The player's own shell struck `hit`. */
@@ -48,8 +35,6 @@ export function hitTakenText(hit: HitResult, by: Tank): { text: string; color: s
 	if (hit.penetrated) return { text: `Пробитие ${zone}: −${r(hit.damage)} (${by.def.name})`, color }
 	return { text: `Не пробито: ${zone} (${by.def.name})`, color }
 }
-
-const SEASON_LABEL = { summer: 'лето', autumn: 'осень', winter: 'зима' } as const
 
 /** "степь · лето · туман": the map's country, season and weather for the battle intro. */
 export function mapTitle(t: Terrain): string {

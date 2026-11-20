@@ -1,13 +1,8 @@
 import * as THREE from 'three'
-import type { TankDef } from '../config'
+import { HUD, type TankDef } from '../config'
 import { TankView } from '../tank/tankView'
 
-const FOV = 30 // deg
-/** Three-quarter view from the front left, a little from above. */
-const VIEW_YAW = 0.75 // rad
-const VIEW_PITCH = 0.3 // rad
-const SPIN_SPEED = 0.5 // rad/s, the selected vehicle's turntable
-const MARGIN = 1.08 // framing slack around the silhouette
+const P = HUD.preview
 
 /** What the camera frames: the turntable's centre height, its radius about the y axis and its half height. */
 interface Frame {
@@ -23,7 +18,7 @@ interface Frame {
 export class TankPreview {
 	private readonly renderer: THREE.WebGLRenderer
 	private readonly scene = new THREE.Scene()
-	private readonly camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 200)
+	private readonly camera = new THREE.PerspectiveCamera(P.fov, 1, 0.1, 200)
 	private readonly views = new Map<string, { view: TankView; frame: Frame }>()
 	private readonly tmpBox = new THREE.Box3()
 	private readonly tmpV = new THREE.Vector3()
@@ -56,14 +51,14 @@ export class TankPreview {
 		const cam = this.camera
 		cam.aspect = w / h
 		// Fit the turntable's silhouette (any heading) into both fields of view; the near side is `reach` closer
-		const tan = Math.tan(THREE.MathUtils.degToRad(FOV / 2))
-		const halfV = frame.halfH * Math.cos(VIEW_PITCH) + frame.reach * Math.sin(VIEW_PITCH)
-		const dist = Math.max(halfV / tan, frame.reach / (tan * cam.aspect)) * MARGIN + frame.reach * 0.5
+		const tan = Math.tan(THREE.MathUtils.degToRad(P.fov / 2))
+		const halfV = frame.halfH * Math.cos(P.viewPitch) + frame.reach * Math.sin(P.viewPitch)
+		const dist = Math.max(halfV / tan, frame.reach / (tan * cam.aspect)) * P.margin + frame.reach * 0.5
 		const center = this.tmpV.set(0, frame.cy, 0)
 		cam.position.set(
-			Math.sin(VIEW_YAW) * Math.cos(VIEW_PITCH) * dist,
-			frame.cy + Math.sin(VIEW_PITCH) * dist,
-			Math.cos(VIEW_YAW) * Math.cos(VIEW_PITCH) * dist,
+			Math.sin(P.viewYaw) * Math.cos(P.viewPitch) * dist,
+			frame.cy + Math.sin(P.viewPitch) * dist,
+			Math.cos(P.viewYaw) * Math.cos(P.viewPitch) * dist,
 		)
 		cam.lookAt(center)
 		cam.updateProjectionMatrix()
@@ -78,7 +73,7 @@ export class TankPreview {
 
 	/** Radians the selected vehicle turns in `dt` seconds. */
 	static spin(dt: number) {
-		return dt * SPIN_SPEED
+		return dt * P.spinSpeed
 	}
 
 	private model(def: TankDef) {

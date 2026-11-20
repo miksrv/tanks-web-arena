@@ -3,7 +3,7 @@ import { BotBrain } from '../ai/bot'
 import { TeamTactics } from '../ai/team'
 import { CameraRig } from '../camera'
 import { Shells } from '../combat/shells'
-import { MODE_LABEL, PLANE, RENDER, TANKS, WEATHER } from '../config'
+import { MATCH, MODE_LABEL, PLANE, RENDER, TANKS, WEATHER } from '../config'
 import { ArtyView } from '../fx/artyView'
 import { Audio } from '../fx/audio'
 import { Particles } from '../fx/particles'
@@ -29,11 +29,6 @@ import { Spotting } from './spotting'
 import { TeamSignals, type Squad } from './teamSignals'
 import { exposeOnWindow, type TestOptions } from './testHooks'
 import { afterPaint, disposeMap, generateMap, mapKey, mapRequest, type GeneratedMap, type MapRequest } from './world'
-
-const MAX_STEP = 0.05 // s: longer frames are simulated slower rather than in one big step
-const MAX_RAW_FRAME = 0.25
-const AUTOSTART_DELAY_MS = 500
-const DEBUG_LOG_MS = 5000
 
 /** Owns the renderer, the systems and the round lifecycle; `start()` runs the frame loop. */
 export class Game {
@@ -173,12 +168,7 @@ export class Game {
 
 	private go() {
 		this.startRound()
-		try {
-			const r = this.renderer.domElement.requestPointerLock() as unknown as Promise<void> | undefined
-			r?.catch?.(() => undefined)
-		} catch {
-			/* unsupported */
-		}
+		this.input.lock()
 	}
 
 	private startRound() {
@@ -213,7 +203,7 @@ export class Game {
 				),
 		)
 		// Rows leave the base one after another (front row first) so the formation does not jam at the gate;
-		// the row is read from where the tank actually stands, 12 m per row behind the base centre
+		// the row is read from where the tank actually stands behind the base centre
 		const { bases } = this.world.terrain
 		for (const b of this.bots) {
 			const t = b.tank
@@ -221,14 +211,14 @@ export class Game {
 			const enemy = bases[1 - t.team]
 			const l = Math.hypot(enemy.x - base.x, enemy.z - base.z) || 1
 			const behind = -((t.pos.x - base.x) * (enemy.x - base.x) + (t.pos.z - base.z) * (enemy.z - base.z)) / l
-			const row = Math.max(0, Math.round(behind / 12))
+			const row = Math.max(0, Math.round(behind / MATCH.spawn.rowGap))
 			const mates = this.teamBots[t.team]
 			b.plan(
 				this.world,
 				this.tactics[t.team],
 				mates.indexOf(b),
 				mates.length,
-				row * 3.5 + Math.random() * 2,
+				row * MATCH.departRow + Math.random() * MATCH.departJitter,
 				this.time,
 			)
 		}
@@ -246,7 +236,7 @@ export class Game {
 	}
 
 	private autostartSoon() {
-		setTimeout(() => this.hud.garage.onGo?.(), AUTOSTART_DELAY_MS)
+		setTimeout(() => this.hud.garage.onGo?.(), MATCH.autostartDelayMs)
 	}
 
 	// ---------------------------------------------------------------- frame loop
@@ -258,13 +248,13 @@ export class Game {
 		if (!this.pacer.shouldRender(now, targetFps)) return
 		if (this.opts.debug) this.debugLog(now)
 		// rAF stamps can trail performance.now(): never step backwards
-		const raw = Math.max(0, Math.min(MAX_RAW_FRAME, (now - this.last) / 1000))
+		const raw = Math.max(0, Math.min(RENDER.maxRawFrame, (now - this.last) / 1000))
 		const paused = this.paused
-		const dt = paused ? 0 : Math.min(MAX_STEP, raw) * this.timeScale
+		const dt = paused ? 0 : Math.min(RENDER.maxStep, raw) * this.timeScale
 		this.last = now
 		this.time += dt
 		this.resolution.update(raw, targetFps)
-		this.fps.count(dt)
+		this.fps.count(raw)
 		this.audio.setPaused(paused)
 
 		if (!paused) this.updatePhase(dt)
@@ -377,8 +367,10 @@ export class Game {
 		this.particles.setScale(bufferHeight, rig.camera.fov)
 		this.precip.setScale(bufferHeight, rig.camera.fov)
 		this.precip.update(dt, rig.camera, rig.mode === 'arty')
-		if (flying) this.audio.engine(plane.throttle, plane.speed, PLANE.maxSpeed, true, dt)
-		else this.audio.engine(player.throttle, player.speed, player.def.speed, player.alive, dt)
+		// Nothing is simulated in the garage: the tank's last throttle must not keep the engine roaring there
+		if (this.match.phase === 'garage') this.audio.engine(0, 0, 1, false)
+		else if (flying) this.audio.engine(plane.throttle, plane.speed, PLANE.maxSpeed, true)
+		else this.audio.engine(player.throttle, player.speed, player.def.speed, player.alive)
 		this.renderer.render(this.env.scene, rig.camera)
 		this.hud.update({
 			dt,
@@ -410,7 +402,7 @@ export class Game {
 
 	private debugLog(now: number) {
 		if (now <= this.debugAt) return
-		this.debugAt = now + DEBUG_LOG_MS
+		this.debugAt = now + MATCH.debugLogMs
 		const alive = [0, 1].map((team) => this.tanks.filter((t) => t.team === team && t.alive).length)
 		const parts = [
 			`t=${this.time.toFixed(0)}`,

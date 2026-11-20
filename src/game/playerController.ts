@@ -1,4 +1,4 @@
-import { AMMO, AMMO_IDS, DRIVE } from '../config'
+import { AMMO, AMMO_IDS, CONTROLS, DRIVE } from '../config'
 import type { CameraRig } from '../camera'
 import type { Shells } from '../combat/shells'
 import type { Audio } from '../fx/audio'
@@ -22,8 +22,6 @@ const SIGNAL_KEYS: [string, Signal][] = [
 ]
 
 const MENU_KEY = 'KeyQ'
-const SHOT_BUFFER = 0.3 // s: a click this close to the end of the reload fires the moment the gun is loaded
-const RELOAD_CUE_MIN = 2 // s: guns that reload faster than this (autocannons) give no "loaded" cue
 
 /**
  * Keyboard and mouse → the player's tank, camera modes and consumables; spectating teammates after death; the plane
@@ -237,13 +235,13 @@ export class PlayerController {
 		const loaded = this.loading && player.reload <= 0
 		if (phase !== 'battle') this.queuedShot = false
 		else if (this.input.leftClicked) {
-			if (player.reload > 0 && player.reload <= SHOT_BUFFER) this.queuedShot = true
+			if (player.reload > 0 && player.reload <= CONTROLS.shotBuffer) this.queuedShot = true
 			else this.fire(player)
 		} else if (this.queuedShot && player.reload <= 0) {
 			this.queuedShot = false
 			this.fire(player)
 		}
-		if (loaded && player.reload <= 0 && player.def.gun.reload >= RELOAD_CUE_MIN) this.audio.reloaded()
+		if (loaded && player.reload <= 0 && player.def.gun.reload >= CONTROLS.reloadCueMin) this.audio.reloaded()
 		this.loading = player.reload > 0
 	}
 

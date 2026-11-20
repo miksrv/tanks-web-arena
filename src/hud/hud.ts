@@ -1,6 +1,6 @@
 import type * as THREE from 'three'
 import type { CameraRig, CamMode } from '../camera'
-import { PLANE } from '../config'
+import { HUD, PLANE } from '../config'
 import type { Plane } from '../plane/plane'
 import type { Tank, WorldRefs } from '../tank/tank'
 import type { Terrain } from '../world/terrain'
@@ -15,8 +15,6 @@ import { Scoreboard } from './scoreboard'
 import { RadialMenu } from './radialMenu'
 import { StatusPanel } from './statusPanel'
 import { TankLabels } from './tankLabels'
-
-const SIXTH_SENSE_TIME = 4 // s the lamp stays lit
 
 export interface HudStats {
 	fps: number
@@ -66,6 +64,8 @@ export class Hud {
 	private readonly captureBar = new CaptureBar()
 	showFps = false
 	private sixthTimer = 0
+	private centerTimer = 0
+	private centerLater = ''
 
 	// ---------------------------------------------------------------- overlays
 	showGarage(on: boolean) {
@@ -79,9 +79,15 @@ export class Hud {
 		const el = $('reportBody')
 		el.innerHTML = html
 		show($('report'), html !== '')
+		// A player back from a battle knows the keys: the controls fold away and leave the room to the report
+		if (html) ($('garageControls') as HTMLDetailsElement).open = false
 	}
-	center(html: string) {
+	/** Big message in the middle. With `later` it is replaced by that slim line after `HUD.messages.centerBigTime`. */
+	center(html: string, later = '') {
 		this.overlay('center', html)
+		$('center').classList.remove('slim')
+		this.centerLater = later
+		this.centerTimer = later ? HUD.messages.centerBigTime : 0
 	}
 	hint(html: string) {
 		this.overlay('hint', html)
@@ -124,7 +130,7 @@ export class Hud {
 	}
 	/** Light the "you are spotted" lamp. */
 	sixthSense() {
-		this.sixthTimer = SIXTH_SENSE_TIME
+		this.sixthTimer = HUD.messages.sixthSenseTime
 	}
 
 	// ---------------------------------------------------------------- per frame
@@ -135,6 +141,10 @@ export class Hud {
 		this.reticle.update(f.dt, f.player, f.rig, f.world, f.locked && !f.plane, f.mode, f.artyBlocked)
 		this.updatePlane(f.plane, f.locked)
 		show($('freeLook'), f.freeLook)
+		if (this.centerTimer > 0 && (this.centerTimer -= f.dt) <= 0) {
+			this.overlay('center', this.centerLater)
+			$('center').classList.add('slim')
+		}
 		this.sixthTimer = f.player.alive ? Math.max(0, this.sixthTimer - f.dt) : 0
 		show($('sixth'), this.sixthTimer > 0)
 		const askForLock = !f.locked && !this.garage.isOpen

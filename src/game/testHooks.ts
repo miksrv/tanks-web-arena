@@ -26,6 +26,7 @@ export function readTestOptions(search = location.search): TestOptions {
 	const num = (name: string) => (params.has(name) ? Number(params.get(name)) : null)
 	const tank = params.get('tank')
 	const round = num('round')
+	const speed = num('speed')
 	const weather = params.get('weather')
 	const mode = params.get('mode')
 	const map = params.get('map')
@@ -34,7 +35,7 @@ export function readTestOptions(search = location.search): TestOptions {
 		autostart: params.has('autostart'),
 		seed: num('seed'),
 		tankId: tank && tank in TANKS ? tank : null,
-		timeScale: num('speed') ?? 1,
+		timeScale: speed !== null && speed > 0 ? speed : 1, // also drops NaN from `?speed=abc`
 		overviewTop: params.get('view') === 'top',
 		debug: params.has('debug'),
 		weather: weather && weather in WEATHER ? (weather as Weather) : null,

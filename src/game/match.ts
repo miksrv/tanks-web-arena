@@ -1,4 +1,4 @@
-import { MATCH, TANKS, tanksOf, type BattleMode, type Nation, type Role, type TankDef } from '../config'
+import { BOT_NAMES, MATCH, TANKS, tanksOf, type BattleMode, type Nation, type Role, type TankDef } from '../config'
 import { Tank } from '../tank/tank'
 import type { Terrain } from '../world/terrain'
 
@@ -8,38 +8,17 @@ export type Phase = 'garage' | 'countdown' | 'battle' | 'result'
 /** Why the battle ended. */
 export type Outcome = 'destroyed' | 'capture' | 'time' | 'defended'
 
-const NAMES: Record<Nation, string[]> = {
-	ussr: [
-		'Лавриненко',
-		'Колобанов',
-		'Бурда',
-		'Самохин',
-		'Оськин',
-		'Любушкин',
-		'Фадин',
-		'Коновалов',
-		'Архипов',
-		'Катуков',
-		'Бочковский',
-		'Зиновий',
-	],
-	germany: [
-		'Wittmann',
-		'Carius',
-		'Knispel',
-		'Bölter',
-		'Kerscher',
-		'Barkmann',
-		'Staudegger',
-		'Rondorf',
-		'Bix',
-		'Strippel',
-		'Fehrmann',
-		'Loewe',
-	],
-}
 const nationOfTeam: Nation[] = ['ussr', 'germany']
-const BALANCE_PASSES = 20
+
+/** A shuffled copy (Fisher–Yates: sorting by a random comparator is biased). */
+function shuffled<T>(list: readonly T[]): T[] {
+	const out = [...list]
+	for (let i = out.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1))
+		;[out[i], out[j]] = [out[j], out[i]]
+	}
+	return out
+}
 
 /** Vehicles of a role for one nation rated within the spread of `rating`, or the nearest-rated ones if none is. */
 function candidates(nation: Nation, role: Role, rating: number): string[] {
@@ -73,7 +52,7 @@ export function pickRosters(playerDef: TankDef, playerTeam: 0 | 1): string[][] {
 		return team === playerTeam ? [[playerDef.id], ...slots] : slots
 	})
 	const rosters = options.map((slots) => slots.map(pick))
-	for (let pass = 0; pass < BALANCE_PASSES; pass++) {
+	for (let pass = 0; pass < MATCH.balancePasses; pass++) {
 		const diff = ratingOf(rosters[0]) - ratingOf(rosters[1])
 		if (Math.abs(diff) <= MATCH.ratingTolerance) break
 		// The single swap (any bot slot, any vehicle allowed there) that brings the sums closest
@@ -120,7 +99,7 @@ export class Match {
 		const rosters = pickRosters(playerDef, playerTeam)
 		const tanks: Tank[] = []
 		for (const team of [0, 1] as const) {
-			const names = [...NAMES[nationOfTeam[team]]].sort(() => Math.random() - 0.5)
+			const names = shuffled(BOT_NAMES[nationOfTeam[team]])
 			rosters[team].forEach((id, i) => {
 				if (team === playerTeam && i === 0) tanks.unshift(new Tank(playerDef, team, 'Вы', true))
 				else tanks.push(new Tank(TANKS[id], team, names[i % names.length], false))
@@ -138,15 +117,19 @@ export class Match {
 			const yaw = Math.atan2(enemy.x - base.x, enemy.z - base.z)
 			const rx = Math.cos(yaw)
 			const rz = -Math.sin(yaw) // right of the facing direction
-			const list = tanks.filter((t) => t.team === team)
-			// Artillery at the back row
+			// Places in the formation are dealt at random each battle (the player's too), artillery in the back row
+			const { cols, colGap, rowGap } = MATCH.spawn
+			const list = shuffled(tanks.filter((t) => t.team === team))
 			list.sort((a, b) => (a.def.role === 'spg' ? 1 : 0) - (b.def.role === 'spg' ? 1 : 0))
+			const taken: { x: number; z: number }[] = []
 			list.forEach((t, i) => {
-				const col = (i % 4) - 1.5
-				const row = Math.floor(i / 4)
-				const x = base.x + rx * col * 11 - Math.sin(yaw) * row * 12
-				const z = base.z + rz * col * 11 - Math.cos(yaw) * row * 12
-				const spot = terrain.passable(x, z) ? { x, z } : terrain.findSpot(base.x, base.z, 35)
+				const col = (i % cols) - (cols - 1) / 2
+				const row = Math.floor(i / cols)
+				const x = base.x + rx * col * colGap - Math.sin(yaw) * row * rowGap
+				const z = base.z + rz * col * colGap - Math.cos(yaw) * row * rowGap
+				// A blocked place in the rows: anywhere free near the base, clear of the tanks already placed
+				const spot = terrain.passable(x, z) ? { x, z } : terrain.findSpot(base.x, base.z, 35, taken)
+				taken.push(spot)
 				t.spawn(spot.x, spot.z, yaw, terrain)
 			})
 		}

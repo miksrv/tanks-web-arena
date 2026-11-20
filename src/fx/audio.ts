@@ -1,15 +1,20 @@
+import { AUDIO_FX } from '../config'
 import { EngineSound, type NoiseKind } from './engineSound'
 
 /** Where a sound comes from on the map; `null` is the listener's own tank (centred, full volume). */
 export type SoundAt = { x: number; z: number } | null
 
-const PAN_WIDTH = 0.8 // a sound straight to the side is not fully in one ear
-const PAN_NEAR = 12 // m: closer sounds are pulled toward the centre (they come from all around the hull)
-const AIR_FAR = 0.08 // air absorption: lowpass at the edge of a sound's reach, as a fraction of the near cutoff
-const SILENT = 0.0001 // floor for exponential envelopes (they cannot reach zero)
+const { panWidth, panNear, airFar, silent, plate } = AUDIO_FX
+const MUTE_KEY = 'tanks-web-arena.muted'
 
-// Inharmonic partials of a struck steel plate: armour clangs, breech, debris
-const PLATE = [1, 2.32, 4.25, 6.63]
+/** The mute choice of the last visit (false when the storage is empty or blocked). */
+function storedMute(): boolean {
+	try {
+		return localStorage.getItem(MUTE_KEY) === '1'
+	} catch {
+		return false
+	}
+}
 
 /** A one-shot's entry point: gain-adjusted volume `v` and how far toward the edge of its reach it is (0…1). */
 interface Voice {
@@ -31,7 +36,8 @@ export class Audio {
 	/** The looping rain hiss and the level it should be at (kept even before the context exists). */
 	private rainGain: GainNode | null = null
 	private rainLevel = 0
-	muted = false
+	/** Remembered between visits (per browser). */
+	muted = storedMute()
 	/** Simulation paused: the context is suspended and stays so until `setPaused(false)`. */
 	private paused = false
 	private readonly ear = { x: 0, z: 0, yaw: 0 }
@@ -161,7 +167,7 @@ export class Audio {
 		const far = Math.min(1, d / reach)
 		const air = ctx.createBiquadFilter()
 		air.type = 'lowpass'
-		air.frequency.value = 16000 * Math.pow(AIR_FAR, Math.sqrt(far))
+		air.frequency.value = 16000 * Math.pow(airFar, Math.sqrt(far))
 		air.connect(this.panned(ctx, this.mix, pan))
 		const send = ctx.createGain()
 		send.gain.value = 0.15 + 0.6 * far
@@ -194,9 +200,9 @@ export class Audio {
 		f.frequency.setValueAtTime(freq, t)
 		if (freqEnd !== freq) f.frequency.exponentialRampToValueAtTime(freqEnd, t + dur)
 		const g = this.ctx.createGain()
-		g.gain.setValueAtTime(SILENT, t)
+		g.gain.setValueAtTime(silent, t)
 		g.gain.linearRampToValueAtTime(gain, t + attack)
-		g.gain.exponentialRampToValueAtTime(SILENT, t + dur)
+		g.gain.exponentialRampToValueAtTime(silent, t + dur)
 		src.connect(f).connect(g).connect(out)
 		src.start(t, Math.random() * 1.5)
 		src.stop(t + dur + 0.05)
@@ -220,9 +226,9 @@ export class Audio {
 		o.frequency.setValueAtTime(freq, t)
 		if (slide !== 1) o.frequency.exponentialRampToValueAtTime(Math.max(15, freq * slide), t + dur)
 		const g = this.ctx.createGain()
-		g.gain.setValueAtTime(SILENT, t)
+		g.gain.setValueAtTime(silent, t)
 		g.gain.linearRampToValueAtTime(gain, t + attack)
-		g.gain.exponentialRampToValueAtTime(SILENT, t + dur)
+		g.gain.exponentialRampToValueAtTime(silent, t + dur)
 		o.connect(g).connect(out)
 		o.start(t)
 		o.stop(t + dur + 0.05)
@@ -230,7 +236,7 @@ export class Audio {
 
 	/** A struck steel plate: inharmonic partials, the higher ones dying first. */
 	private ring(out: AudioNode, delay: number, base: number, gain: number, dur: number) {
-		PLATE.forEach((r, i) => {
+		plate.forEach((r, i) => {
 			const f = base * r * (0.98 + Math.random() * 0.04)
 			this.partial(out, delay, f, gain / (1 + i * 0.8), dur / (1 + i * 0.7))
 		})
@@ -253,7 +259,7 @@ export class Audio {
 		// Screen right is (−cos yaw, sin yaw)
 		const side = (-dx * Math.cos(this.ear.yaw) + dz * Math.sin(this.ear.yaw)) / d
 		const v = Math.max(0, 1 - d / reach)
-		return [v * v * 0.6 + v * 0.4, side * PAN_WIDTH * Math.min(1, d / PAN_NEAR), d]
+		return [v * v * 0.6 + v * 0.4, side * panWidth * Math.min(1, d / panNear), d]
 	}
 
 	/** Cannon: supersonic crack, muzzle blast, sub-bass thump and a rolling echo; bigger guns are lower and longer. */
@@ -387,7 +393,7 @@ export class Audio {
 	}
 
 	/** Per-frame engine note. */
-	engine(throttle: number, speed: number, maxSpeed: number, alive: boolean, _dt: number) {
+	engine(throttle: number, speed: number, maxSpeed: number, alive: boolean) {
 		if (this.ctx && this.engineSound)
 			this.engineSound.update(this.ctx.currentTime, throttle, speed, maxSpeed, alive)
 	}
@@ -401,6 +407,11 @@ export class Audio {
 	}
 	toggleMute(): boolean {
 		this.muted = !this.muted
+		try {
+			localStorage.setItem(MUTE_KEY, this.muted ? '1' : '0')
+		} catch {
+			/* storage blocked: the choice lasts for the session */
+		}
 		if (this.master) this.master.gain.value = this.muted ? 0 : 1
 		return this.muted
 	}

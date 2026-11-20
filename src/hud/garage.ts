@@ -1,9 +1,12 @@
 import {
 	ARCHETYPES,
+	HUD,
 	MAP_PRESETS,
 	MODE_LABEL,
+	MODE_NOTE,
 	RENDER,
 	ROLE_LABEL,
+	SEASON_LABEL,
 	TANKS,
 	tanksOf,
 	WEATHER,
@@ -11,20 +14,11 @@ import {
 	type Nation,
 	type TankDef,
 } from '../config'
+import { RAD_TO_DEG } from '../core/math'
 import type { MapChoice } from '../game/world'
 import { FramePacer } from '../render/framePacer'
 import { $, show } from './dom'
 import { TankPreview } from './tankPreview'
-
-const RAD_TO_DEG = 57.3
-const MODE_NOTE: Record<BattleMode, string> = {
-	standard: 'у каждой команды своя база: уничтожить всех или захватить базу противника',
-	encounter: 'одна нейтральная база в центре: её может захватить любая команда',
-	assault: 'одна команда обороняет базу, другая её штурмует; время на стороне обороны',
-}
-
-/** Bar scale maxima for the vehicle cards. */
-const STAT_MAX = { hp: 1400, speed: 16, pen: 200, dmg: 2100, armor: 200, view: 410 }
 
 function statBar(label: string, v: number, max: number, text: string): string {
 	const width = Math.min(100, (v / max) * 100).toFixed(0)
@@ -41,7 +35,8 @@ function vehicleNotes(d: TankDef): string {
 			: 'гаубица: навесной огонь, вид сверху'
 	} else if (g.arc < 3) fire = `без башни: сектор ±${Math.round(g.arc * RAD_TO_DEG)}°`
 	let shell = ''
-	if (g.derp) shell = `фугасы по умолчанию, сплэш ${g.splash} м`
+	if (g.mortar) shell = `реактивная мортира: только ОФ ×${g.rounds}, сплэш ${g.splash} м, заряжание на месте`
+	else if (g.derp) shell = `фугасы по умолчанию, сплэш ${g.splash} м`
 	else if (g.bloomShot && !g.salvo) shell = 'автопушка: очередь без потери сведения'
 	return [fire, shell, d.shape.openTop ? 'открытая рубка' : ''].filter(Boolean).join(' · ')
 }
@@ -52,12 +47,12 @@ function vehicleCardHtml(d: TankDef): string {
 	const armor = `${d.armor.front}/${d.armor.side}/${d.armor.rear}`
 	return (
 		`<span class="role">${ROLE_LABEL[d.role]}</span><b>${d.name}</b>` +
-		statBar('прочность', d.hp, STAT_MAX.hp, String(d.hp)) +
-		statBar('скорость', d.speed, STAT_MAX.speed, `${Math.round(d.speed * 3.6)}`) +
-		statBar('пробитие', d.gun.pen, STAT_MAX.pen, String(d.gun.pen)) +
-		statBar('урон', dmg, STAT_MAX.dmg, String(dmg)) +
-		statBar('броня', d.armor.front, STAT_MAX.armor, `${d.armor.front}`) +
-		statBar('обзор', d.viewRange, STAT_MAX.view, String(d.viewRange)) +
+		statBar('прочность', d.hp, HUD.garage.statMax.hp, String(d.hp)) +
+		statBar('скорость', d.speed, HUD.garage.statMax.speed, `${Math.round(d.speed * 3.6)}`) +
+		statBar('пробитие', d.gun.pen, HUD.garage.statMax.pen, String(d.gun.pen)) +
+		statBar('урон', dmg, HUD.garage.statMax.dmg, String(dmg)) +
+		statBar('броня', d.armor.front, HUD.garage.statMax.armor, `${d.armor.front}`) +
+		statBar('обзор', d.viewRange, HUD.garage.statMax.view, String(d.viewRange)) +
 		`<small>${d.gun.caliber} мм · перезарядка ${d.gun.reload} с · броня ${armor}${notes ? '<br>' + notes : ''}</small>`
 	)
 }
@@ -86,7 +81,6 @@ function controlsHtml(help: HTMLElement): string {
 	return pairs.map((p) => `<span class="key">${p}</span>`).join('') + (tip ? tip.outerHTML : '')
 }
 
-const SEASON = { summer: 'лето', autumn: 'осень', winter: 'зима' } as const
 const STORE_KEY = 'tanks-web-arena.battle'
 
 /** The last map and mode choice (per browser; an empty or blocked storage gives the defaults). */
@@ -128,6 +122,7 @@ export class Garage {
 	constructor() {
 		for (const n of this.nationTabs()) {
 			n.onclick = () => {
+				if (this.nation === n.dataset.n) return
 				this.nation = n.dataset.n as Nation
 				this.tankId = tanksOf(this.nation)[1]
 				this.render()
@@ -154,7 +149,8 @@ export class Garage {
 			if (!this.isOpen) return
 			if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.step(-1)
 			else if (e.code === 'ArrowRight' || e.code === 'KeyD') this.step(1)
-			else if (e.code === 'Enter') this.onGo?.()
+			// Enter on a focused button is that button's click, not «В бой» (To battle)
+			else if (e.code === 'Enter' && !(e.target instanceof HTMLButtonElement)) this.onGo?.()
 		})
 		window.addEventListener('resize', () => {
 			if (this.isOpen) this.drawAll()
@@ -182,7 +178,7 @@ export class Garage {
 	private buildChoices() {
 		const maps: [string, string, string][] = [['random', 'Случайная', 'каждый бой новая карта']]
 		for (const p of MAP_PRESETS) {
-			const note = `${ARCHETYPES[p.archetype].label} · ${SEASON[p.season]} · ${WEATHER[p.weather].label}`
+			const note = `${ARCHETYPES[p.archetype].label} · ${SEASON_LABEL[p.season]} · ${WEATHER[p.weather].label}`
 			maps.push([p.id, p.name, note])
 		}
 		const modes: [string, string, string][] = [['random', 'Случайный', 'стандартный, встречный или штурм']]

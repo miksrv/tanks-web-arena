@@ -1,3 +1,4 @@
+import { SIGNALS } from '../config'
 import type { BotBrain } from '../ai/bot'
 import type { TeamTactics } from '../ai/team'
 import type { CameraRig } from '../camera'
@@ -6,10 +7,6 @@ import type { Tank, WorldRefs } from '../tank/tank'
 import type { Capture, CaptureZone } from './capture'
 import { COLOR } from './messages'
 import type { Signal } from './playerController'
-
-const SIGNAL_COOLDOWN = 2 // s between two team signals
-const FOCUS_TIME = 25 // s the team prefers the called-out target
-const ORDER_HOLD = 40 // s bots sent by a signal stay where they were sent
 
 /** The player's side: who sends the signal and who answers it. */
 export interface Squad {
@@ -49,7 +46,7 @@ export class TeamSignals {
 		const { hud, rig } = this
 		const { player: p, world, tactics: tac } = squad
 		if (!p.alive || time < this.readyAt) return
-		this.readyAt = time + SIGNAL_COOLDOWN
+		this.readyAt = time + SIGNALS.cooldown
 		const near = (x: number, z: number, n: number) =>
 			squad.bots
 				.filter((b) => b.tank.alive && b.tank.def.role !== 'spg')
@@ -60,7 +57,7 @@ export class TeamSignals {
 		}
 		const t = rig.aimedTank
 		if (sig === 'attack' && t && t.team !== p.team && t.alive) {
-			tac.focusOn(t, time + FOCUS_TIME)
+			tac.focusOn(t, time + SIGNALS.focusTime)
 			hud.announce(`<b>Вы</b>: Атакую ${t.def.name}!`)
 			hud.ping(t.pos.x, t.pos.z, COLOR.bad)
 			reply(near(t.pos.x, t.pos.z, 1), 'Понял, огонь по цели!')
@@ -69,13 +66,13 @@ export class TeamSignals {
 			hud.announce('<b>Вы</b>: Атакую сюда!')
 			hud.ping(at.x, at.z, COLOR.warn)
 			const bots = near(at.x, at.z, 3)
-			for (const b of bots) b.order(world, { x: at.x, z: at.z }, time, ORDER_HOLD)
+			for (const b of bots) b.order(world, { x: at.x, z: at.z }, time, SIGNALS.orderHold)
 			reply(bots, 'Понял, выдвигаюсь!')
 		} else if (sig === 'help') {
 			hud.announce('<b>Вы</b>: Нужна помощь!')
 			hud.ping(p.pos.x, p.pos.z, COLOR.info)
 			const bots = near(p.pos.x, p.pos.z, 2)
-			for (const b of bots) b.order(world, { x: p.pos.x, z: p.pos.z }, time, ORDER_HOLD)
+			for (const b of bots) b.order(world, { x: p.pos.x, z: p.pos.z }, time, SIGNALS.orderHold)
 			reply(bots, 'Иду на помощь!')
 		} else {
 			const zone = world.zones.find((z) => z.owner === p.team) ?? world.zones.find((z) => z.owner === -1)
@@ -89,7 +86,7 @@ export class TeamSignals {
 			for (const b of bots) {
 				tac.defenders.add(b.tank)
 				b.defend(world, zone)
-				b.holdOrder(time, ORDER_HOLD)
+				b.holdOrder(time, SIGNALS.orderHold)
 			}
 			reply(bots, 'Возвращаюсь на базу!')
 		}
