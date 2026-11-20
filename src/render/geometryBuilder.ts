@@ -69,3 +69,10 @@ export class MergedGeometryBuilder {
 		return geo
 	}
 }
+
+/** THREE colours built from a table of hex strings (config holds plain data). */
+export function colorTable<K extends string>(hex: Record<K, string>): Record<K, THREE.Color> {
+	const out = {} as Record<K, THREE.Color>
+	for (const k in hex) out[k] = new THREE.Color(hex[k])
+	return out
+}

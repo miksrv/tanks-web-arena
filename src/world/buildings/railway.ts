@@ -1,20 +1,17 @@
 import * as THREE from 'three'
-import { RAIL } from '../../config'
+import { RAIL, STRUCTURES } from '../../config'
 import type { Terrain } from '../terrain'
 import type { Railway } from '../terrain/railway'
 import { C, type BuildContext } from './builder'
 
-const SLEEPER_STEP = 1.6 // m
-const RAIL_SEGMENT = 6 // m: rails follow the ground in pieces this long
-const GAUGE = 1.52 // m (Russian broad gauge)
-const WAGON = { length: 12, gap: 1.4, width: 2.9, height: 3, wheels: 1.1 }
-const WAGON_PAINT = [new THREE.Color('#6b3a2a'), new THREE.Color('#4a5038'), new THREE.Color('#5a5650')]
-const steel = new THREE.Color('#4a4844')
-const roadClear = 26 // m: no wagon stands on a level crossing
-const baseClear = 70 // m: nor in or by a base circle
+const { sleeperStep: SLEEPER_STEP, railSegment: RAIL_SEGMENT, gauge: GAUGE, wagon: WAGON } = STRUCTURES
+const wagonPaint = STRUCTURES.wagonPaint.map((c) => new THREE.Color(c))
+const steel = new THREE.Color(STRUCTURES.steel)
 
 const nearBase = (t: Terrain, x: number, z: number) =>
-	[...t.bases, ...(t.neutral ? [t.neutral] : [])].some((b) => Math.hypot(b.x - x, b.z - z) < baseClear)
+	[...t.bases, ...(t.neutral ? [t.neutral] : [])].some(
+		(b) => Math.hypot(b.x - x, b.z - z) < STRUCTURES.wagonBaseClear,
+	)
 
 /** Sleepers and rails along the track, and one or two goods trains standing on it (solid cover). */
 export function railway(ctx: BuildContext, rw: Railway) {
@@ -53,7 +50,7 @@ function trains(ctx: BuildContext, rw: Railway, rot: number) {
 			const s = rw.s0 + 60 + rnd() * (rw.s1 - rw.s0 - 120 - len)
 			if (taken.some(([a, b]) => s < b + 30 && s + len > a - 30)) continue
 			const clear = Array.from({ length: count + 1 }, (_, i) => rw.at(s + i * (WAGON.length + WAGON.gap)))
-			if (clear.some((p) => t.roads.dist(p.x, p.z) < roadClear || nearBase(t, p.x, p.z))) continue
+			if (clear.some((p) => t.roads.dist(p.x, p.z) < STRUCTURES.wagonRoadClear || nearBase(t, p.x, p.z))) continue
 			taken.push([s, s + len])
 			for (let i = 0; i < count; i++) wagon(ctx, rw, s + i * (WAGON.length + WAGON.gap) + WAGON.length / 2, rot)
 			break
@@ -66,7 +63,7 @@ function wagon(ctx: BuildContext, rw: Railway, s: number, rot: number) {
 	const { t, b, rnd } = ctx
 	const p = rw.at(s)
 	const y0 = t.height(p.x, p.z) + 0.2
-	const paint = WAGON_PAINT[Math.floor(rnd() * WAGON_PAINT.length)]
+	const paint = wagonPaint[Math.floor(rnd() * wagonPaint.length)]
 	const { length: L, width: W, height: H, wheels: Wh } = WAGON
 	b.box(L, H, W, paint, p.x, y0 + Wh + H / 2, p.z, rot)
 	b.box(L + 0.3, 0.25, W + 0.3, C.roofGrey, p.x, y0 + Wh + H + 0.1, p.z, rot)

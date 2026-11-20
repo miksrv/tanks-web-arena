@@ -1,18 +1,9 @@
 import * as THREE from 'three'
-import { TERRAIN_RES, WORLD, WORLD_HALF } from '../../config'
+import { RELIEF, TERRAIN_RES, WORLD, WORLD_HALF } from '../../config'
 import type { Simplex2D } from '../../core/noise'
 import type { LayoutAxis, Relief } from './types'
 
 const { smoothstep } = THREE.MathUtils
-const EROSION_PASSES = 40
-/** Steppe gullies (balki): depth, and how thin the noise's zero lines are cut (closer to 1 = narrower). */
-const GULLY_DEPTH = 6.5
-const GULLY_EDGE = [0.9, 0.985] as const
-/** Pass: the ridge across the middle of the map, and the saddles where the three lanes go over it. */
-const RIDGE_HEIGHT = 24
-const RIDGE_SPAN = [55, 210] as const // m from the middle line: full height inside, gone outside
-const SADDLES = [-200, 0, 200] // m across the axis (the lane anchors on a dry map)
-const SADDLE_WIDTH = [28, 85] as const
 
 /** Grid step in metres. */
 export const CELL_SIZE = (WORLD_HALF * 2) / (TERRAIN_RES - 1)
@@ -47,7 +38,7 @@ function reliefNoise(
 		case 'steppe': {
 			// Nearly flat, cut by long meandering gullies along the zero lines of a low-frequency noise
 			const ridged = 1 - Math.abs(n.noise(x * 0.0042 + 17, z * 0.0042 - 9))
-			const gully = smoothstep(ridged, GULLY_EDGE[0], GULLY_EDGE[1]) * GULLY_DEPTH
+			const gully = smoothstep(ridged, RELIEF.gullyEdge[0], RELIEF.gullyEdge[1]) * RELIEF.gullyDepth
 			return (
 				hills * 0.22 * n.fbm(x * 0.0025, z * 0.0025, 3) +
 				WORLD.detail * 0.5 * n.noise(x * 0.03, z * 0.03) -
@@ -58,8 +49,10 @@ function reliefNoise(
 			// A ridge across the base axis, low saddles where the lanes cross it
 			const u = Math.abs(x * axis.dx + z * axis.dz)
 			const p = x * axis.px + z * axis.pz
-			const saddle = Math.max(...SADDLES.map((v) => 1 - smoothstep(Math.abs(p - v), ...SADDLE_WIDTH)))
-			const ridge = RIDGE_HEIGHT * (1 - smoothstep(u, ...RIDGE_SPAN)) * (1 - 0.85 * saddle)
+			const saddle = Math.max(
+				...RELIEF.saddles.map((v) => 1 - smoothstep(Math.abs(p - v), ...RELIEF.saddleWidth)),
+			)
+			const ridge = RELIEF.ridgeHeight * (1 - smoothstep(u, ...RELIEF.ridgeSpan)) * (1 - 0.85 * saddle)
 			return hills * 0.5 * n.fbm(x * 0.0038, z * 0.0038, 4) + ridge + bumps()
 		}
 		default:
@@ -87,7 +80,7 @@ function erode(g: Float32Array) {
 			g[b] -= m
 		}
 	}
-	for (let pass = 0; pass < EROSION_PASSES; pass++) {
+	for (let pass = 0; pass < RELIEF.erosionPasses; pass++) {
 		for (let j = 0; j < r - 1; j++) {
 			for (let i = 0; i < r - 1; i++) {
 				const k = j * r + i

@@ -1,14 +1,12 @@
-import { WORLD, WORLD_HALF } from '../../config'
+import { PROPS, WORLD_HALF } from '../../config'
 import type { Terrain, TreeSpecies } from '../terrain'
 import type { PropSet, Rock } from './types'
 
 type Rnd = () => number
 
-const BARE: readonly string[] = ['water', 'mud', 'road', 'base', 'town', 'mountain', 'sand', 'rail']
-
 /** Where vegetation may stand: not in water, mud, roads, bases, the town, the mountains, on a beach or a railway. */
 function okGround(t: Terrain, x: number, z: number): boolean {
-	return !BARE.includes(t.biome(x, z))
+	return !PROPS.bareGround.includes(t.biome(x, z))
 }
 
 /** Clear of settlements (plus `pad`), the river banks and the crossings. */
@@ -29,8 +27,6 @@ function nearWater(t: Terrain, x: number, z: number): boolean {
 		t.bogs.some((b) => near(b, 1.7))
 	)
 }
-
-const MIN_WILLOWS = 15
 
 class Scatter {
 	readonly set: PropSet = { trees: [], bushes: [], rocks: [], hay: [], fences: [] }
@@ -129,7 +125,7 @@ class Scatter {
 	fewWillows() {
 		const { flora } = this.t
 		const willows = this.set.trees.filter((tr) => tr.species === flora.waterside)
-		if (willows.length < MIN_WILLOWS) for (const tr of willows) tr.species = flora.leafy
+		if (willows.length < PROPS.minWillows) for (const tr of willows) tr.species = flora.leafy
 	}
 
 	/** Anti-tank obstacles: rows of steel hedgehogs or dragon's teeth flanking a lane halfway to the crossing. */
@@ -189,7 +185,7 @@ class Scatter {
 	rocks() {
 		const { t, rnd } = this
 		const rocks = this.set.rocks
-		for (let k = 0; k < WORLD.rocks * 12 && rocks.length < WORLD.rocks; k++) {
+		for (let k = 0; k < t.params.rocks * 12 && rocks.length < t.params.rocks; k++) {
 			const edge = rnd() < 0.6
 			const x = (rnd() * 2 - 1) * (WORLD_HALF - 60)
 			const z = (rnd() * 2 - 1) * (WORLD_HALF - 60)

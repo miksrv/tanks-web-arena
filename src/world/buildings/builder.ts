@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { BUILDING_PALETTE, STRUCTURES, type BuildingColor } from '../../config'
 import { MergedGeometryBuilder, placeY } from '../../render/geometryBuilder'
 import type { OBB } from '../obb'
 import type { Terrain } from '../terrain'
@@ -24,25 +25,11 @@ export interface Building {
 	kind: BuildingKind
 }
 
+type Palette = Record<BuildingColor, THREE.Color>
 /** Building palette. */
-export const C = {
-	wall: new THREE.Color('#c9b89a'),
-	wallDark: new THREE.Color('#9a8a6c'),
-	log: new THREE.Color('#7a5a3a'),
-	roof: new THREE.Color('#7a3a2a'),
-	roofGrey: new THREE.Color('#5a5a5a'),
-	brick: new THREE.Color('#8a5a48'),
-	brickDark: new THREE.Color('#5a3a30'),
-	rubble: new THREE.Color('#6d6760'),
-	plaster: new THREE.Color('#b8aa98'),
-	window: new THREE.Color('#2a2a30'),
-	church: new THREE.Color('#e0dcd0'),
-	dome: new THREE.Color('#2a6a9a'),
-	concrete: new THREE.Color('#9a9890'),
-	stone: new THREE.Color('#6c6760'),
-	plank: new THREE.Color('#8a6a44'),
-	timber: new THREE.Color('#5e4228'),
-}
+export const C = Object.fromEntries(
+	Object.entries(BUILDING_PALETTE).map(([k, v]) => [k, new THREE.Color(v)]),
+) as Palette
 
 /** Merged-geometry builder with the shapes buildings are made of. */
 export class BuildingBuilder extends MergedGeometryBuilder {
@@ -100,11 +87,8 @@ export function frameAt(cx: number, cz: number, rot: number) {
 /** Biome check shared by the generators: houses and walls never stand on water, a road or the railway. */
 export function isWetOrRoad(t: Terrain, x: number, z: number): boolean {
 	const bm = t.biome(x, z)
-	return bm === 'water' || bm === 'road' || bm === 'rail' || nearRailway(t, x, z, RAIL_CLEAR)
+	return bm === 'water' || bm === 'road' || bm === 'rail' || nearRailway(t, x, z, STRUCTURES.railClear)
 }
-
-/** m kept clear on each side of the track centre */
-const RAIL_CLEAR = 6
 
 /** Within `d` of the railway's centre line (false on a map without one). */
 export function nearRailway(t: Terrain, x: number, z: number, d: number): boolean {

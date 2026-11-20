@@ -10,7 +10,6 @@ export const WORLD = {
 	detail: 2, // m amplitude of the small bumps on top of the hills
 	mountainBand: 110, // m from the edge where the terrain climbs into mountains
 	mountainHeight: 70,
-	rocks: 70,
 	// Forest, village, lake, bush and haystack counts and the river chance are per archetype (ARCHETYPES)
 	riverWidth: [14, 26] as const, // m, bed width range of the meandering stream
 	bridges: [3, 4] as const, // bridges on a map with a river — never fewer than three
@@ -20,7 +19,7 @@ export const WORLD = {
 }
 
 /** What kind of country a map is: each archetype sets its own layout numbers, relief and seasons. */
-export type Archetype = 'classic' | 'steppe' | 'swamp' | 'pass' | 'coast'
+export type Archetype = 'classic' | 'steppe' | 'swamp' | 'pass' | 'coast' | 'lakes'
 
 export interface ArchetypeDef {
 	label: string
@@ -35,6 +34,7 @@ export interface ArchetypeDef {
 	railway: number // chance of a railway embankment on a map without a river
 	haystacks: number
 	bushClusters: number
+	rocks: number // boulders scattered over meadows, forests and the mountain rim
 	/** Field / meadow split override (low = mostly fields), or null for the map's own roll. */
 	fields: number | null
 }
@@ -42,7 +42,7 @@ export interface ArchetypeDef {
 export const ARCHETYPES: Record<Archetype, ArchetypeDef> = {
 	classic: {
 		label: 'средняя полоса',
-		weight: 0.44,
+		weight: 0.34,
 		seasons: { summer: 0.5, autumn: 0.25, winter: 0.25 },
 		riverChance: 0.5,
 		forests: [7, 12],
@@ -53,6 +53,7 @@ export const ARCHETYPES: Record<Archetype, ArchetypeDef> = {
 		railway: 0.3,
 		haystacks: 35,
 		bushClusters: 60,
+		rocks: 70,
 		fields: null,
 	},
 	steppe: {
@@ -68,6 +69,7 @@ export const ARCHETYPES: Record<Archetype, ArchetypeDef> = {
 		railway: 0.9,
 		haystacks: 70,
 		bushClusters: 45,
+		rocks: 35,
 		fields: -0.35,
 	},
 	swamp: {
@@ -83,6 +85,7 @@ export const ARCHETYPES: Record<Archetype, ArchetypeDef> = {
 		railway: 0,
 		haystacks: 12,
 		bushClusters: 85,
+		rocks: 45,
 		fields: 0.2,
 	},
 	pass: {
@@ -98,6 +101,7 @@ export const ARCHETYPES: Record<Archetype, ArchetypeDef> = {
 		railway: 0,
 		haystacks: 20,
 		bushClusters: 60,
+		rocks: 110,
 		fields: null,
 	},
 	coast: {
@@ -113,7 +117,24 @@ export const ARCHETYPES: Record<Archetype, ArchetypeDef> = {
 		railway: 0.25,
 		haystacks: 30,
 		bushClusters: 60,
+		rocks: 70,
 		fields: null,
+	},
+	lakes: {
+		label: 'озёрный край',
+		weight: 0.1,
+		seasons: { summer: 0.5, autumn: 0.3, winter: 0.2 },
+		riverChance: 0.25,
+		forests: [9, 13],
+		villages: [1, 2],
+		lakes: [2, 3],
+		lakesDry: [3, 4],
+		bogs: [0, 2],
+		railway: 0,
+		haystacks: 8,
+		bushClusters: 55,
+		rocks: 130,
+		fields: 0.3,
 	},
 }
 
@@ -136,7 +157,20 @@ export const RAIL = {
 }
 
 /** Tree species. A map plants only a few of them: one per role, rolled from FLORA. */
-export type TreeSpecies = 'pine' | 'spruce' | 'linden' | 'birch' | 'oak' | 'poplar' | 'willow' | 'apple'
+export type TreeSpecies =
+	| 'pine'
+	| 'spruce'
+	| 'larch'
+	| 'cypress'
+	| 'stonepine'
+	| 'linden'
+	| 'birch'
+	| 'oak'
+	| 'acacia'
+	| 'alder'
+	| 'poplar'
+	| 'willow'
+	| 'apple'
 
 /** Tree species odds of an archetype, per role. Orchards are always apple trees. */
 export interface FloraDef {
@@ -155,33 +189,45 @@ export const FLORA: Record<Archetype, FloraDef> = {
 		willow: 0.45,
 		coniferShare: [0.4, 0.7],
 	},
+	// Shelter belts of white acacia and poplar rows
 	steppe: {
 		conifer: { pine: 1 },
-		leafy: { oak: 0.5, linden: 0.3, birch: 0.2 },
-		alley: { poplar: 0.7, linden: 0.3 },
+		leafy: { acacia: 0.55, oak: 0.3, linden: 0.15 },
+		alley: { poplar: 0.6, acacia: 0.4 },
 		willow: 0.35,
 		coniferShare: [0.15, 0.4],
 	},
+	// Alder carr and birch on the wet ground
 	swamp: {
 		conifer: { spruce: 0.55, pine: 0.45 },
-		leafy: { birch: 0.75, linden: 0.25 },
-		alley: { birch: 0.7, poplar: 0.3 },
+		leafy: { alder: 0.55, birch: 0.45 },
+		alley: { birch: 0.6, alder: 0.4 },
 		willow: 0.75,
 		coniferShare: [0.35, 0.6],
 	},
+	// Larches on the slopes: gold in autumn, bare in winter
 	pass: {
-		conifer: { spruce: 0.7, pine: 0.3 },
+		conifer: { larch: 0.45, spruce: 0.4, pine: 0.15 },
 		leafy: { birch: 0.45, oak: 0.35, linden: 0.2 },
 		alley: { linden: 0.4, birch: 0.4, poplar: 0.2 },
 		willow: 0.2,
 		coniferShare: [0.55, 0.8],
 	},
+	// Southern shore: umbrella pines and cypress rows
 	coast: {
-		conifer: { pine: 0.85, spruce: 0.15 },
-		leafy: { oak: 0.4, linden: 0.4, birch: 0.2 },
-		alley: { poplar: 0.55, linden: 0.45 },
+		conifer: { stonepine: 0.6, pine: 0.4 },
+		leafy: { oak: 0.45, linden: 0.35, acacia: 0.2 },
+		alley: { cypress: 0.6, poplar: 0.4 },
 		willow: 0.3,
 		coniferShare: [0.45, 0.75],
+	},
+	// Northern taiga: spruce and pine with birch
+	lakes: {
+		conifer: { spruce: 0.55, pine: 0.45 },
+		leafy: { birch: 0.8, alder: 0.2 },
+		alley: { birch: 1 },
+		willow: 0.15,
+		coniferShare: [0.65, 0.85],
 	},
 }
 

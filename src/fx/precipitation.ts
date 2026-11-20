@@ -1,13 +1,9 @@
 import * as THREE from 'three'
-import type { Weather } from '../config'
+import { PRECIPITATION, type Weather } from '../config'
 
+const { style, maxPointPx } = PRECIPITATION
 /** Drops live in a box that travels with the camera; the shader wraps them around it, so the CPU never moves one. */
-const BOX = new THREE.Vector3(70, 34, 70)
-const STYLE = {
-	rain: { count: 2600, fall: 16, sway: 0, size: 0.7, color: '#c7d3dc', alpha: 0.42, streak: 1 },
-	snow: { count: 2200, fall: 1.6, sway: 0.9, size: 0.12, color: '#f6f8fb', alpha: 0.9, streak: 0 },
-} as const
-const MAX_POINT_PX = 48
+const box = new THREE.Vector3(...PRECIPITATION.box)
 
 const VERTEX = /* glsl */ `
 attribute float aSeed;
@@ -28,7 +24,7 @@ void main() {
 	vec3 rel = mod(p - uCentre, uBox) - 0.5 * uBox;
 	vec4 mv = viewMatrix * vec4(uCentre + rel, 1.0);
 	float d = max(1.0, -mv.z);
-	gl_PointSize = min(${MAX_POINT_PX}.0, uSize * uScale / d);
+	gl_PointSize = min(${maxPointPx}.0, uSize * uScale / d);
 	// Thin out toward the box walls (no hard edge), and nothing right in the lens
 	vA = (1.0 - smoothstep(0.3, 0.5, length(rel.xz) / uBox.x)) * smoothstep(1.5, 4.0, d);
 	gl_Position = projectionMatrix * mv;
@@ -60,13 +56,13 @@ export class Precipitation {
 	private time = 0
 
 	constructor() {
-		const n = Math.max(STYLE.rain.count, STYLE.snow.count)
+		const n = Math.max(style.rain.count, style.snow.count)
 		const pos = new Float32Array(n * 3)
 		const seed = new Float32Array(n)
 		for (let i = 0; i < n; i++) {
-			pos[i * 3] = Math.random() * BOX.x
-			pos[i * 3 + 1] = Math.random() * BOX.y
-			pos[i * 3 + 2] = Math.random() * BOX.z
+			pos[i * 3] = Math.random() * box.x
+			pos[i * 3 + 1] = Math.random() * box.y
+			pos[i * 3 + 2] = Math.random() * box.z
 			seed[i] = Math.random()
 		}
 		const geo = new THREE.BufferGeometry()
@@ -84,7 +80,7 @@ export class Precipitation {
 				uSize: { value: 0 },
 				uScale: { value: 1 },
 				uCentre: { value: new THREE.Vector3() },
-				uBox: { value: BOX },
+				uBox: { value: box },
 				uColor: { value: new THREE.Color() },
 				uAlpha: { value: 0 },
 				uStreak: { value: 0 },
@@ -97,7 +93,7 @@ export class Precipitation {
 
 	/** Rain or snow for this map's weather; anything else switches it off. */
 	setWeather(weather: Weather) {
-		const s = weather === 'rain' ? STYLE.rain : weather === 'snow' ? STYLE.snow : null
+		const s = weather === 'rain' ? style.rain : weather === 'snow' ? style.snow : null
 		this.points.visible = !!s
 		if (!s) return
 		const u = this.mat.uniforms

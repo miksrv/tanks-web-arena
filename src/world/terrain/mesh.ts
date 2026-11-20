@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { TERRAIN_RES, WORLD_HALF } from '../../config'
+import { TERRAIN_GEN, TERRAIN_RES, WORLD_HALF } from '../../config'
 import type { Simplex2D } from '../../core/noise'
 import { PALETTE } from './palette'
 import { BIOME_ID, WATER_LEVEL, type Biome, type Season } from './types'
@@ -87,22 +87,12 @@ export function buildTerrainMesh(g: TerrainGrid): THREE.Mesh {
 	return mesh
 }
 
-const WATER_STYLE: Record<Season, { color: string; roughness: number }> = {
-	summer: { color: '#2f6a8a', roughness: 0.25 },
-	autumn: { color: '#3f6478', roughness: 0.25 },
-	winter: { color: '#4a5f70', roughness: 0.6 },
-}
-
-/** Marsh water: dark and green, whatever the season. */
-const BOG_WATER = { color: '#3b5238', roughness: 0.5 }
-/** The water plane reaches well past the map edge, so a coast map's sea runs to the horizon. */
-const WATER_SIZE = WORLD_HALF * 6
-
 /** One translucent plane at the water level under the whole map (and the sea beyond it). */
 export function buildWaterMesh(season: Season, marsh = false): THREE.Mesh {
-	const geo = new THREE.PlaneGeometry(WATER_SIZE, WATER_SIZE)
+	const size = WORLD_HALF * TERRAIN_GEN.waterPlane
+	const geo = new THREE.PlaneGeometry(size, size)
 	geo.rotateX(-Math.PI / 2)
-	const style = marsh ? BOG_WATER : WATER_STYLE[season]
+	const style = marsh ? TERRAIN_GEN.bogWater : TERRAIN_GEN.waterStyle[season]
 	const material = new THREE.MeshStandardMaterial({ ...style, metalness: 0.1, transparent: true, opacity: 0.8 })
 	const mesh = new THREE.Mesh(geo, material)
 	mesh.position.y = WATER_LEVEL

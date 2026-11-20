@@ -3,7 +3,9 @@ import {
 	ARCHETYPES,
 	CAPTURE,
 	COAST,
+	DRIVE,
 	SPOTTING,
+	TERRAIN_GEN,
 	TERRAIN_RES,
 	WORLD,
 	WORLD_HALF,
@@ -52,14 +54,6 @@ import {
 
 const { smoothstep } = THREE.MathUtils
 const tmpG = new THREE.Vector2()
-
-const BASE_FLAT_RADIUS = 70 // m of levelled ground around each base
-const BASE_BIOME_RADIUS = 45
-const DEEP_WATER = 1.3 // m: deeper than this is impassable
-const FLOODPLAIN = WATER_LEVEL + 2.5 // m: the land beside the river, just above the water
-const RIVER_BANK = 22 // m: from the water's edge up to the floodplain
-const MAX_PASSABLE_GRADIENT = 0.95
-const OUTSIDE_HEIGHT = 120 // the ground "outside the world" is a wall
 
 /**
  * Heightmap world, laid out afresh for every seed: the base-to-base axis points in a random direction, a river
@@ -233,7 +227,7 @@ export class Terrain implements LayoutTarget {
 		if (this.coastSign) h = this.withCoast(h, x, z)
 		// Flat ground for bases and settlements, blended out over a wide ring so no cliff forms at the edge
 		for (const s of this.settlements) h = this.flattened(h, x, z, s.x, s.z, s.r)
-		for (const b of this.bases) h = this.flattened(h, x, z, b.x, b.z, BASE_FLAT_RADIUS)
+		for (const b of this.bases) h = this.flattened(h, x, z, b.x, b.z, TERRAIN_GEN.baseFlatRadius)
 		if (this.neutral) h = this.flattened(h, x, z, this.neutral.x, this.neutral.z, CAPTURE.flatRadius)
 		if (this.hasRiver) h = this.withRiverValley(h, x, z)
 		this.lakes.forEach((l, i) => (h = this.withLake(h, l, i, x, z)))
@@ -274,11 +268,12 @@ export class Terrain implements LayoutTarget {
 	private withRiverValley(h: number, x: number, z: number) {
 		const rd = Math.abs(this.riverDist(x, z))
 		const w = this.riverWidth / 2
-		const plain = Math.min(h, FLOODPLAIN)
+		const plain = Math.min(h, WATER_LEVEL + TERRAIN_GEN.floodplain)
 		// The valley side is wider where the surrounding ground is higher (slope ≤ ~0.15)
 		const sideW = 90 + Math.max(0, h - plain - 6) * 8
-		if (rd >= w + RIVER_BANK + sideW) return h
-		const ground = plain + (h - plain) * smoothstep(rd, w + RIVER_BANK, w + RIVER_BANK + sideW)
+		if (rd >= w + TERRAIN_GEN.riverBank + sideW) return h
+		const ground =
+			plain + (h - plain) * smoothstep(rd, w + TERRAIN_GEN.riverBank, w + TERRAIN_GEN.riverBank + sideW)
 		let fordK = 0
 		for (const c of this.crossings) {
 			if (c.kind !== 'ford') continue
@@ -286,7 +281,7 @@ export class Terrain implements LayoutTarget {
 			fordK = Math.max(fordK, 1 - smoothstep(along, 10, c.half))
 		}
 		const bed = WATER_LEVEL - 2.4 + fordK * 1.9 + 0.4 * this.noise.noise(x * 0.1, z * 0.1)
-		const k = smoothstep(rd, w, w + RIVER_BANK)
+		const k = smoothstep(rd, w, w + TERRAIN_GEN.riverBank)
 		return rd < w ? bed : bed + (Math.max(ground, bed + 1) - bed) * k
 	}
 
@@ -351,7 +346,7 @@ export class Terrain implements LayoutTarget {
 		if (Math.abs(this.riverDist(x, z)) < this.riverWidth / 2 + 7) return 'mud'
 		for (let i = 0; i < this.lakes.length; i++) if (this.lakeD(this.lakes[i], i, x, z) < 0.8) return 'mud'
 		for (let i = 0; i < this.bogs.length; i++) if (this.lakeD(this.bogs[i], i + 40, x, z) < 1.45) return 'mud'
-		for (const b of this.bases) if (Math.hypot(x - b.x, z - b.z) < BASE_BIOME_RADIUS) return 'base'
+		for (const b of this.bases) if (Math.hypot(x - b.x, z - b.z) < TERRAIN_GEN.baseBiomeRadius) return 'base'
 		const nb = this.neutral
 		if (nb && Math.hypot(x - nb.x, z - nb.z) < CAPTURE.biomeRadius) return 'base'
 		for (const s of this.settlements) if (Math.hypot(x - s.x, z - s.z) < s.r) return s.kind
@@ -395,7 +390,7 @@ export class Terrain implements LayoutTarget {
 		const n = TERRAIN_RES - 1
 		const fx = ((x + WORLD_HALF) / (WORLD_HALF * 2)) * n
 		const fz = ((z + WORLD_HALF) / (WORLD_HALF * 2)) * n
-		if (fx < 0 || fz < 0 || fx >= n || fz >= n) return OUTSIDE_HEIGHT
+		if (fx < 0 || fz < 0 || fx >= n || fz >= n) return TERRAIN_GEN.outsideHeight
 		const i = Math.floor(fx)
 		const j = Math.floor(fz)
 		const tx = fx - i
@@ -449,13 +444,13 @@ export class Terrain implements LayoutTarget {
 	/** Ground movement multiplier at a point (surface type, water depth). */
 	surfaceSpeed(x: number, z: number): number {
 		const b = this.biome(x, z)
-		if (b === 'water') return this.waterDepth(x, z) > DEEP_WATER ? 0 : BIOME_SPEED.water
+		if (b === 'water') return this.waterDepth(x, z) > DRIVE.deepWater ? 0 : BIOME_SPEED.water
 		return BIOME_SPEED[b]
 	}
 
 	passable(x: number, z: number): boolean {
-		if (this.waterDepth(x, z) > DEEP_WATER) return false
-		return this.gradient(x, z, tmpG).length() < MAX_PASSABLE_GRADIENT
+		if (this.waterDepth(x, z) > DRIVE.deepWater) return false
+		return this.gradient(x, z, tmpG).length() < TERRAIN_GEN.maxPassableGradient
 	}
 
 	/** Heightmap line of sight between two eye points (buildings are checked separately). */

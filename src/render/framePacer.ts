@@ -1,5 +1,4 @@
-/** A frame may come this early (ms) and still count as on time: rAF stamps jitter. */
-const EARLY_SLACK = 2
+import { RENDER } from '../config'
 
 /**
  * Frame pacing on any refresh rate. Rendering is gated by a schedule that advances by the target interval, so the
@@ -12,14 +11,14 @@ export class FramePacer {
 	/** Call on every rAF callback; returns true when this one should simulate and render. */
 	shouldRender(now: number, targetFps: number): boolean {
 		const interval = 1000 / targetFps
-		if (now < this.nextAt - EARLY_SLACK) return false
+		if (now < this.nextAt - RENDER.earlySlack) return false
 		// Fell behind by more than a frame (slow frame, hidden tab): resynchronise instead of rushing to catch up
 		this.nextAt = now - this.nextAt > interval ? now + interval : this.nextAt + interval
 		return true
 	}
 }
 
-/** Frames per second of simulated time, refreshed twice a second (the P overlay and the debug log). */
+/** Rendered frames per second of real time, refreshed twice a second (the P overlay and the debug log). */
 export class FpsCounter {
 	value = 0
 	private acc = 0

@@ -60,10 +60,11 @@ export function bunker(ctx: BuildContext, x: number, z: number, rot: number) {
 	const d = 5.5
 	const h = 2.4
 	const front = d / 2 + 0.03
-	b.box(w, h, d, C.concrete, x, y + h / 2, z, -rot)
-	b.box(w + 0.8, 0.4, d + 0.8, C.stone, x, y + h + 0.2, z, -rot)
-	b.box(3.2, 0.35, 0.1, C.window, x + Math.sin(rot) * front, y + h * 0.65, z + Math.cos(rot) * front, -rot) // slit
-	ctx.place('bunker', x, z, w + 0.8, d + 0.8, -rot, y, h + 0.4)
+	// A box turned by `rot` has its depth axis along the heading (sin rot, cos rot): the slit sits on that face
+	b.box(w, h, d, C.concrete, x, y + h / 2, z, rot)
+	b.box(w + 0.8, 0.4, d + 0.8, C.stone, x, y + h + 0.2, z, rot)
+	b.box(3.2, 0.35, 0.1, C.window, x + Math.sin(rot) * front, y + h * 0.65, z + Math.cos(rot) * front, rot) // slit
+	ctx.place('bunker', x, z, w + 0.8, d + 0.8, rot, y, h + 0.4)
 }
 
 /** Windmill: a tapered timber tower with a cap and four sails, facing `rot`. */

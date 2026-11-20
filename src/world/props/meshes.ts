@@ -4,9 +4,9 @@ import type { Terrain, TreeSpecies } from '../terrain'
 import { crownColor, crownGeometry, mergePositions, SPECIES } from './species'
 import type { Fence, Hay, PropSet, Rock, Tree } from './types'
 
-/** Bush: three blobs merged. */
+/** Bush: three blobs merged (90 triangles: there are hundreds of bushes on a map). */
 function bushGeometry(): THREE.BufferGeometry {
-	const blob = new THREE.SphereGeometry(1, 6, 5)
+	const blob = new THREE.SphereGeometry(1, 5, 4)
 	const blobs = [
 		[0, 0.7, 0, 1],
 		[0.9, 0.5, 0.3, 0.75],
@@ -82,7 +82,7 @@ export class PropMeshes {
 		const trees = this.set.trees
 		const bark = mat({ color: '#ffffff', roughness: 0.95 }) // tinted per instance
 		const crownMat = mat({ color: '#ffffff', roughness: 0.9 })
-		const trunkGeo = new THREE.CylinderGeometry(0.18, 0.32, 5, 6).translate(0, 2.5, 0)
+		const trunkGeo = new THREE.CylinderGeometry(0.18, 0.32, 5, 6, 1, true).translate(0, 2.5, 0) // no caps: crown above, ground below
 		this.trunks = this.instanced(trunkGeo, bark, trees.length)
 		this.group.add(this.trunks)
 		const col = new THREE.Color()

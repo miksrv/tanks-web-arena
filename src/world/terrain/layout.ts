@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { COAST, WORLD, WORLD_HALF, type ArchetypeDef, type BattleMode } from '../../config'
+import { COAST, TERRAIN_GEN, WORLD, WORLD_HALF, type ArchetypeDef, type BattleMode } from '../../config'
 import type { Railway } from './railway'
 import { crossingPath, type River } from './river'
 import type { RoadNetwork } from './roadNetwork'
@@ -48,10 +48,7 @@ export interface LayoutTarget {
 }
 
 const pick = (rnd: Rnd, [a, b]: readonly [number, number]) => a + Math.floor(rnd() * (b - a + 1))
-const TOWN_RADIUS = 95
-const PLACE_TRIES = 80
-const LAKE_TRIES = 250
-const WINDMILL_CANDIDATES = 60
+const { placeTries: PLACE_TRIES } = TERRAIN_GEN
 
 /**
  * Places everything on a fresh map, in a fixed order (it is the map's RNG sequence): crossings and the central
@@ -185,7 +182,7 @@ export class MapLayout {
 			kind: 'town',
 			x,
 			z,
-			r: TOWN_RADIUS,
+			r: TERRAIN_GEN.townRadius,
 			rot,
 			variant,
 			church: true,
@@ -368,7 +365,7 @@ export class MapLayout {
 		const { t, r } = this
 		const nl = pick(r, t.hasRiver ? t.params.lakes : t.params.lakesDry)
 		for (let l = 0; l < nl; l++) {
-			for (let k = 0; k < LAKE_TRIES; k++) {
+			for (let k = 0; k < TERRAIN_GEN.lakeTries; k++) {
 				const rr = 30 + r() * 35
 				const x = (r() * 2 - 1) * (this.playable - rr - 10)
 				const z = (r() * 2 - 1) * (this.playable - rr - 10)
@@ -410,7 +407,7 @@ export class MapLayout {
 		const { t, r } = this
 		if (!t.features.windmill) return
 		let best: { x: number; z: number; h: number } | null = null
-		for (let k = 0; k < WINDMILL_CANDIDATES; k++) {
+		for (let k = 0; k < TERRAIN_GEN.windmillCandidates; k++) {
 			const { x, z } = this.randomPoint(50)
 			if (this.riverGap(x, z) < 60 || !this.clearOfPlaces(x, z, 8) || t.roads.dist(x, z, true) < 25) continue
 			if (t.forests.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 12)) continue

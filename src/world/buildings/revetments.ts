@@ -1,20 +1,17 @@
 import * as THREE from 'three'
+import { STRUCTURES } from '../../config'
 import type { Terrain } from '../terrain'
 import { frameAt, type BuildContext } from './builder'
 
-const FRONT = 8.5 // m, the front berm (the tank's nose goes up to it)
-const SIDE = 6 // m, side berms
-const THICK = 1.4
-const HEIGHT = 1.25
-const ROUTE_CLEAR = 30 // m from roads and lane waypoints // m: hull-down for most hulls, the turret free to shoot
-const earth = new THREE.Color('#6a5a40')
-const sandbag = new THREE.Color('#a8976c')
-const BAD_GROUND: readonly string[] = ['water', 'mud', 'road', 'rail', 'town', 'village', 'forest', 'mountain', 'sand']
+const { front: FRONT, side: SIDE, thick: THICK, height: HEIGHT, routeClear: ROUTE_CLEAR } = STRUCTURES.revetment
+const earth = new THREE.Color(STRUCTURES.revetment.earth)
+const sandbag = new THREE.Color(STRUCTURES.revetment.sandbag)
 
 /** May a revetment stand here: open, level, dry ground clear of buildings. */
 function fits(ctx: BuildContext, x: number, z: number): boolean {
 	const t = ctx.t
-	if (BAD_GROUND.includes(t.biome(x, z)) || !t.passable(x, z) || t.waterDepth(x, z) > 0) return false
+	if (STRUCTURES.revetment.badGround.includes(t.biome(x, z)) || !t.passable(x, z) || t.waterDepth(x, z) > 0)
+		return false
 	// Off the bots' routes: a tank driving along a lane must not blunder into the U
 	if (t.roads.dist(x, z) < ROUTE_CLEAR) return false
 	if (t.lanes.some((lane) => lane.some((p) => Math.hypot(p.x - x, p.z - z) < ROUTE_CLEAR))) return false
