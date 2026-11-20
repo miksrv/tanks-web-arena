@@ -11,15 +11,16 @@ Code: `src/world/terrain/`, `src/world/props/`, `src/world/buildings/`; numbers:
 
 ## Map archetypes (`ARCHETYPES`, `src/world/terrain/style.ts`)
 
-First the terrain type is picked (randomly by weight); it sets the relief, seasons, number of forests, villages, lakes, swamps, bushes and haystacks, and the chance of a river and a railway (the archetype, its season, revetments, the sea side and the railway are rolled from a separate RNG; weather and mode from their own):
+First the terrain type is picked (randomly by weight); it sets the relief, seasons, number of forests, villages, lakes, swamps, bushes, rocks and haystacks, and the chance of a river and a railway (the archetype, its season, revetments, the sea side and the railway are rolled from a separate RNG; weather and mode from their own):
 
 | Archetype              | Weight | Relief                                     | Special                                                                                |
 | ---------------------- | ------ | ------------------------------------------ | -------------------------------------------------------------------------------------- |
-| central Russia (mixed) | 44 %   | as before                                  | river 50 %, railway 30 % on dry maps                                                   |
+| central Russia (mixed) | 34 %   | as before                                  | river 50 %, railway 30 % on dry maps                                                   |
 | steppe                 | 16 %   | almost flat, gullies up to 6.5 m           | 1–4 forests, fields, 70 haystacks, river 30 %, railway 90 %                            |
 | swamps                 | 14 %   | plain                                      | 11–16 forests, 5–8 swamps (water 0.5–1 m, passable slowly), corduroy roads; dark water |
 | mountain pass          | 12 %   | ridge +24 m across the axis, three saddles | no river; crests rocky, snow-covered in winter                                         |
 | coast                  | 14 %   | as central Russia                          | one flank runs into the sea with a beach (sand 0.85), no mountains on that side        |
+| lake country           | 10 %   | as central Russia                          | 9–13 conifer forests, 3–4 lakes (2–3 with a river), 130 rocks, few fields, no railway  |
 
 - Gullies: zeros of low-frequency noise, cut 6.5 m down; after erosion — gentle hollows ~45 m wide.
 - Swamps: a shallow bowl with a flat boggy shore (mud up to 1.45 r); unlike lakes they can lie across a road — the road then runs on a corduroy-road embankment (`withCauseway`).
@@ -43,12 +44,12 @@ First the terrain type is picked (randomly by weight); it sets the relief, seaso
 
 ## Named maps (`MAP_PRESETS`)
 
-A fixed seed with archetype, season and weather: «Прохоровка» (Prokhorovka), «Курская дуга» (Kursk Bulge; steppe), «Полесье» (Polesia; swamps, fog), «Перевал» (The Pass; winter, snowfall), «Керчь» (Kerch; coast), «Ржев» (Rzhev), «Орёл» (Oryol), «Малиновка» (Malinovka). Selected in the garage; the mode is chosen separately.
+A fixed seed with archetype, season and weather: «Прохоровка» (Prokhorovka), «Курская дуга» (Kursk Bulge; steppe), «Полесье» (Polesia; swamps, fog), «Перевал» (The Pass; winter, snowfall), «Керчь» (Kerch; coast), «Карелия» (Karelia; lake country, overcast), «Ржев» (Rzhev), «Орёл» (Oryol), «Малиновка» (Malinovka). Selected in the garage; the mode is chosen separately.
 
 ## Terrain styles and seasons
 
 - Style (`relief_`): hills (as above), plain (amplitude ×0.4, wider waves), ridges (ridged noise stretched 3:1 in a random direction: long crests and troughs), valley (a lowland along the base-to-base axis, rising towards the flanks by +16 m at 110–420 m from the axis). Erosion with slope ≤ 0.3 is applied to all of them.
-- Season (`season`, 50/25/25 %): summer, autumn, winter. The ground and minimap palette is in `PALETTE`; sky, fog and light in `SKY` (`src/render/environment.ts`). Tree crowns are coloured via instanceColor by species: in summer green with variation (birch and willow lighter, oak and spruce darker), in autumn deciduous trees from red to yellow (birch and poplar yellow, oak brown), in winter deciduous trees are bare (brown, smaller), conifers stay green. In winter the snow on the mountains sits lower, bushes and haystacks are faded, water is dark and matte.
+- Season (`season`, 50/25/25 %): summer, autumn, winter. The ground and minimap palette is in `GROUND_PALETTE`; sky, fog and light in `SKY` (`src/config/render.ts`). Tree crowns are coloured via instanceColor by species: in summer green with variation (birch and willow lighter, oak and spruce darker), in autumn deciduous trees from red to yellow (birch and poplar yellow, oak brown), in winter deciduous trees are bare (brown, smaller), conifers stay green. In winter the snow on the mountains sits lower, bushes and haystacks are faded, water is dark and matte.
 - The share of fields and meadows on the map is random (`zoneCut`).
 
 ## Map features (`features`)
@@ -80,28 +81,34 @@ Written into the grid: field (furrows, direction per 90 m cell), meadow, forest,
 
 ## Tree species and building kit (`FLORA`, `BUILDING_KIT`, `rollFlora`/`rollKit` in `src/world/terrain/style.ts`)
 
-Each map takes only a limited set out of the eight species and four new buildings, so maps differ from one another. Both rolls come from their own seed-based RNGs (`terrain.flora`, `terrain.kit`) and do not shift the map layout.
+Each map takes only a limited set out of the thirteen species and four new buildings, so maps differ from one another. Both rolls come from their own seed-based RNGs (`terrain.flora`, `terrain.kit`) and do not shift the map layout.
 
-| Species | Where             | Look                                                  |
-| ------- | ----------------- | ----------------------------------------------------- |
-| pine    | conifer           | cone, reddish trunk                                   |
-| spruce  | conifer           | three tiered cones, dark                              |
-| linden  | deciduous, avenue | rounded crown (the former "deciduous")                |
-| birch   | deciduous, avenue | narrow elongated crown, white trunk, yellow in autumn |
-| oak     | deciduous         | wide low crown, thick short trunk, brown in autumn    |
-| poplar  | avenue            | tall column (≈ 14 m)                                  |
-| willow  | by water          | dome with drooping branches, low thick trunk          |
-| apple   | orchards          | low wide crown                                        |
+| Species    | Where                                    | Look                                                  |
+| ---------- | ---------------------------------------- | ----------------------------------------------------- |
+| pine       | conifer                                  | cone, reddish trunk                                   |
+| spruce     | conifer                                  | three tiered cones, dark                              |
+| larch      | conifer (pass)                           | two open cones; gold in autumn, bare in winter        |
+| stone pine | conifer (coast)                          | flat umbrella crown on a tall bare trunk              |
+| cypress    | avenue (coast)                           | dark narrow column                                    |
+| acacia     | deciduous, avenue (steppe, coast)        | wide flat-topped crown, short trunk                   |
+| alder      | deciduous, avenue (swamps, lake country) | dark narrow egg                                       |
+| linden     | deciduous, avenue                        | rounded crown (the former "deciduous")                |
+| birch      | deciduous, avenue                        | narrow elongated crown, white trunk, yellow in autumn |
+| oak        | deciduous                                | wide low crown, thick short trunk, brown in autumn    |
+| poplar     | avenue                                   | tall column (≈ 14 m)                                  |
+| willow     | by water                                 | dome with drooping branches, low thick trunk          |
+| apple      | orchards                                 | low wide crown                                        |
 
-- Roles: the conifer species (pine / spruce), deciduous (linden / birch / oak), avenue (linden / birch / poplar) and willow by water — by archetype weights (`FLORA`): steppe — pine, oak, poplars; swamps — spruce, birch, often willow; mountain pass — mostly spruce; coast — pine, oak or linden, poplars. The share of conifers in forests is also specific to each map (`coniferShare`).
+- Roles: the conifer species (pine / spruce), deciduous (linden / birch / oak), avenue (linden / birch / poplar) and willow by water — by archetype weights (`FLORA`), and each archetype has species the others do not: steppe — acacia shelter belts, oak, poplars; swamps — alder and birch, often willow; mountain pass — larch or spruce; coast — stone pines, cypress or poplar avenues; lake country — spruce and pine (65–85 % of the forest) with birch. One species per role, so the extra species cost no draw calls. The share of conifers in forests is also specific to each map (`coniferShare`).
 - Willow is rolled instead of a separate avenue species (avenues are then made of the map's deciduous species), so a map has 2–3 species plus apple trees in orchards. Willows grow in forests and among the lone trees within ~30 m of a river, lake or swamp; if there are fewer than 15 of them on the map, they become the map's deciduous species (a separate mesh is not worth a handful of trees).
+- House style by archetype (`STRUCTURES.houseStyle`, colours only): log walls and red roofs in central Russia, whitewashed walls under thatch in the steppe, dark logs under thatch in the swamps, stone under slate on the pass, plaster and tiles on the coast, dark logs and plank roofs in the lake country.
 - Buildings (`BUILDING_KIT`): a chapel instead of the village church (35 % of maps; whitewashed, with a bell tower and a spire); two-storey brick houses (50 % of maps, 15–40 % of village log houses and farmstead houses); kolkhoz warehouses instead of village barns (50 %; 9–10 × 17–21 m, placed only if all corners are on dry ground off the roads); a water tower at the edge of the first village (45 %; brick shaft, wooden tank, 15 m). All are OBBs with height, like the other houses: cannot be driven through, a shell hits the box, they block view.
 
 ## Props (InstancedMesh)
 
 - Trees: in forests (density 0.02/m²) the map's conifer and deciduous species, 260 lone trees across the map, avenues, orchards. The trunks of all species — one InstancedMesh (scale and bark colour per instance), crowns — one mesh per species, and only for the species present on the map: usually 3–4 crown meshes + trunks (previously 2 + 2). A tank fells a tree on contact (1.1 s fall animation in the direction of travel), slowing to 0.7. Shells ignore trees.
 - Bushes: 60 shrub clusters of 3–8 at forest edges and in meadows; standing in a bush = +0.35 camouflage.
-- Rocks: 70, in the mountains and meadows; impassable, they stop shells flying below their top (rock ~1.1 r, hedgehogs and dragon's teeth 1.5 m): a shell passing over a rock flies on.
+- Rocks: by archetype (`rocks`: 70 central Russia and coast, 35 steppe, 45 swamps, 110 pass, 130 lake country), in the mountains and meadows; impassable, they stop shells flying below their top (rock ~1.1 r, hedgehogs and dragon's teeth 1.5 m): a shell passing over a rock flies on. The check is against the whole flight segment, so a small obstacle cannot be skipped between two steps.
 - Haystacks (35, in fields) get crushed; fences in villages get knocked down.
 
 ## Performance

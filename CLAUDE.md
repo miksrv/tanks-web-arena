@@ -13,7 +13,7 @@ npm run format       # / format:check
 npm run check        # typecheck + lint + format:check — before every commit
 ```
 
-Test URL parameters (`src/game/testHooks.ts`): `?autostart&seed=N&tank=id&map=classic|steppe|swamp|pass|coast&mode=standard|encounter|assault&weather=clear|overcast|dawn|dusk|fog|rain|snow&speed=K&view=top&debug`.
+Test URL parameters (`src/game/testHooks.ts`): `?autostart&seed=N&tank=id&map=classic|steppe|swamp|pass|coast|lakes&mode=standard|encounter|assault&weather=clear|overcast|dawn|dusk|fog|rain|snow&speed=K&view=top&debug`.
 
 ## Architecture
 
@@ -22,7 +22,7 @@ The layout is described in `README.md` (Project structure); the rules and number
 - `src/config/` holds every tunable number; one file per vehicle in `config/vehicles/{ussr,germany}`. Change balance there, not in the systems.
 - `src/game/game.ts` is the loop and the round lifecycle; systems (`tank/`, `combat/`, `ai/`, `world/`, `hud/`, `fx/`) are called from it and do not import each other's internals.
 - Everything visual is procedural: no files under `public/` except `.htaccess` and `og-image.jpg` (the link preview, cropped from `docs/screenshots/battle.jpg`); a new file there must also be added to the upload step in `.github/workflows/deploy.yml`.
-- Deferred plans live in `docs/TODO-progression.md` and `docs/TODO-server.md`.
+- Deferred plans live in `docs/TODO-progression.md`, `docs/TODO-gameplay.md` and `docs/TODO-server.md`.
 
 ## Language
 
