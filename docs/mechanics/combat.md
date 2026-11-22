@@ -4,8 +4,10 @@ Code: `src/combat/armor.ts`, `src/combat/shells.ts`, `src/combat/ballistics.ts`,
 
 ## Firing
 
-- The shell leaves the muzzle along the barrel direction with Gaussian dispersion: reticle radius (m per 100 m) = `dispersion · (1 + bloom)`, circle = 2σ, clipped at 2σ.
-- `bloom` grows with movement (0.19 per m/s), hull rotation (0.95 per rad/s), turret rotation (0.4), firing (+2.5) and decays exponentially with the time constant `aimTime / 3`.
+- The shell leaves the muzzle along the barrel direction and lands somewhere inside the dispersion circle: radius (m per 100 m) = `dispersion · (1 + bloom)`, Gaussian with the circle = 2σ, clipped at 2σ (more shells near the centre than at the rim).
+- `bloom` is the larger of what the movement gives and what is left from before. Movement gives `aimSpread · (speed / top speed + 0.33 · hull turn rate + 0.14 · (turret traverse rate + gun laying rate))`, rates in rad/s. Firing adds 2.5 (autocannons 0.35). It decays exponentially with the time constant `aimTime / 3` and never exceeds 16.
+- `aimSpread` is the bloom at top speed, by class (`DRIVE.aimSpread`): light 4, medium 9, heavy 10, TD 12, SPG 14; a vehicle may set its own (`TankDef.aimSpread`). So a light tank at full speed has a circle 5 times the aimed one and can fire on the move, a tank destroyer 13 times and has to stop.
+- The two numbers a vehicle converges by, `gun.aimTime` (how fast the circle closes) and `aimSpread` (how wide it opens), are the ones upgrades will change (`Tank.aimSpread` is the place to apply them).
 - Damaged gun: dispersion ×1.5 for 12 s.
 - Elevation is solved analytically (`solveElevation`) from the range and the height difference to the aim point: low trajectory for tanks, high for howitzers. The resulting world direction is converted into the turret frame, so hull pitch and roll on a slope are compensated. The shell flies with gravity 9.8.
 
@@ -70,6 +72,7 @@ The hitboxes stayed the same (hull and turret) plus a small commander's cupola b
 - A penetration wounds, with a 30 % chance, one crew member from the compartment behind the penetrated plate: turret — commander, gunner, loader; hull front — driver; hull side — driver or loader; roof — anyone; rear (engine) and running gear — nobody. HE fragments through the roof — 12 % × proximity to the burst (×2.5 on open casemates).
 - A wounded member (until a first aid kit) degrades the vehicle: commander — view range ×0.85, gunner — dispersion and aim time ×1.25, driver — speed, acceleration and hull rotation ×0.85, loader — reload ×1.25.
 - First aid kit (E), 1 pc., heals everyone. Bots use it on their own after 3–8 s × (1.3 − skill).
+- Small crews (`TankDef.crew`): with three men (Pz II F) the commander also lays the gun, with two (T-60, T-70) he loads it as well. A wound to any of his roles wounds him, so every penalty of those roles applies at once; the panel and the log name him as the commander.
 - The status lists only what is damaged: broken modules and wounded crew members (a healthy vehicle shows neither line); crit counts are kept for ribbons: wound, ammo rack, gun.
 
 - Ramming: closing speed > 3 m/s → damage `1.4 · speed · mass ratio` (mass = hit points), doubled for the rammed vehicle. The rammer is the one that brought more of the closing speed; it gets the ram ribbon. A pair is resolved once per frame, both vehicles lose speed.
@@ -89,9 +92,10 @@ Code: `src/fx/artyView.ts`, `src/fx/groundMarks.ts` (`splashRing`), `src/game/co
 - Own shells in flight are marked with a marker of constant screen size. Any HE shell with splash > 3 m draws an expanding ring of the splash radius on the ground (0.9 s).
 - If the direct hit and the fragments dealt no damage, «Мимо» (Miss) pops up at the impact point; damage is shown by the usual floating numbers.
 
-## Gun marker
+## Reticle and dispersion circle
 
-Code: `src/combat/trace.ts` (`traceShot`), `src/hud/reticle.ts` (`updateGunMarker`), `artyView.ts` (`gunRing`)
+Code: `src/combat/trace.ts` (`traceShot`), `src/hud/reticle.ts` (`updateGunCircle`), `artyView.ts` (`gunRing`)
 
+- The reticle at the screen centre is a plain ring as wide as the dispersion circle once fully converged (not under `HUD.reticle.minPx`; it grows with the sniper zoom): where the player points. It is coloured by the armour under it, and the reload ring runs along the same circle.
 - The turret traverses at `turretTurn`, the barrel elevates at 1.5 rad/s, so the gun lags behind the reticle. The shell always leaves along the real barrel (direction from the gun's world matrix in `Tank.fire`).
-- A yellow marker shows where the shell would land if fired right now: a parabola from the muzzle along the current direction with the real velocity and gravity (for howitzers — the `HOWITZER` law), in segments of ≈ 7 m against tanks, houses and terrain. In arcade and sniper view it is a small circle on screen (clamped to the edge if the point is off-frame), in artillery view — a ring on the ground at the real impact point.
+- The dispersion circle shows where the shell would land if fired right now: its centre is a parabola from the muzzle along the current direction with the real velocity and gravity (for howitzers — the `HOWITZER` law), in segments of ≈ 7 m against tanks, houses and terrain; its size is the dispersion now, never smaller than the reticle, so the shell lands inside it and converged the two rings are one. Its colour is the convergence: green once aimed (`bloom` ≤ 0.12), yellow while settling, red wide open (> 0.9). In arcade and sniper view it is drawn on screen (clamped to the edge if the point is off-frame). The artillery view keeps its own picture: the dispersion circle on the ground around the aim point and a ring at the gun's real impact point.

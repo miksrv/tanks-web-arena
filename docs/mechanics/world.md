@@ -44,7 +44,7 @@ First the terrain type is picked (randomly by weight); it sets the relief, seaso
 
 ## Named maps (`MAP_PRESETS`)
 
-A fixed seed with archetype, season and weather: «Прохоровка» (Prokhorovka), «Курская дуга» (Kursk Bulge; steppe), «Полесье» (Polesia; swamps, fog), «Перевал» (The Pass; winter, snowfall), «Керчь» (Kerch; coast), «Карелия» (Karelia; lake country, overcast), «Ржев» (Rzhev), «Орёл» (Oryol), «Малиновка» (Malinovka). Selected in the garage; the mode is chosen separately.
+A fixed seed with archetype and season: «Прохоровка» (Prokhorovka), «Курская дуга» (Kursk Bulge; both steppe), «Полесье» (Polesia; swamps, autumn), «Перевал» (The Pass; winter), «Керчь» (Kerch; coast), «Карелия» (Karelia; lake country), «Ржев» (Rzhev; winter), «Орёл» (Oryol; autumn), «Малиновка» (Malinovka). Selected in the garage; the mode and the weather are chosen separately. The weather is not part of a map: with «Случайная» (Random) a named map rolls a new one for its season every battle; a fixed choice is one of clear, overcast, dawn, dusk, fog or «Осадки» (Precipitation: snowfall on a winter map, rain otherwise).
 
 ## Terrain styles and seasons
 

@@ -48,7 +48,7 @@
 
 ## Match (`src/game/match.ts`, `src/game/capture.ts`, `MATCH`, `CAPTURE`)
 
-- Garage: the player's nation and vehicle, the map (random or one of the named ones, `MAP_PRESETS`) and the mode (random or fixed); the map and mode choice is remembered in the browser. The player's team: the player + bots by the roster "1 light, 2 medium, 2 heavy, 1 TD, 1 SPG" minus the player's class; the enemy — the full roster.
+- Garage: the player's nation and vehicle, the map (random or one of the named ones, `MAP_PRESETS`), the mode (random or fixed) and the weather (random or fixed); the three choices are remembered in the browser. The «Карта» (Map), «Режим» (Mode) and «Погода» (Weather) buttons show the current pick and open a dialog of cards (`src/hud/choiceDialog.ts`): a map card has an aerial shot of that map, its country and season and a description (`note` in `MAP_PRESETS`); a mode card has a diagram and its description (`MODE_NOTE`); a weather card has a drawn sign, the view range it leaves and a description (`WEATHER_CHOICES`). The map shots are `src/assets/maps/<id>.webp`, rendered from the game in clear weather by `scripts/map-previews.mjs` (run it again after a change to map generation or a new named map). The player's team: the player + bots by the roster "1 light, 2 medium, 2 heavy, 1 TD, 1 SPG" minus the player's class; the enemy — the full roster.
 - Balancing (`pickRosters` in `src/game/match.ts`): every vehicle has a battle rating `rating` (T-60 2 … IS-2 and Ferdinand 7). A bot's vehicle is chosen at random among the vehicles of its class with a rating within ±1.5 of the player's vehicle (if there are none — the nearest by rating), then single swaps bring the teams' rating sums to a difference ≤ 0.5 (no more than 20 passes). Both sides have the same classes.
 - Line-up in two rows at the base facing the enemy, SPGs at the back; the places in the rows (the player's too) are dealt at random every battle (`MATCH.spawn`). 4 s countdown.
 - Modes (random 60 / 25 / 15 %, `modeOdds`): **Standard** — each side has its own base; **Encounter** — one neutral base in the middle (on the line equidistant from the bases, closer to the map centre; there is no river on such a map, the city moves to a flank); **Assault** — one side defends its base, the other has nothing to capture, on time-out the defence wins.
@@ -63,12 +63,33 @@
 
 ## Battle report (`src/game/battleReport.ts`)
 
-- In the garage after a battle — a collapsible block «Разбор последнего боя» (Last battle report): shots, hit and penetration percentages, damage dealt and received; two tables («Нанесено» (Dealt) and «Получено» (Received)) per enemy vehicle: hits, penetrations, ricochets, non-penetrations, crits (modules, crew, fire, track), damage with splash, where the hits landed (hull, turret, lower plate, mantlet, cupola, screen — with counts) and the kill (your own — in green, of the one who destroyed you — in red). Friendly fire is not counted.
+- «Разбор последнего боя» (Last battle report) is a dialog that opens by itself on the return to the garage after a battle, and again from the button on the right of the map, mode and weather row (hidden until a battle gives something to show): shots, hit and penetration percentages, damage dealt and received; two tables («Нанесено» (Dealt) and «Получено» (Received)) per enemy vehicle: hits, penetrations, ricochets, non-penetrations, crits (modules, crew, fire, track), damage with splash, where the hits landed (hull, turret, lower plate, mantlet, cupola, screen — with counts) and the kill (your own — in green, of the one who destroyed you — in red). Friendly fire is not counted.
+
+## Battle history (`src/game/records.ts`, `src/hud/statsDialog.ts`)
+
+- Every finished battle (a left one too, as a defeat) is added to the record of the player's vehicle: battles, wins, draws, survived, kills, damage dealt and taken, spotting damage, blocked damage, spotted, shots, hits, penetrations, the best damage and kills of one battle, medals by name and the date of the last battle.
+- The records are kept in `localStorage` under `tanks-web-arena.records` (per browser, with a version number); a blocked storage keeps them for the session only. `?autostart` runs are not recorded.
+- The bar-chart button of the garage opens «Статистика» (Statistics): totals over all vehicles, a table of the vehicles played (most played first) and the full record of the selected one.
+- A vehicle card shows three numbers over the top left corner of its portrait («боёв», «побед», «подбито»: battles, win rate, kills); a click on them opens the dialog on that vehicle. A vehicle without battles shows nothing and is not listed.
+
+## Vehicle panel (`src/hud/statusPanel.ts`, `src/hud/tankSchema.ts`)
+
+- The player's panel shows a standard outline of the vehicle from above, one per kind (`PLANS`): light, medium and heavy tank, tank destroyer (casemate), SPG (fighting compartment at the rear) and rocket launcher (a lorry with rails). On it: tracks or wheels, hull, engine, ammunition rack, turret or casemate with the gun, and one seat per man aboard (driver, gunner and commander on the left, loader on the right).
+- What is broken turns red (tracks, engine, rack, turret ring, gun), a fire blinks on the engine, a wounded crew member turns red. The broken modules and wounded crew are also listed in words next to it, in red too.
+- Health is not on the outline: a thin bar shows the share left (green, amber under 50 %, red under 25 %), and the exact number shows for 3 s after the health drops.
+- A hit lights a red arc on the side of the diagram it came from, for 1.5 s. The struck part lights up orange and fades out over 12 s (`HUD.status.hitMarkLife`): the whole front, rear, left or right plate of the hull, its roof, the left or right track, or the turret; a penetration and a stopped hit look the same. Splash and ramming light nothing.
+- `HUD.status.style` switches the panel: `'schema'` (this one) or `'bar'` (no diagram, the health bar with the number always on).
+
+## Shell tiles and minimap (`src/hud/statusPanel.ts`, `src/hud/minimap.ts`)
+
+- Shells: one tile per type the vehicle carries, with its key, a drawing of the shell, its name and the rounds left; the loaded type is lit, an empty one shows a red 0. Penetration and damage are not shown there.
+- The minimap shows the battlefield up to the foot of the mountains (`WORLD_HALF − WORLD.mountainBand + HUD.minimap.rim` from the centre), not the ridge around it; anything beyond is drawn on the map's edge.
 
 ## Ribbons and medals (`src/hud/ribbons.ts`, `src/game/medals.ts`)
 
 - Ribbons in battle above the shell bar, with counters (a ribbon leaves 7 s after its last event and returns with the running count on the next one): kill, penetration, crit, set on fire, track, spotting, spotting damage (an ally damaged an enemy that this tank is spotting), armour (hit without penetration), ram, capture, base defence.
 - Battle medals (7 × 7 scale): «Колобанов» (Kolobanov: victory while left alone against three or more), «Воин» (Warrior: 3+ kills), «Основной калибр» (High Caliber: most damage, ≥ 1000), «Снайпер» (Sniper: 4+ penetrations from 250 m), «Разведчик» (Scout: 4+ spots), «Поддержка» (Support: ≥ 800 spotting damage), «Стальная стена» (Steel Wall: ≥ 1200 blocked over 6+ hits), «Захватчик» (Invader: base taken in a capture victory), «Защитник» (Defender: ≥ 40 capture points knocked off), «Мастер критов» (Crit Master: 4+ crits).
 - The scoreboard (Tab) has the added columns «По засвету» (Spotting damage) and «Броня» (Armour).
-- A dead player spectates allies (Space — next), the battle runs to the end.
+- A knocked-out player's camera stays on the wreck for 4 s (`MATCH.wreckView`) while the centre panel counts down, then spectates allies (Space — next); the battle runs to the end.
+- «Завершить бой» (Leave the battle): the button on the pause screen (Esc), or Enter once dead. The player's side loses at once («Вы покинули бой» (You left the battle)) and the usual result screen with the personal numbers comes up.
 - Pause: while the mouse is not captured (Esc, window switch) during the countdown or battle, time stands still and sound is paused; clicking the screen resumes. With `?autostart` the pause is disabled (there is no mouse capture in automated tests).

@@ -58,7 +58,7 @@ Historical variants:
 
 - **Gun:** T-34-76 L-11 → F-34, KV-1 L-11 → ZiS-5, Pz.IV H KwK 40 L/43 → L/48, StuG III L/24 → L/48.
 - **Engine:** speed and acceleration.
-- **Suspension:** hull traverse, less dispersion on the move.
+- **Suspension:** hull traverse, less dispersion on the move (`Tank.aimSpread`).
 - **Turret:** only where historical.
 
 ### 2. Crew (XP accumulates by itself)
@@ -69,7 +69,7 @@ Historical variants:
 ### 3. Equipment (3 slots, bought for supplies, removable)
 
 - Gun rammer: −10% reload time.
-- Stabilizer: smaller aiming penalty on the move (`Tank.bloom`).
+- Stabilizer: smaller aiming penalty on the move (`Tank.aimSpread`: how wide the dispersion circle opens; `gun.aimTime`: how fast it closes).
 - Optics: +10% `viewRange`.
 - Camouflage net: +`camo` while stationary.
 - Ventilation: +small bonus to everything.

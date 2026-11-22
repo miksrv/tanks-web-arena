@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.0
+
+Two Lend-Lease vehicles, detailed tank models, a voice for every engine and gun, and battle statistics.
+
+### Minor Changes
+
+- New vehicles: M4A2 Sherman medium tank and SU-57 tank destroyer (Lend-Lease, USSR)
+- Tanks look new: weathered paint and camouflage, hatches, grilles, tools and tracks that run
+- Winter whitewash on vehicles; dust, mud or slush on the lower plates by season
+- Sound: every engine and gun has its own voice; nearby tanks are heard, far shots arrive late
+- Aiming: a dispersion circle on the gun's line of fire shows where the shell may land
+- Light tanks can fire on the move; tank destroyers and SPGs have to stop to aim
+- Battle statistics per vehicle in the garage: battles, wins, kills, damage, medals
+- Garage: map, mode and weather are picked from cards with a shot of each map
+- Weather is a choice of its own: any map can be played in any weather, or a random one
+- Garage: vehicles are sorted by class; the last battle report opens as a dialog
+- Vehicle panel: a top-down diagram shows broken modules, wounded crew and where hits landed
+- Shell tiles show a drawing and the rounds left; the minimap shows only the battlefield
+- Leave the battle from the pause screen, or with Enter once knocked out (counts as a defeat)
+- The camera stays on your wreck for 4 s before it goes to a teammate
+- Small crews: in the T-60, T-70 and Pz II F the commander also lays or loads the gun
+- The strike plane (V) is switched off for now
+
 ## 0.1.3
 
 Two new tank destroyers, a lake country map and a cleaner battle screen.
