@@ -10,21 +10,13 @@ export const ROLE_LABEL: Record<Role, string> = {
 	spg: 'САУ',
 }
 
-/** Camera mode names in the status panel (keys are `CamMode`). */
-export const CAM_MODE_LABEL = {
-	chase: 'аркадный',
-	sniper: 'снайперский',
-	arty: 'артиллерийский',
-	spectate: 'наблюдение',
-	plane: 'самолёт',
-}
 /** Armour zone names in the aim readout. */
 export const ARMOR_ZONE_LABEL = { lower: 'нижний лист', mantlet: 'маска', cupola: 'башенка', screen: 'экран' } as const
-/** One-line battle mode descriptions in the garage. */
+/** Battle mode descriptions on the mode cards of the garage. */
 export const MODE_NOTE: Record<BattleMode, string> = {
-	standard: 'у каждой команды своя база: уничтожить всех или захватить базу противника',
-	encounter: 'одна нейтральная база в центре: её может захватить любая команда',
-	assault: 'одна команда обороняет базу, другая её штурмует; время на стороне обороны',
+	standard: 'У каждой команды своя база: уничтожить всех или захватить базу противника.',
+	encounter: 'Одна нейтральная база в центре: её может захватить любая команда.',
+	assault: 'Одна команда обороняет базу, другая её штурмует. Время на стороне обороны.',
 }
 /** Where a hit landed, for the battle log and the report: the struck part, or the special zone on it. */
 export const HIT_PART_LABEL = { hull: 'корпус', turret: 'башня', tracks: 'гусеница' }

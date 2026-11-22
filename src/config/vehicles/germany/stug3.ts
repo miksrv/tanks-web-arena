@@ -9,6 +9,7 @@ export const stug3: TankDef = {
 	id: 'stug3',
 	nation: 'germany',
 	role: 'td',
+	engine: 'hl120',
 	name: 'StuG III G',
 	hp: 780,
 	rating: 4.5,

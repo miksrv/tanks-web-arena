@@ -22,6 +22,17 @@ export function placeEuler(x: number, y: number, z: number, rx: number, ry: numb
 	)
 }
 
+/** Extra vertex data for textured models. */
+export interface SurfaceOptions {
+	/**
+	 * Texture coordinates by box projection, in metres: each triangle is projected along the axis its face looks
+	 * down most, so a tiling texture lies on every plate without stretching (the texture's `repeat` sets its size).
+	 */
+	boxUv?: boolean
+	/** Colours get a fourth component: 1 on painted parts, 0 elsewhere (the material's paint mask). */
+	paintMask?: boolean
+}
+
 /**
  * Bakes many small primitives into one non-indexed geometry with per-vertex colour, so a whole village or a whole
  * tank part is a single draw call. Parts are transformed on the CPU when they are added.
@@ -30,11 +41,15 @@ export class MergedGeometryBuilder {
 	private readonly pos: number[] = []
 	private readonly nrm: number[] = []
 	private readonly col: number[] = []
+	private readonly uv: number[] = []
 	private readonly v = new THREE.Vector3()
 	private readonly nm = new THREE.Matrix3()
 	private readonly c = new THREE.Color()
 
-	constructor(private readonly paint?: Painter) {}
+	constructor(
+		private readonly paint?: Painter,
+		private readonly surface: SurfaceOptions = {},
+	) {}
 
 	/** Append `geo` (not consumed) transformed by `m`; `painted` runs the painter over every vertex. */
 	add(geo: THREE.BufferGeometry, color: THREE.Color, m: THREE.Matrix4 = IDENTITY, painted = false) {
@@ -49,10 +64,30 @@ export class MergedGeometryBuilder {
 			if (painted && this.paint) this.paint(this.v.x, this.v.y, this.v.z, color, this.c)
 			else this.c.copy(color)
 			this.col.push(this.c.r, this.c.g, this.c.b)
+			if (this.surface.paintMask) this.col.push(painted ? 1 : 0)
 			this.v.fromBufferAttribute(n, i).applyMatrix3(this.nm).normalize()
 			this.nrm.push(this.v.x, this.v.y, this.v.z)
+			if (this.surface.boxUv && i % 3 === 2) this.projectTriangle()
 		}
 		if (g !== geo) g.dispose()
+	}
+
+	/** Box-projected texture coordinates of the triangle just added (its last nine position numbers). */
+	private projectTriangle() {
+		const p = this.pos
+		const o = p.length - 9
+		const ux = p[o + 3] - p[o]
+		const uy = p[o + 4] - p[o + 1]
+		const uz = p[o + 5] - p[o + 2]
+		const vx = p[o + 6] - p[o]
+		const vy = p[o + 7] - p[o + 1]
+		const vz = p[o + 8] - p[o + 2]
+		const nx = Math.abs(uy * vz - uz * vy)
+		const ny = Math.abs(uz * vx - ux * vz)
+		const nz = Math.abs(ux * vy - uy * vx)
+		// Side plates take (z, y), the roof and the belly (x, z), front and rear plates (x, y)
+		const [a, b] = nx >= ny && nx >= nz ? [2, 1] : ny >= nz ? [0, 2] : [0, 1]
+		for (let k = 0; k < 9; k += 3) this.uv.push(p[o + k + a], p[o + k + b])
 	}
 
 	/** Append and dispose a temporary geometry. */
@@ -65,7 +100,8 @@ export class MergedGeometryBuilder {
 		const geo = new THREE.BufferGeometry()
 		geo.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3))
 		geo.setAttribute('normal', new THREE.Float32BufferAttribute(this.nrm, 3))
-		geo.setAttribute('color', new THREE.Float32BufferAttribute(this.col, 3))
+		geo.setAttribute('color', new THREE.Float32BufferAttribute(this.col, this.surface.paintMask ? 4 : 3))
+		if (this.surface.boxUv) geo.setAttribute('uv', new THREE.Float32BufferAttribute(this.uv, 2))
 		return geo
 	}
 }

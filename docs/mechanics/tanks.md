@@ -1,6 +1,6 @@
 # Tanks
 
-Code: `src/tank/tank.ts`, model: `src/tank/tankView.ts` and `src/tank/model/`, stats and look: one file per vehicle in `src/config/vehicles/ussr/` and `src/config/vehicles/germany/` (garage order — the nation's `index.ts`)
+Code: `src/tank/tank.ts`, model: `src/tank/tankView.ts` and `src/tank/model/`, stats and look: one file per vehicle in `src/config/vehicles/ussr/` and `src/config/vehicles/germany/` (listed in the nation's `index.ts`; the garage shows them by class — light, medium, heavy, TD, SPG — and by rating within a class, `tanksOf`)
 
 ## Vehicles
 
@@ -36,6 +36,8 @@ Code: `src/tank/tank.ts`, model: `src/tank/tankView.ts` and `src/tank/model/`, s
 | Panzerwerfer 42 | SPG    | 320  | 50      | 10/8/8, half-track                     | 10 × 150 mm Nebelwerfer, ±13°                              | 30 (HE) / 200 × 10 / 32       | 320        | 0.22       |
 | ISU-152         | TD     | 1300 | 35      | 120/90/60 (casemate)                   | 152 mm, ±10°, splash 5 m                                   | 135 / 700 / 14.5              | 340        | 0.12       |
 | Sturmtiger      | TD     | 1300 | 32      | 150/82/82, casemate 200/82/82          | 380 mm rocket mortar, HE only, 10 rounds, splash 8 m, ±10° | 170 / 1050 / 20               | 330        | 0.04       |
+| M4A2 Sherman    | medium | 720  | 45      | 90/38/38 · 88/51/51                    | 75 mm M3 (Lend-Lease)                                      | 90 / 115 / 3.6                | 380        | 0.12       |
+| SU-57           | TD     | 300  | 58      | 13/7/7, open half-track                | 57 mm (Lend-Lease T48), ±26°                               | 112 / 90 / 2.9                | 370        | 0.30       |
 
 Gun types: regular (AP by default), SPG howitzers (`howitzer`: indirect fire, top-down view), "derp guns" (`derp`: direct fire, HE by default), autocannons (`bloomShot` 0.35: a burst barely opens up the reticle) and rocket launchers (`salvo`: one press launches a series of rockets at 0.1 s intervals along the current position of the rails, each with its own dispersion; HE only; howitzer ballistics) and the rocket mortar (`mortar`, the Sturmtiger: see below). The team composition is picked by roles, the vehicle within a role is chosen at random.
 
@@ -62,12 +64,24 @@ Rocket mortar (`gun.mortar`, numbers in `MORTAR`): direct fire with a slow rocke
 
 Each vehicle describes its look in its own file, in `shape`. The top-level dimensions (`hullL/W/H`, `tW/tL/tH/tZ`, `trackH`) are also the hitboxes; the rest affects only the look. Model coordinate system: +z forward, +y up, +x — left side.
 
-- `hullLook` — hull: side profile `outline` (normalised: z 0 = rear … 1 = nose, y 0 = fender line … 1 = roof), `roofW` — narrowing towards the roof for sloped sides (T-34, Panther), `lowerNose` — lower glacis between the tracks, `drums` — external fuel tanks, `spareTracks` — spare track links on the front, `skirts` — side skirts.
+- `hullLook` — hull: side profile `outline` (normalised: z 0 = rear … 1 = nose, y 0 = fender line … 1 = roof), `roofW` — narrowing towards the roof for sloped sides (T-34, Panther), `lowerNose` — lower glacis between the tracks, `drums` — external fuel tanks, `spareTracks` — spare track links on the front, `skirts` — side skirts, `bowMg` — a ball-mounted machine gun in the front plate.
 - `turretLook` — turret or casemate: `welded` (a profile extruded across the width with side slope `roofW`) or `round` (cast/faceted, `facets` faces: 6 — the T-34 "nut", 8 — T-60, 12 — cast), `bustle` — rear bustle, `x` — turret ring offset (T-60/T-70 — to the left), `cupola` — commander's cupola, `twinHatches` — two hatches, `stowage` — a box on the turret rear, `skirts` — turret side skirts (Pz. IV H), `sideTracks` — track links on the turret sides (Tiger), `mountY` — trunnion height.
 - `gunLook` — mantlet (`box`, `round`, `ball`, `saukopf`, `shield`), muzzle brake (`none`, `single`, `double`, `multi`), `sleeve` — recoil system sleeve.
 - `running` — running gear: `tracks`, `halftrack` or `truck`; number and radius of road wheels, `layout` (`even`, `paired` — bogies of the Pz. IV and Ferdinand, `interleaved` — staggered on the Tiger, Panther, Luchs), return rollers, drive sprocket at the front (Germans, T-60/70, SU-76) or at the rear (T-34, KV, IS, Ferdinand), truck axles.
 - The upper hull is drawn from the fender line, the roof is at height `trackH·0.72 + hullH`; the upper run of the track with its rollers is visible. The track band is a profile around the idler, the drive sprocket and the road wheels.
 - On TDs and SPGs the casemate is part of the hull, only the gun turns (within the `arc` sector) around its mantlet; on turreted vehicles the whole turret turns.
-- Details: exhaust at the rear plate, headlight on the nose, antenna, tow hooks, spares and tools stowage on the fender.
-- Paint: 4BO (USSR) / dunkelgelb with green patches (Germany), per-vertex noise; Balkenkreuz on the hull and turret (on the Tiger — hull only), a red star on the turret or casemate (on the T-34-76 with the faceted turret — on the hull side).
-- Everything static is three meshes (hull with casemate, turret, gun) with vertex colours and one material per tank, road wheels are a single InstancedMesh (tyre + painted disc); about 1000–1600 triangles per vehicle. Wrecks — dark colour, turret tilted.
+- Details are placed by rule from the outline, so every vehicle gets them: the driver's visor (a hatch in a sloped Soviet glacis) and the bow machine gun on the front plate, crew hatches with periscopes on the roof ahead of the turret, the engine deck with grilles behind it (ahead of a rear casemate), a muffler drum (Germany) or two pipes and a transmission hatch (USSR) on the rear plate, mud flaps, tools and a tow cable on the sides, headlights, antenna, tow hooks. The turret roof carries the cupola with vision slits or hatches, periscopes, a ventilator and lifting eyes; the gun has a stepped barrel, a dark bore and a coaxial machine gun.
+- Paint (`TANK_PAINT` in `config/fx.ts`, textures in `model/textures.ts`): one tiling texture per nation and season, generated once and shared by all tanks. 4BO (USSR) / dunkelgelb with sprayed green and brown patches (Germany), in winter worn whitewash over it; fading, rain streaks and chips are in the texture. Parts get texture coordinates by box projection (metres), so the texture lies on every plate without stretching. A second shared texture gives the surface relief and roughness. Vertex colour alpha is the paint mask: only painted parts take the paint texture, tyres, tools, glass and markings keep their plain colour. Dust (summer), mud (autumn) or slush (winter) is a vertex tint that fades out with height.
+- Markings: Balkenkreuz on the hull and turret (on the Tiger — hull only), a red star on the turret or casemate (on the T-34-76 with the faceted turret — on the hull side).
+- Tracks (`model/tracks.ts`): both bands are one mesh with a link texture along the belt; the texture runs with each track separately (the outer track of a turn runs further), the road wheels of each side turn with it.
+- Everything static is three meshes (hull with casemate, turret, gun) and one material per tank, plus the tracks mesh with its own material; road wheels are a single InstancedMesh (tyre, dished disc with a hub cap and a ring of holes). About 2500–4000 triangles and 5 draw calls per vehicle. Wrecks — dark colour, turret tilted.
+
+## Sound (`src/fx/audio.ts`, `src/fx/engineSound.ts`, voices in `src/config/sound.ts`)
+
+Everything is synthesised in the browser, there are no audio files.
+
+- Engine: every vehicle names its engine in `engine` (`ENGINES`: V-2 diesel of the T-34, the heavier V-2 of the KV and IS, GAZ and Maybach sixes, Maybach HL 120 and HL 230 V12, the petrol-electric Ferdinand, lorry engines). A voice is the firing frequency at idle and at full revs, the diesel knock, how unevenly the cylinders fire, the resonances of the exhaust and hull, the gear whine and the number of gears. The exhaust note is a short loop of firing pulses played at the engine's revs; the revs climb through each gear and drop on the shift.
+- Running gear: track clatter at the link rate and squeal in a turn, each with the level and pitch of the vehicle's tracks (the T-34 clatters, the Tiger and Panther squeal; a lorry has none). The turret traverse hums while the turret turns.
+- Other vehicles: the three nearest running engines within 140 m are heard, quieter and duller with distance and panned by their bearing (`ENGINE_MIX`). Only vehicles drawn on screen sound, so an unspotted enemy cannot be heard.
+- Guns (`GUN_SOUND`): a shot is voiced from the gun itself. Calibre sets the pitch and the length of the blast, muzzle velocity the supersonic crack (sharp on long guns, almost none on howitzers), a muzzle brake adds a harsh bark, autocannons under 30 mm give a short dry report. In the player's own tank the breech clanks, the barrel rings and the spent case drops on the floor.
+- Distance: shots, rockets and explosions are heard late, at 340 m/s (at most 1.6 s); hit sounds on armour are not delayed.

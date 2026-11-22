@@ -9,6 +9,7 @@ export const tiger: TankDef = {
 	id: 'tiger',
 	nation: 'germany',
 	role: 'heavy',
+	engine: 'hl230',
 	name: 'Tiger I',
 	hp: 1200,
 	rating: 6.5,
@@ -35,6 +36,7 @@ export const tiger: TankDef = {
 		gunR: 0.07,
 		openTop: false,
 		hullLook: {
+			bowMg: true,
 			outline: [
 				[0.01, 0],
 				[0.97, 0],

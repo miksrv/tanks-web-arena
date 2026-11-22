@@ -9,6 +9,7 @@ export const hummel: TankDef = {
 	id: 'hummel',
 	nation: 'germany',
 	role: 'spg',
+	engine: 'hl120',
 	name: 'Hummel',
 	hp: 450,
 	rating: 4.5,

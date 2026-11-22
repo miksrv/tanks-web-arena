@@ -20,13 +20,13 @@
 
 - **Three game modes**: Standard (a base on each side), Encounter (one neutral base) and Assault (one side defends). Two teams of 7, no respawn, 6-minute rounds, WoT-style base capture.
 - **A new map every battle**: 900 × 900 m, six terrain types (central Russia, steppe, swamps, mountain pass, coast, lake country), nine named maps, seven kinds of weather and time of day, three seasons. Rivers with bridges and fords, railways, villages, a ruined town or a factory district, pillboxes, Czech hedgehogs, forests where trees fall under your tank.
-- **30 historical vehicles** in five classes: light, medium and heavy tanks, tank destroyers and SPGs. T-34, KV-1, IS-2, SU-152, Katyusha; Pz. IV, Panther, Tiger I, StuG III, Ferdinand, Sturmtiger, Nebelwerfer and more. Each has its own armour layout, gun, speed, view range and camouflage.
+- **32 historical vehicles** in five classes: light, medium and heavy tanks, tank destroyers and SPGs. T-34, KV-1, IS-2, SU-152, Katyusha; Pz. IV, Panther, Tiger I, StuG III, Ferdinand, Sturmtiger, Nebelwerfer and more. Each has its own armour layout, gun, speed, view range and camouflage.
 - **World of Tanks style armour model**: hull and turret plates by projection, impact angle, normalisation, ricochet, the three-calibre rule, weak zones (lower glacis, cupola, mantlet), side skirts against HE. Three shell types: AP, APCR, HE with splash.
 - **Modules and crew**: tracks, engine, turret ring, gun, ammo rack (with detonation), fire; wounded commander, gunner, driver and loader. Repair kit, first aid kit and fire extinguisher. Ramming.
 - **Spotting**: view range vs camouflage, line of sight through terrain and buildings, bushes and forests, shared team vision, sixth sense. Unspotted enemies are not drawn.
 - **Team bots with roles**: scouts spot from bushes, strike groups push lanes together, tank destroyers cover from high ground, SPGs fire from the rear at spotted targets. Bots pick shells by target armour, angle their hull and retreat when low.
-- **Arcade, sniper and artillery views**, a reticle coloured by penetration chance, a reload ring, a gun marker that shows where the shell will really land, an artillery trajectory and dispersion ellipse.
-- **Battle feedback**: ribbons, medals, hit log, scoreboard, minimap, hit direction indicator, a post-battle report in the garage, team signals to bots, procedural sound with stereo panning.
+- **Arcade, sniper and artillery views**, a reticle coloured by penetration chance, a reload ring, a dispersion circle on the gun's line of fire that shows where the shell may really land, an artillery trajectory and dispersion ellipse.
+- **Battle feedback**: ribbons, medals, hit log, scoreboard, minimap, hit direction indicator, a post-battle report and per-vehicle battle statistics in the garage, team signals to bots, procedural sound with stereo panning: every engine and gun has its own voice.
 
 ## Controls
 
@@ -40,8 +40,8 @@
 | R / E / F       | repair kit / first aid kit / fire extinguisher                                       |
 | Q (hold)        | team signal menu; T / G / B send Attacking! / Need help! / Defend the base! directly |
 | Tab / H / M / P | scoreboard / help / sound / fps                                                      |
-| Space           | after death: next ally                                                               |
-| Esc             | pause and release the mouse; click to continue                                       |
+| Space / Enter   | after death: next ally / leave the battle (a defeat)                                 |
+| Esc             | pause and release the mouse; click to continue, or leave the battle (a defeat)       |
 
 ## Tech stack
 
@@ -69,7 +69,7 @@ src/
   main.ts       entry point
   config/       all game numbers: vehicles (one file per vehicle), guns, shells, combat, bots, match, world and map generation, HUD, effects, rendering
   core/         math, noise, spatial grid
-  game/         game loop, match flow, player controller, spotting, capture, medals, battle report
+  game/         game loop, match flow, player controller, spotting, capture, medals, battle report, battle history
   world/        procedural terrain, rivers, roads, railways, villages, towns, props
   tank/         tank state, movement, suspension, crew, modules, ammo, hit boxes, procedural models
   combat/       armour model, shells, ballistics, tracing
@@ -77,7 +77,7 @@ src/
   render/       renderer, environment, adaptive resolution
   hud/          garage, reticle, minimap, ribbons, scoreboard
   fx/           particles, ground marks, precipitation, procedural audio
-  plane/        the player's aircraft prototype
+  plane/        the player's aircraft prototype (switched off: its key is commented out in playerController.ts)
 docs/mechanics/ the rules and numbers behind combat, tanks, the world, spotting and bots
 docs/TODO-*.md  deferred plans: progression and a client-server mode
 ```

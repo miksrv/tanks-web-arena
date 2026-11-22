@@ -9,6 +9,7 @@ export const marder3: TankDef = {
 	id: 'marder3',
 	nation: 'germany',
 	role: 'td',
+	engine: 'praga',
 	name: 'Marder III',
 	hp: 420,
 	rating: 4,

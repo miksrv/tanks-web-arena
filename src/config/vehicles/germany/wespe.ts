@@ -8,6 +8,7 @@ export const wespe: TankDef = {
 	id: 'wespe',
 	nation: 'germany',
 	role: 'spg',
+	engine: 'maybachSix',
 	name: 'Wespe',
 	hp: 380,
 	rating: 3.5,

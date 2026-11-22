@@ -46,6 +46,7 @@ const OUTCOME: Record<Outcome, (side: string) => string> = {
 	capture: (side) => `${side}: база захвачена`,
 	time: (side) => `${side}: время вышло, у них больше машин`,
 	defended: (side) => `${side}: оборона выстояла`,
+	left: () => 'Вы покинули бой',
 }
 
 /** Result screen for the finished round: who won and why, the player's numbers and medals. */
@@ -69,7 +70,7 @@ export function resultHtml(winner: 0 | 1 | -1 | null, outcome: Outcome, player: 
 	return (
 		`${title}<small>${reason}</small><small>${stats}</small>` +
 		(list ? `<div class="medals">${list}</div>` : '') +
-		`<small>Следующий бой через несколько секунд</small>`
+		`<small>Возврат в гараж через несколько секунд</small>`
 	)
 }
 
@@ -77,6 +78,14 @@ export function countdownHtml(timer: number, howitzer: boolean): string {
 	const hint = howitzer ? ' · колесо вперёд или Shift — артиллерийский вид' : ''
 	return `${Math.ceil(timer)}<br><small>Приготовиться${hint}</small>`
 }
+
+/** The player's tank is knocked out: the camera stays on the wreck for `timer` more seconds. */
+export function wreckHtml(timer: number): string {
+	return `Танк подбит<br><small>Наблюдение за боем через ${Math.ceil(timer)} с · Enter — завершить бой</small>`
+}
+
+/** The slim line under the screen while the dead player watches a teammate. */
+export const SPECTATE_HTML = '<small>Наблюдение · Пробел — следующий союзник · Enter — завершить бой</small>'
 
 export function killHtml(t: Tank, by: Tank | null): string {
 	const who = by ? `<b>${by.name}</b> (${by.def.name})` : 'Кто-то'

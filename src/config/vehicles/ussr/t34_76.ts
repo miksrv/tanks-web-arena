@@ -8,6 +8,7 @@ export const t34_76: TankDef = {
 	id: 't34_76',
 	nation: 'ussr',
 	role: 'medium',
+	engine: 'v2',
 	name: 'Т-34-76',
 	hp: 680,
 	rating: 4,
@@ -34,6 +35,7 @@ export const t34_76: TankDef = {
 		gunR: 0.055,
 		openTop: false,
 		hullLook: {
+			bowMg: true,
 			outline: [
 				[0.02, 0],
 				[0.96, 0],

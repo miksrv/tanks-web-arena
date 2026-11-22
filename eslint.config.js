@@ -44,5 +44,11 @@ export default defineConfig(
 		...tseslint.configs.disableTypeChecked,
 		languageOptions: { globals: globals.node },
 	},
+	{
+		// Tooling scripts: Node, with functions that run inside the page
+		files: ['scripts/**/*.mjs'],
+		...tseslint.configs.disableTypeChecked,
+		languageOptions: { globals: { ...globals.node, ...globals.browser } },
+	},
 	prettier,
 )

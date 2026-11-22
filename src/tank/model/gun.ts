@@ -37,12 +37,19 @@ function cannon(gb: TankBuilder, def: TankDef, base: THREE.Color) {
 	const r = s.gunR
 	const mw = s.tW * (look.mantletW ?? 0.4)
 	const mh = Math.min(s.tH * 0.62, r * 5 + 0.3)
+	// Coaxial machine gun beside the gun of a turret, the breech inside an open fighting compartment
+	if (s.turret && (look.mantlet === 'box' || look.mantlet === 'round')) {
+		gb.cyl(0.022, 0.022, 0.5, 5, C.steel, -Math.min(mw * 0.36, r * 4 + 0.2), mh * 0.1, 0.3, false, Math.PI / 2)
+	}
+	if (s.openTop && look.mantlet !== 'shield') gb.box(r * 4.5, r * 4.5, 0.8, C.steel, 0, 0, -0.45)
 	switch (look.mantlet) {
 		case 'box':
 			gb.box(mw, mh, 0.3, base, 0, 0, 0.1, true)
+			if (!look.sleeve) gb.cyl(r * 1.9, r * 2.4, 0.22, 8, base, 0, 0, 0.36, true, Math.PI / 2)
 			break
 		case 'round':
 			gb.cyl(mh / 2, mh / 2, mw, 8, base, 0, 0, 0, true, 0, Math.PI / 2)
+			if (!look.sleeve) gb.cyl(r * 1.8, r * 2.3, 0.3, 8, base, 0, 0, mh / 2 + 0.05, true, Math.PI / 2)
 			break
 		case 'ball':
 			gb.part(
@@ -69,7 +76,13 @@ function cannon(gb: TankBuilder, def: TankDef, base: THREE.Color) {
 		gb.cyl(r, r, end, 12, base, 0, 0, end / 2, true, Math.PI / 2)
 		gb.cyl(r * 1.15, r * 1.15, 0.22, 12, base, 0, 0, end - 0.11, true, Math.PI / 2)
 		gb.cyl(r * 0.76, r * 0.76, 0.04, 12, C.rubber, 0, 0, end + 0.005, false, Math.PI / 2)
-	} else gb.cyl(r, r * 1.35, end, 8, base, 0, 0, end / 2, true, Math.PI / 2)
+	} else {
+		// A thicker reinforce over the chamber end, the chase tapering to the muzzle, and the dark bore
+		const step = end * 0.36
+		gb.cyl(r * 1.24, r * 1.42, step, 8, base, 0, 0, step / 2, true, Math.PI / 2)
+		gb.cyl(r, r * 1.14, end - step, 8, base, 0, 0, (end + step) / 2, true, Math.PI / 2)
+		gb.cyl(r * 0.62, r * 0.62, 0.03, 8, C.grille, 0, 0, end + 0.002, false, Math.PI / 2)
+	}
 	switch (look.brake) {
 		case 'single':
 			gb.cyl(r * 1.7, r * 1.7, 0.3, 8, base, 0, 0, end - 0.15, true, Math.PI / 2)
@@ -77,9 +90,11 @@ function cannon(gb: TankBuilder, def: TankDef, base: THREE.Color) {
 		case 'double':
 			gb.cyl(r * 1.9, r * 1.9, 0.13, 8, base, 0, 0, end - 0.065, true, Math.PI / 2)
 			gb.cyl(r * 1.9, r * 1.9, 0.13, 8, base, 0, 0, end - 0.32, true, Math.PI / 2)
+			gb.cyl(r * 1.3, r * 1.3, 0.14, 8, C.grille, 0, 0, end - 0.19, false, Math.PI / 2)
 			break
 		case 'multi':
-			gb.box(r * 3.4, r * 3, 0.65, base, 0, 0, end - 0.32, true)
+			gb.box(r * 3.4, r * 3, 0.65, base, 0, 0, end - 0.335, true)
+			for (let i = 0; i < 3; i++) gb.box(r * 3.5, r * 1.1, 0.08, C.grille, 0, 0, end - 0.14 - i * 0.19)
 			break
 		case 'none':
 			break

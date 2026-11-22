@@ -13,8 +13,10 @@ import { su76 } from './su76'
 import { su152 } from './su152'
 import { bm13 } from './bm13'
 import { isu152 } from './isu152'
+import { sherman } from './sherman'
+import { su57 } from './su57'
 
-/** Soviet vehicles in garage order (the second one is the garage's default pick). */
+/** Soviet vehicles (the garage sorts them by class, see `tanksOf`). */
 export const USSR_TANKS: TankDef[] = [
 	t70,
 	t34_85,
@@ -30,4 +32,6 @@ export const USSR_TANKS: TankDef[] = [
 	su152,
 	bm13,
 	isu152,
+	sherman,
+	su57,
 ]

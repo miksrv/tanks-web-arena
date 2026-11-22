@@ -3,7 +3,7 @@ import { BotBrain } from '../ai/bot'
 import { TeamTactics } from '../ai/team'
 import { CameraRig } from '../camera'
 import { Shells } from '../combat/shells'
-import { MATCH, MODE_LABEL, PLANE, RENDER, TANKS, WEATHER } from '../config'
+import { MATCH, MODE_LABEL, RENDER, TANKS, WEATHER } from '../config'
 import { ArtyView } from '../fx/artyView'
 import { Audio } from '../fx/audio'
 import { Particles } from '../fx/particles'
@@ -24,7 +24,9 @@ import { Match } from './match'
 import { BattleReport } from './battleReport'
 import { awardMedals } from './medals'
 import { COLOR, countdownHtml, mapTitle, resultHtml } from './messages'
+import { playEngines } from './engineAudio'
 import { PlayerController } from './playerController'
+import { TankRecords } from './records'
 import { Spotting } from './spotting'
 import { TeamSignals, type Squad } from './teamSignals'
 import { exposeOnWindow, type TestOptions } from './testHooks'
@@ -51,6 +53,7 @@ export class Game {
 	private readonly signals: TeamSignals
 	private readonly worldGroup = new THREE.Group()
 	private readonly report = new BattleReport()
+	private readonly records = new TankRecords()
 
 	private map!: GeneratedMap
 	/** The next map, generated while the result screen is up. */
@@ -93,8 +96,10 @@ export class Game {
 			report: this.report,
 			player: () => this.player,
 		})
+		this.controller.onLeave = this.hud.onLeave = () => this.leave()
 		this.controller.onSignal = (sig) => this.signals.send(sig, this.squad(), this.time)
 		this.signals = new TeamSignals(this.hud, this.rig)
+		this.hud.setRecords(this.records.all)
 		this.timeScale = opts.timeScale
 		this.seed = opts.seed
 		if (opts.tankId) {
@@ -128,15 +133,11 @@ export class Game {
 
 	// ---------------------------------------------------------------- world and rounds
 
-	private takeSeed(): number | null {
-		const s = this.seed
-		this.seed = null
-		return s
-	}
-
-	/** What the next map must be: the garage choice, with the test hooks' forced values on top. */
+	/** What the next map must be: the garage choice, with the test hooks' forced values on top (the seed once). */
 	private request(): MapRequest {
-		return mapRequest(this.hud.garage.choice, this.opts, this.takeSeed())
+		const seed = this.seed
+		this.seed = null
+		return mapRequest(this.hud.garage.choice, this.opts, seed)
 	}
 
 	private loadMap() {
@@ -259,7 +260,7 @@ export class Game {
 
 		if (!paused) this.updatePhase(dt)
 		const inBattle = this.match.phase !== 'garage'
-		if (inBattle) this.controller.update(this.player, this.tanks, this.match.phase, this.time)
+		if (inBattle) this.controller.update(this.player, this.tanks, this.match.phase, this.time, dt)
 		if (inBattle && !paused) this.simulate(dt)
 		this.render(dt, paused)
 		this.input.endFrame()
@@ -278,17 +279,7 @@ export class Game {
 	private updatePhase(dt: number) {
 		const { match, hud } = this
 		const changed = match.update(dt, this.tanks)
-		if (changed && match.phase === 'result') {
-			// The bots stop thinking now: let them roll to a halt instead of driving on blind for the whole result screen
-			for (const b of this.bots) b.tank.throttle = b.tank.steer = 0
-			hud.showResult(
-				resultHtml(match.winner, match.outcome, this.player, awardMedals(this.player, this.tanks, match)),
-			)
-			hud.center('')
-			hud.setReport(this.report.html())
-			// The next map is built once the result screen is up, not in the frame that shows it
-			afterPaint(() => match.phase === 'result' && (this.nextMap ??= generateMap(hud, this.request())))
-		}
+		if (changed && match.phase === 'result') this.showResult()
 		if (changed && match.phase === 'garage') {
 			hud.showResult('')
 			hud.showGarage(true)
@@ -303,6 +294,26 @@ export class Game {
 			this.rig.distance = 520
 		}
 		if (match.phase === 'countdown') hud.center(countdownHtml(match.timer, !!this.player.def.gun.howitzer))
+	}
+
+	/** The battle is over: the result screen, the report for the garage and the next map. */
+	private showResult() {
+		const { match, hud } = this
+		// The bots stop thinking now: let them roll to a halt instead of driving on blind for the whole result screen
+		for (const b of this.bots) b.tank.throttle = b.tank.steer = 0
+		const medals = awardMedals(this.player, this.tanks, match)
+		hud.showResult(resultHtml(match.winner, match.outcome, this.player, medals))
+		// Automated runs (`?autostart`) play with nobody at the controls: they leave the history alone
+		if (!this.opts.autostart) this.records.add(this.player, match, medals, this.report.totals())
+		hud.center('')
+		hud.setReport(this.report.html())
+		// The next map is built once the result screen is up, not in the frame that shows it
+		afterPaint(() => match.phase === 'result' && (this.nextMap ??= generateMap(hud, this.request())))
+	}
+
+	/** «Завершить бой» (Leave the battle): the player's side loses and the result screen comes up at once. */
+	private leave() {
+		if (this.match.forfeit(this.player.team)) this.showResult()
 	}
 
 	/** One simulation step: bots, tanks, shells, spotting and effects (the round result keeps the world moving). */
@@ -367,10 +378,7 @@ export class Game {
 		this.particles.setScale(bufferHeight, rig.camera.fov)
 		this.precip.setScale(bufferHeight, rig.camera.fov)
 		this.precip.update(dt, rig.camera, rig.mode === 'arty')
-		// Nothing is simulated in the garage: the tank's last throttle must not keep the engine roaring there
-		if (this.match.phase === 'garage') this.audio.engine(0, 0, 1, false)
-		else if (flying) this.audio.engine(plane.throttle, plane.speed, PLANE.maxSpeed, true)
-		else this.audio.engine(player.throttle, player.speed, player.def.speed, player.alive)
+		playEngines(this.audio, this.match.phase === 'garage', flying ? plane : null, player, this.tanks)
 		this.renderer.render(this.env.scene, rig.camera)
 		this.hud.update({
 			dt,
@@ -387,6 +395,7 @@ export class Game {
 			plane: flying ? plane : null,
 			artyBlocked: this.artyView.blocked,
 			paused,
+			canLeave: paused && this.match.phase === 'battle',
 			resupplying: this.resupplying && this.match.phase === 'battle',
 			stats: {
 				fps: this.fps.value,

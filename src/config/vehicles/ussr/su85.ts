@@ -9,6 +9,7 @@ export const su85: TankDef = {
 	id: 'su85',
 	nation: 'ussr',
 	role: 'td',
+	engine: 'v2',
 	name: 'СУ-85',
 	hp: 760,
 	rating: 5,

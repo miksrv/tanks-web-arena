@@ -43,6 +43,9 @@ export function weighted<K extends string>(r: number, odds: Partial<Record<K, nu
 /** Weather and the battle mode come from their own RNG streams, so they never shift the layout of a seed. */
 export const rollWeather = (seed: number, season: Season): Weather =>
 	weighted(mulberry32(seed * 104729 + 71)(), WEATHER_ODDS[season], 'clear')
+/** The weather asked for, on a map of that season: «Осадки» (Precipitation) is snowfall in winter, rain otherwise. */
+export const askedWeather = (w: Weather | 'precip' | undefined, season: Season): Weather | undefined =>
+	w === 'precip' ? (season === 'winter' ? 'snow' : 'rain') : w
 export const rollMode = (seed: number): BattleMode =>
 	weighted(mulberry32(seed * 7907 + 3)(), MATCH.modeOdds, 'standard')
 export const ARCHETYPE_ODDS = Object.fromEntries(Object.entries(ARCHETYPES).map(([k, a]) => [k, a.weight])) as Record<

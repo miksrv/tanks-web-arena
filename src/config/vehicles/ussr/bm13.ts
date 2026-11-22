@@ -8,6 +8,7 @@ export const bm13: TankDef = {
 	id: 'bm13',
 	nation: 'ussr',
 	role: 'spg',
+	engine: 'zis',
 	name: 'БМ-13 «Катюша»',
 	hp: 300,
 	rating: 4,

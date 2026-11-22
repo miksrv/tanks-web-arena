@@ -144,9 +144,14 @@ export const CREW = {
 
 // Movement feel
 export const DRIVE = {
-	bloomMove: 0.19, // reticle bloom per m/s of hull speed (fraction of base dispersion)
-	bloomTurn: 0.95, // per rad/s of hull turn
-	bloomTurret: 0.4, // per rad/s of turret traverse, and of laying the gun for range
+	/**
+	 * How far a class opens its dispersion circle: the bloom at top speed (the circle is `1 + bloom` times the aimed
+	 * one). Light tanks fire on the move, tank destroyers and artillery have to stop. A vehicle may set its own
+	 * (`TankDef.aimSpread`).
+	 */
+	aimSpread: { light: 4, medium: 9, heavy: 10, td: 12, spg: 14 } as Record<Role, number>,
+	bloomTurn: 0.33, // share of the spread per rad/s of hull turn
+	bloomTurret: 0.14, // share of the spread per rad/s of turret traverse, and of laying the gun for range
 	bloomShot: 2.5, // after firing
 	aimedBloom: 0.12, // at or under this the reticle counts as converged (green, the "aimed" cue)
 	looseBloom: 0.9, // over this it is wide open (red); yellow in between
@@ -164,7 +169,7 @@ export const DRIVE = {
 	casemateSteer: 0.7, // …with at most this much steering
 	gunPitchRate: 1.5, // rad/s of gun elevation
 	poseSmoothing: 14, // 1/s: how fast the hull settles onto the ground's pitch and roll
-	maxBloom: 4, // the reticle never opens wider than this
+	maxBloom: 16, // the dispersion circle never opens wider than this
 	spawnBloom: 2, // reticle bloom at the start of a round
 	bloomSettle: 3, // the bloom shrinks by this share per aim time
 	treeKnock: 2.5, // m/s needed to push a tree over; slower than that a trunk just stops the hull

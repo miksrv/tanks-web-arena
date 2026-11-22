@@ -1,4 +1,4 @@
-import { CAPTURE, HUD, WORLD_HALF } from '../config'
+import { CAPTURE, HUD, WORLD, WORLD_HALF } from '../config'
 import type { CaptureZone } from '../game/capture'
 import { Spotting } from '../game/spotting'
 import type { Tank } from '../tank/tank'
@@ -7,9 +7,13 @@ import { PALETTE, type Biome, type Terrain } from '../world/terrain'
 type Rgb = [number, number, number]
 
 const SIZE = HUD.minimap.size // canvas pixels
-const SCALE = SIZE / (WORLD_HALF * 2)
-const mx = (x: number) => (x + WORLD_HALF) * SCALE
-const mz = (z: number) => (z + WORLD_HALF) * SCALE
+/** Half the side of the mapped square, m: the battlefield up to the foot of the mountains, not the ridge around it. */
+const MAP_HALF = WORLD_HALF - WORLD.mountainBand + HUD.minimap.rim
+const SCALE = SIZE / (MAP_HALF * 2)
+// A point beyond the mapped square is drawn on its edge
+const onMap = (v: number) => Math.max(0, Math.min(SIZE, (v + MAP_HALF) * SCALE))
+const mx = onMap
+const mz = onMap
 
 const hexToRgb = (h: string): Rgb => [
 	parseInt(h.slice(1, 3), 16),
@@ -82,8 +86,8 @@ export function bakeMinimap(terrain: Terrain): HTMLCanvasElement {
 	const col = biomeColors(terrain)
 	for (let j = 0; j < SIZE; j++) {
 		for (let i = 0; i < SIZE; i++) {
-			const x = -WORLD_HALF + (i / SIZE) * WORLD_HALF * 2
-			const z = -WORLD_HALF + (j / SIZE) * WORLD_HALF * 2
+			const x = -MAP_HALF + (i / SIZE) * MAP_HALF * 2
+			const z = -MAP_HALF + (j / SIZE) * MAP_HALF * 2
 			const b = terrain.biome(x, z)
 			const shade = shadeOf(b, terrain.height(x, z))
 			const [r, g, bb] = col[b]

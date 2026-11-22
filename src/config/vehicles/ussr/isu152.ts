@@ -9,6 +9,7 @@ export const isu152: TankDef = {
 	id: 'isu152',
 	nation: 'ussr',
 	role: 'td',
+	engine: 'v2Heavy',
 	name: 'ИСУ-152',
 	hp: 1300,
 	rating: 7,

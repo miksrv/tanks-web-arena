@@ -9,6 +9,7 @@ export const su76: TankDef = {
 	id: 'su76',
 	nation: 'ussr',
 	role: 'spg',
+	engine: 'gazTwin',
 	name: 'СУ-76М',
 	hp: 380,
 	rating: 3,

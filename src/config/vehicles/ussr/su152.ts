@@ -9,6 +9,7 @@ export const su152: TankDef = {
 	id: 'su152',
 	nation: 'ussr',
 	role: 'td',
+	engine: 'v2Heavy',
 	name: 'СУ-152',
 	hp: 950,
 	rating: 6,

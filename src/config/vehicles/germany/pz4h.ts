@@ -9,6 +9,7 @@ export const pz4h: TankDef = {
 	id: 'pz4h',
 	nation: 'germany',
 	role: 'medium',
+	engine: 'hl120',
 	name: 'Pz. IV H',
 	hp: 720,
 	rating: 4.5,
@@ -35,6 +36,7 @@ export const pz4h: TankDef = {
 		gunR: 0.06,
 		openTop: false,
 		hullLook: {
+			bowMg: true,
 			outline: [
 				[0.03, 0],
 				[0.96, 0],

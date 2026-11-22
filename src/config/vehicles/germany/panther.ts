@@ -9,6 +9,7 @@ export const panther: TankDef = {
 	id: 'panther',
 	nation: 'germany',
 	role: 'medium',
+	engine: 'hl230',
 	name: 'Panther D',
 	hp: 1000,
 	rating: 6.5,
@@ -35,6 +36,7 @@ export const panther: TankDef = {
 		gunR: 0.06,
 		openTop: false,
 		hullLook: {
+			bowMg: true,
 			outline: [
 				[0.03, 0],
 				[0.97, 0],

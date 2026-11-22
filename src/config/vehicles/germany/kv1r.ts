@@ -9,6 +9,7 @@ export const kv1r: TankDef = {
 	id: 'kv1r',
 	nation: 'germany',
 	role: 'heavy',
+	engine: 'v2Heavy',
 	name: 'KV-1 753(r)',
 	hp: 1100,
 	rating: 4.5,
@@ -35,6 +36,7 @@ export const kv1r: TankDef = {
 		gunR: 0.05,
 		openTop: false,
 		hullLook: {
+			bowMg: true,
 			outline: [
 				[0.04, 0],
 				[0.95, 0],
