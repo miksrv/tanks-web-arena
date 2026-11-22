@@ -1,6 +1,7 @@
 import type { HitResult } from '../combat/armor'
 import type { Tank } from '../tank/tank'
 import { hitPlace } from './messages'
+import type { ShotTotals } from './records'
 
 /** The player's exchange with one enemy vehicle, one way. */
 interface Row {
@@ -65,12 +66,22 @@ export class BattleReport {
 		else if (t === player) this.row(this.taken, by).killed = true
 	}
 
+	/** The player's shooting: shots fired, direct hits on enemies and penetrations. */
+	totals(): ShotTotals {
+		let hits = 0
+		let pens = 0
+		for (const x of this.dealt.values()) {
+			hits += x.hits
+			pens += x.pens
+		}
+		return { shots: this.shots, hits, pens }
+	}
+
 	/** The breakdown for the garage, or '' when the player neither fired nor was hit. */
 	html(): string {
 		if (!this.shots && !this.taken.size) return ''
 		const dealt = [...this.dealt.values()]
-		const hits = dealt.reduce((s, x) => s + x.hits, 0)
-		const pens = dealt.reduce((s, x) => s + x.pens, 0)
+		const { hits, pens } = this.totals()
 		const totals = [
 			`выстрелов ${this.shots}`,
 			`попаданий ${hits} (${pct(hits, this.shots)})`,
