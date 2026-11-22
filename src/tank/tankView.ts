@@ -1,20 +1,22 @@
 import * as THREE from 'three'
-import { GRAVITY, TANK_VIEW, type Nation, type TankDef } from '../config'
+import { GRAVITY, TANK_PAINT, TANK_VIEW, type Nation, type PaintSeason, type TankDef } from '../config'
 import { AXIS_X, AXIS_Y } from '../core/math'
-import { MergedGeometryBuilder } from '../render/geometryBuilder'
-import { C, TankBuilder, camoPainter, hullDims } from './model/builder'
+import { C, TankBuilder, hullDims, weatherPainter } from './model/builder'
 import { buildGun } from './model/gun'
 import { buildHull } from './model/hull'
 import { addMarkings } from './model/markings'
+import { maskPaint, paintTexture, scrollTracks, surfaceTexture, trackTexture } from './model/textures'
+import { buildTracks } from './model/tracks'
 import { buildCasemate, buildTurret, turretLook } from './model/turret'
-import { wheelLayout, type Wheel } from './model/wheels'
+import { wheelGeometry, wheelLayout, type Wheel } from './model/wheels'
 
-const { wreckColor, blownUp, blownOut, wheelSegments, recoilPerMm, recoilLimits, recoilTime } = TANK_VIEW
+const { wreckColor, blownUp, blownOut, recoilPerMm, recoilLimits, recoilTime } = TANK_VIEW
 
 /**
  * Procedural WW2 tank: hull from a side profile, turret or casemate, gun, running gear, nation paint and markings.
  * Scene graph: group (hull, casemate) → turret (yaws; on a casemate only the gun's pivot) → gun (pitches).
- * One material per tank (hit flash, wreck paint).
+ * One material per tank (hit flash, wreck paint) over the shared paint texture of its nation and the season, and
+ * one for its tracks, whose link texture runs with each track.
  */
 export class TankView {
 	readonly group = new THREE.Group()
@@ -24,7 +26,11 @@ export class TankView {
 	readonly muzzleLocal: THREE.Vector3
 	readonly hullTop: number
 	readonly turretY: number
-	private readonly material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0.15 })
+	private readonly material: THREE.MeshStandardMaterial
+	private trackMaterial: THREE.MeshStandardMaterial | null = null
+	/** Distance run by the left (x) and the right (y) track, in tiles of the link texture. */
+	private readonly trackScroll = { value: new THREE.Vector2() }
+	private trackTiles = 0
 	private readonly wheels: THREE.InstancedMesh
 	private readonly wheelList: Wheel[]
 	private readonly owned: THREE.BufferGeometry[] = []
@@ -33,7 +39,8 @@ export class TankView {
 	private readonly tmpV = new THREE.Vector3()
 	private readonly tmpS = new THREE.Vector3()
 	private readonly flipQ = new THREE.Quaternion().setFromAxisAngle(AXIS_Y, Math.PI)
-	private travelled = 0
+	/** Metres run by the left and the right track. */
+	private readonly travelled = [0, 0]
 	private flashTimer = 0
 	/** The gun's own mesh: it slides along the barrel on recoil, the pivot (and the muzzle point) stay put. */
 	private readonly barrel: THREE.Mesh
@@ -50,19 +57,30 @@ export class TankView {
 		readonly def: TankDef,
 		nation: Nation,
 		seed: number,
+		season: PaintSeason = 'summer',
 	) {
 		const s = def.shape
-		const base = C[nation]
-		const paint = camoPainter(nation, seed)
+		const base = C.paint
 		const dims = hullDims(s)
 		const layout = wheelLayout(dims)
 		this.hullTop = dims.top
 		this.turretY = dims.top
+		const relief = surfaceTexture()
+		this.material = new THREE.MeshStandardMaterial({
+			vertexColors: true,
+			roughness: 0.95,
+			metalness: 0.15,
+			map: paintTexture(nation, season),
+			bumpMap: relief,
+			bumpScale: TANK_PAINT.bumpScale,
+			roughnessMap: relief,
+		})
+		this.material.onBeforeCompile = maskPaint
 
-		const body = new TankBuilder(paint)
-		const turret = new TankBuilder(paint)
-		const gun = new TankBuilder(paint)
-		buildHull(body, dims, base, layout)
+		const body = new TankBuilder(weatherPainter(season, seed))
+		const turret = new TankBuilder(weatherPainter(season, seed + 3, dims.top))
+		const gun = new TankBuilder(weatherPainter(season, seed + 5, dims.top + s.tH / 2))
+		buildHull(body, dims, base, layout, nation)
 		this.muzzleLocal = buildGun(gun, def, base)
 		addMarkings(body, turret, dims, nation)
 
@@ -84,10 +102,35 @@ export class TankView {
 		this.recoilLength = THREE.MathUtils.clamp(def.gun.caliber * recoilPerMm, ...recoilLimits)
 		this.group.add(this.mesh(body, true), this.turret)
 
+		if (layout.track) this.group.add(this.buildTracks(layout.track, s.hullW / 2 - dims.trackW / 2, dims.trackW))
 		this.wheelList = layout.wheels
-		this.wheels = this.buildWheels(base)
+		const wheel = wheelGeometry(new THREE.Color(TANK_PAINT.schemes[nation][season].base))
+		this.owned.push(wheel)
+		this.wheels = new THREE.InstancedMesh(wheel, this.material, this.wheelList.length)
+		this.wheels.castShadow = true
 		this.group.add(this.wheels)
 		this.spin(0)
+	}
+
+	/** Both track bands: one mesh whose link texture is shifted per side as the tracks run. */
+	private buildTracks(run: NonNullable<ReturnType<typeof wheelLayout>['track']>, x: number, w: number): THREE.Mesh {
+		const { geometry, tilesPerMetre } = buildTracks(run, x, w)
+		this.trackTiles = tilesPerMetre
+		const links = trackTexture()
+		const material = new THREE.MeshStandardMaterial({
+			map: links,
+			bumpMap: links,
+			bumpScale: 2,
+			roughness: 0.85,
+			metalness: 0.3,
+		})
+		material.onBeforeCompile = (shader) => scrollTracks(shader, this.trackScroll)
+		this.trackMaterial = material
+		this.owned.push(geometry)
+		const mesh = new THREE.Mesh(geometry, material)
+		mesh.castShadow = true
+		mesh.receiveShadow = true
+		return mesh
 	}
 
 	private mesh(b: TankBuilder, receiveShadow = false): THREE.Mesh {
@@ -99,32 +142,18 @@ export class TankView {
 	}
 
 	/**
-	 * Road wheels, sprockets and idlers as one instanced mesh: a unit wheel with a rubber tyre and a painted hub on its
-	 * outer face; each instance is scaled to its radius and width and turned to face its side.
+	 * Advance the left and the right track by so many metres (one number: both alike): the road wheels turn and the
+	 * links run. A standing tank costs nothing: the buffers are rewritten only when the tracks move.
 	 */
-	private buildWheels(base: THREE.Color): THREE.InstancedMesh {
-		const b = new MergedGeometryBuilder()
-		const tyre = new THREE.CylinderGeometry(1, 1, 1, wheelSegments, 1, true).rotateZ(Math.PI / 2)
-		const face = new THREE.CircleGeometry(1, wheelSegments).rotateY(Math.PI / 2)
-		const hub = new THREE.CircleGeometry(0.72, wheelSegments).rotateY(Math.PI / 2)
-		b.add(tyre, C.rubber)
-		b.add(face, C.rubber, new THREE.Matrix4().makeTranslation(0.5, 0, 0))
-		b.add(hub, base, new THREE.Matrix4().makeTranslation(0.52, 0, 0))
-		for (const g of [tyre, face, hub]) g.dispose()
-		const geo = b.build()
-		this.owned.push(geo)
-		const wheels = new THREE.InstancedMesh(geo, this.material, this.wheelList.length)
-		wheels.castShadow = true
-		return wheels
-	}
-
-	/** Advance the wheels by `dist` metres. A standing tank costs nothing: the buffer is rewritten only when they turn. */
-	spin(dist: number) {
-		if (dist === 0 && this.spun) return
+	spin(left: number, right = left) {
+		if (left === 0 && right === 0 && this.spun) return
 		this.spun = true
-		this.travelled += dist
+		const run = this.travelled
+		run[0] += left
+		run[1] += right
+		this.trackScroll.value.set((run[0] * this.trackTiles) % 1, (run[1] * this.trackTiles) % 1)
 		this.wheelList.forEach((w, i) => {
-			this.tmpQ.setFromAxisAngle(AXIS_X, this.travelled / w.r)
+			this.tmpQ.setFromAxisAngle(AXIS_X, run[w.side > 0 ? 0 : 1] / w.r)
 			if (w.side < 0) this.tmpQ.premultiply(this.flipQ)
 			this.tmpM.compose(this.tmpV.set(w.x, w.y, w.z), this.tmpQ, this.tmpS.set(w.w, w.r, w.r))
 			this.wheels.setMatrixAt(i, this.tmpM)
@@ -169,6 +198,7 @@ export class TankView {
 	/** Burnt-out wreck: dark paint, turret knocked askew. */
 	setWreck(on: boolean) {
 		this.material.color.set(on ? wreckColor : '#ffffff')
+		this.trackMaterial?.color.set(on ? wreckColor : '#ffffff')
 		this.flight = null
 		if (this.def.shape.turret) {
 			this.turret.position.copy(this.turretHome)
@@ -216,6 +246,7 @@ export class TankView {
 	dispose() {
 		for (const g of this.owned) g.dispose()
 		this.material.dispose()
+		this.trackMaterial?.dispose()
 		this.wheels.dispose()
 	}
 }

@@ -1,5 +1,7 @@
+import * as THREE from 'three'
 import { TANK_VIEW } from '../../config'
-import type { HullDims } from './builder'
+import { MergedGeometryBuilder } from '../../render/geometryBuilder'
+import { C, type HullDims } from './builder'
 
 export interface Wheel {
 	x: number
@@ -38,7 +40,34 @@ export interface WheelLayout {
 	rollers: TrackEnd[]
 }
 
-const { wheelOutset } = TANK_VIEW
+const { wheelOutset, wheelSegments } = TANK_VIEW
+
+/**
+ * The unit wheel every road wheel, sprocket and idler is an instance of (radius 1, width 1 along x, outer face at
+ * +x): a rubber tyre, a dished disc in the hull colour with a hub cap, and a ring of holes that shows it turning.
+ */
+export function wheelGeometry(disc: THREE.Color): THREE.BufferGeometry {
+	const b = new MergedGeometryBuilder(undefined, { boxUv: true, paintMask: true })
+	const n = wheelSegments
+	const outward = (g: THREE.BufferGeometry, x: number) => g.rotateZ(-Math.PI / 2).translate(x, 0, 0)
+	const parts: [THREE.BufferGeometry, THREE.Color][] = [
+		[outward(new THREE.CylinderGeometry(1, 1, 1, n, 1, true), 0), C.rubber],
+		[new THREE.RingGeometry(0.74, 1, n).rotateY(Math.PI / 2).translate(0.5, 0, 0), C.rubber],
+		[outward(new THREE.CylinderGeometry(0.3, 0.76, 0.045, n, 1, true), 0.5225), disc],
+		[outward(new THREE.CylinderGeometry(0.17, 0.3, 0.035, 6, 1, true), 0.5625), disc],
+		[new THREE.CircleGeometry(0.17, 6).rotateY(Math.PI / 2).translate(0.58, 0, 0), disc],
+	]
+	for (let i = 0; i < 6; i++) {
+		const a = (i / 6) * Math.PI * 2
+		const hole = new THREE.CircleGeometry(0.075, 4).rotateY(Math.PI / 2)
+		parts.push([hole.translate(0.53, Math.cos(a) * 0.54, Math.sin(a) * 0.54), C.grille])
+	}
+	for (const [g, color] of parts) {
+		b.add(g, color)
+		g.dispose()
+	}
+	return b.build()
+}
 
 /** Road wheels, sprocket, idler and return rollers from the vehicle's running gear description. */
 export function wheelLayout(d: HullDims): WheelLayout {

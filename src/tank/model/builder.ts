@@ -1,15 +1,13 @@
 import * as THREE from 'three'
-import type { Nation, OutlinePoint, ShapeDef } from '../../config'
+import { TANK_PAINT, type OutlinePoint, type PaintSeason, type ShapeDef } from '../../config'
 import { IDENTITY } from '../../core/math'
 import { MergedGeometryBuilder, placeEuler, type Painter } from '../../render/geometryBuilder'
 
 // Local frame: forward = +z, up = +y, +x = the vehicle's left side; origin on the ground under the hull centre.
 
-/** Tank palette. */
+/** Tank palette. `paint` is the tint of painted parts: their colour comes from the nation's paint texture. */
 export const C = {
-	ussr: new THREE.Color('#5f6b3c'),
-	germany: new THREE.Color('#b3a06a'),
-	blotch: new THREE.Color('#6b7a46'),
+	paint: new THREE.Color('#ffffff'),
 	track: new THREE.Color('#2a2724'),
 	rubber: new THREE.Color('#1c1b1a'),
 	steel: new THREE.Color('#3a3a3a'),
@@ -18,6 +16,7 @@ export const C = {
 	window: new THREE.Color('#2a2a30'),
 	wood: new THREE.Color('#6b5a3c'),
 	interior: new THREE.Color('#3b3a30'),
+	grille: new THREE.Color('#15140f'),
 }
 
 /** A side outline in metres: [z, y] pairs. */
@@ -40,17 +39,51 @@ export function outlineEdgeAt(o: Outline, y: number, dir: 1 | -1): number {
 	return best === -Infinity ? 0 : dir * best
 }
 
-/** Nation camouflage: a gentle brightness wave, plus green blotches on German vehicles. */
-export function camoPainter(nation: Nation, seed: number): Painter {
-	return (x, y, z, b, out) => {
+/** Front-most (dir 1) or rear-most (dir −1) plate of an outline at height y: where it is and how it leans. */
+export function plateAt(o: Outline, y: number, dir: 1 | -1) {
+	const d = 0.04
+	const z = outlineEdgeAt(o, y, dir)
+	const dz = outlineEdgeAt(o, y + d, dir) - outlineEdgeAt(o, y - d, dir)
+	/** Rotation about x that lays a part's up axis along the plate. */
+	const lean = Math.atan2(dz, 2 * d)
+	return { z, lean, ny: -Math.sin(lean) * dir, nz: Math.cos(lean) * dir }
+}
+
+/** Ends of the flat roof run of an outline: [rear, front]. */
+export function roofRun(o: Outline): [number, number] {
+	const top = Math.max(...o.map(([, y]) => y))
+	const zs = o.filter(([, y]) => y > top - 1e-3).map(([z]) => z)
+	return [Math.min(...zs), Math.max(...zs)]
+}
+
+/**
+ * Weathering of the painted parts: a faint brightness wave from plate to plate, and the dust or mud of the season
+ * on everything near the ground. `yBase` is the height of the part's frame above the ground.
+ */
+export function weatherPainter(season: PaintSeason, seed: number, yBase = 0): Painter {
+	const [r, g, b] = TANK_PAINT.dirt[season]
+	const { dirtTop, dirtStrength } = TANK_PAINT
+	return (x, y, z, base, out) => {
 		const n = Math.sin(x * 2.1 + seed) * Math.cos(z * 1.7 - seed * 0.3) + Math.sin(y * 3.3 + z * 0.9 + seed)
-		out.copy(b).multiplyScalar(0.92 + 0.06 * n)
-		if (nation === 'germany' && n > 0.9) out.lerp(C.blotch, 0.75)
+		const k = dirtStrength * Math.min(1, Math.max(0, 1 - (y + yBase) / dirtTop)) ** 2
+		const light = 0.97 + 0.03 * n
+		out.setRGB(
+			base.r * light * (1 + (r - 1) * k),
+			base.g * light * (1 + (g - 1) * k),
+			base.b * light * (1 + (b - 1) * k),
+		)
 	}
 }
 
-/** Merged-geometry builder with the primitives a tank is made of. `camo` runs the camouflage painter. */
+/**
+ * Merged-geometry builder with the primitives a tank is made of. `camo` marks a painted part: it takes the paint
+ * texture and the weathering; the rest keeps its plain colour.
+ */
 export class TankBuilder extends MergedGeometryBuilder {
+	constructor(paint?: Painter) {
+		super(paint, { boxUv: true, paintMask: true })
+	}
+
 	box(
 		w: number,
 		h: number,
@@ -62,8 +95,9 @@ export class TankBuilder extends MergedGeometryBuilder {
 		camo = false,
 		rotY = 0,
 		rotX = 0,
+		rotZ = 0,
 	) {
-		this.addTemp(new THREE.BoxGeometry(w, h, d), color, placeEuler(x, y, z, rotX, rotY, 0), camo)
+		this.addTemp(new THREE.BoxGeometry(w, h, d), color, placeEuler(x, y, z, rotX, rotY, rotZ), camo)
 	}
 
 	cyl(

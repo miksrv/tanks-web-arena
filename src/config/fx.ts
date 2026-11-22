@@ -72,12 +72,71 @@ export const TANK_VIEW = {
 	wreckColor: '#2e2a26',
 	blownUp: [9, 13] as const, // m/s: launch speed of a turret thrown by its ammunition
 	blownOut: [1.5, 4] as const, // m/s sideways
-	wheelSegments: 10,
+	wheelSegments: 12,
 	/** The barrel slides back by caliber × this (within the limits, m) on a shot and runs out again in `recoilTime` s. */
 	recoilPerMm: 1 / 260,
 	recoilLimits: [0.12, 0.5] as const,
 	recoilTime: 0.45,
 	wheelOutset: 0.03, // m: wheels stand proud of the track side so their faces show
+	trackPitch: 0.15, // m: length of one track link
+	trackArc: 5, // segments of the track band round the sprocket and the idler
+}
+
+/** A camouflage colour sprayed over the base coat. */
+export interface PaintSpots {
+	color: string
+	cover: number // share of the surface, 0..1
+}
+
+/** One paint job: the base coat, sprayed camouflage and winter whitewash. */
+export interface PaintScheme {
+	base: string
+	spots?: PaintSpots[]
+	/** Share of the surface under worn whitewash. */
+	whitewash?: number
+}
+
+export type PaintSeason = 'summer' | 'autumn' | 'winter'
+
+const USSR_4BO = '#5f6b3c'
+const DUNKELGELB = '#b3a06a'
+const GERMAN_SPOTS: PaintSpots[] = [
+	{ color: '#56633a', cover: 0.26 }, // Olivgrün
+	{ color: '#6d4a35', cover: 0.13 }, // Rotbraun
+]
+
+/**
+ * Vehicle paint: one tiling texture per nation and season (base coat, camouflage, chips, streaks), a shared
+ * surface-relief texture, and the dust the running gear throws on the lower plates (a tint by height).
+ */
+export const TANK_PAINT = {
+	textureSize: 512, // px
+	tile: 4, // m of plate one paint tile covers
+	surfaceSize: 256, // px: relief and roughness texture
+	surfaceTile: 1.5, // m
+	bumpScale: 0.6,
+	whitewashColor: '#d6d8d0',
+	chipColor: '#3d3a33',
+	schemes: {
+		ussr: {
+			summer: { base: USSR_4BO },
+			autumn: { base: USSR_4BO },
+			winter: { base: USSR_4BO, whitewash: 0.62 },
+		},
+		germany: {
+			summer: { base: DUNKELGELB, spots: GERMAN_SPOTS },
+			autumn: { base: DUNKELGELB, spots: GERMAN_SPOTS },
+			winter: { base: DUNKELGELB, spots: GERMAN_SPOTS, whitewash: 0.62 },
+		},
+	} satisfies Record<string, Record<PaintSeason, PaintScheme>>,
+	/** Dust and mud: colour multipliers the paint takes at the ground, fading out by `dirtTop` metres up. */
+	dirt: {
+		summer: [1.3, 1.2, 1.02],
+		autumn: [0.74, 0.64, 0.5],
+		winter: [0.72, 0.68, 0.62],
+	} satisfies Record<PaintSeason, [number, number, number]>,
+	dirtTop: 1.7, // m
+	dirtStrength: 0.75,
 }
 
 /** How the hull rides on its two tracks. */
