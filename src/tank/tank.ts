@@ -1,5 +1,15 @@
 import * as THREE from 'three'
-import { AMMO, COMBAT, DRIVE, MORTAR, SPOTTING, type AmmoId, type TankDef } from '../config'
+import {
+	AMMO,
+	COMBAT,
+	DRIVE,
+	MORTAR,
+	SPOTTING,
+	SUSPENSION,
+	type AmmoId,
+	type PaintSeason,
+	type TankDef,
+} from '../config'
 import { wrapAngle } from '../core/math'
 import { type OBB } from '../world/obb'
 import type { Props } from '../world/props'
@@ -54,7 +64,7 @@ export class Tank {
 	reload = 0
 	/** Length of the reload in progress (the HUD ring's full circle). */
 	reloadFull = 1
-	/** Reticle bloom, 0 = fully aimed. */
+	/** Bloom of the dispersion circle, 0 = fully aimed. */
 	bloom = 0
 	ammo: AmmoId
 	readonly rack: AmmoRack
@@ -114,11 +124,13 @@ export class Tank {
 		readonly team: 0 | 1,
 		readonly name: string,
 		readonly isPlayer: boolean,
+		season: PaintSeason = 'summer',
 	) {
 		this.hp = def.hp
+		this.crew.size = def.crew ?? 4
 		this.ammo = this.stockAmmo
 		this.rack = new AmmoRack(def)
-		this.view = new TankView(def, def.nation, Math.random() * 100)
+		this.view = new TankView(def, def.nation, Math.random() * 100, season)
 		const boxes = createBoxes(def, this.view.hullTop)
 		this.hullBox = boxes.hull
 		this.turretBox = boxes.turret
@@ -150,7 +162,11 @@ export class Tank {
 	get viewRange() {
 		return this.def.viewRange * this.viewMult * this.crew.view
 	}
-	/** Reticle radius in metres at 100 m. */
+	/** Bloom at top speed: how wide this vehicle's dispersion circle opens on the move. */
+	get aimSpread() {
+		return this.def.aimSpread ?? DRIVE.aimSpread[this.def.role]
+	}
+	/** Radius of the dispersion circle in metres at 100 m. */
 	get reticle() {
 		return (
 			this.def.gun.dispersion *
@@ -159,7 +175,7 @@ export class Tank {
 			this.crew.aim
 		)
 	}
-	/** Convergence for the reticle's colour: green once aimed, yellow while settling, red wide open. */
+	/** Convergence for the dispersion circle's colour: green once aimed, yellow while settling, red wide open. */
 	get aimClass(): 'green' | 'yellow' | 'red' {
 		return this.bloom <= DRIVE.aimedBloom ? 'green' : this.bloom <= DRIVE.looseBloom ? 'yellow' : 'red'
 	}
@@ -379,7 +395,9 @@ export class Tank {
 		drive(this, dt, w.terrain)
 		this.stillTime = Math.abs(this.speed) < 0.5 ? this.stillTime + dt : 0
 		resolveCollisions(this, w, dt)
-		this.view.spin(this.speed * dt)
+		// The outer track of a turn runs further than the inner one (+yaw turns left, +x is the left side)
+		const swing = this.yawRate * dt * this.def.shape.hullW * SUSPENSION.trackInset
+		this.view.spin(this.speed * dt - swing, this.speed * dt + swing)
 		layGun(this, dt)
 		updateBloom(this, dt)
 		this.updatePose(w.terrain, dt)

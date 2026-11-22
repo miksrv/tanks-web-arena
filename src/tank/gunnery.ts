@@ -6,7 +6,7 @@ import { disperse, scatter } from './dispersion'
 import type { Tank } from './tank'
 import type { ShotParams } from './types'
 
-// Gunnery of a tank: laying the turret and the gun on the aim point, the reticle bloom, and the shot itself.
+// Gunnery of a tank: laying the turret and the gun on the aim point, the dispersion bloom, and the shot itself.
 
 const { clamp } = THREE.MathUtils
 const tmpDir = new THREE.Vector3()
@@ -14,7 +14,7 @@ const tmpQ = new THREE.Quaternion()
 const tmpQ2 = new THREE.Quaternion()
 const tmpE = new THREE.Euler()
 
-/** One projectile along the barrel as it points right now, with the reticle's dispersion. */
+/** One projectile along the barrel as it points right now, somewhere inside the dispersion circle. */
 export function launch(me: Tank): ShotParams {
 	const g = me.def.gun
 	const am = me.ammoDef
@@ -23,7 +23,7 @@ export function launch(me: Tank): ShotParams {
 	const dir = new THREE.Vector3()
 	me.view.muzzle(origin, dir)
 	if (!g.salvo) me.view.recoil()
-	const sigma = me.reticle / 100 / 2 // the reticle radius is 2σ at 100 m
+	const sigma = me.reticle / 100 / 2 // the circle's radius is 2σ at 100 m
 	let speed = g.shellSpeed * am.speedMult
 	if (g.howitzer) {
 		// A lobbed shell scatters on the ground in a circle: across by the azimuth, along by the charge
@@ -97,12 +97,16 @@ function elevationInTurretFrame(me: Tank): number {
 	return Math.atan2(tmpDir.y, Math.hypot(tmpDir.x, tmpDir.z))
 }
 
-/** Reticle bloom: grows with hull speed, hull and turret rotation and laying for range; shrinks back over the aim time. */
+/**
+ * Bloom of the dispersion circle: grows with hull speed (the vehicle's whole spread at top speed), hull and turret
+ * rotation and laying for range; shrinks back over the aim time.
+ */
 export function updateBloom(me: Tank, dt: number) {
 	const moveBloom =
-		DRIVE.bloomMove * Math.abs(me.speed) +
-		DRIVE.bloomTurn * Math.abs(me.yawRate) +
-		DRIVE.bloomTurret * (Math.abs(me.turretRate) + me.elevRate)
+		me.aimSpread *
+		(Math.abs(me.speed) / me.def.speed +
+			DRIVE.bloomTurn * Math.abs(me.yawRate) +
+			DRIVE.bloomTurret * (Math.abs(me.turretRate) + me.elevRate))
 	const settle = Math.min(1, (DRIVE.bloomSettle / (me.def.gun.aimTime * me.crew.aim)) * dt)
 	me.bloom = Math.min(DRIVE.maxBloom, Math.max(moveBloom, me.bloom - me.bloom * settle))
 }

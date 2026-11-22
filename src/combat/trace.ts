@@ -5,7 +5,7 @@ import type { Tank, WorldRefs } from '../tank/tank'
 /**
  * Where a shell fired right now would land: the parabola from `origin` along `dir` at `speed` under `gravity`,
  * marched in short segments against tanks (other than `self`), buildings and the ground. Writes the end point
- * to `out` and returns the tank that would be struck, if any. Used by the gun marker, not by live shells.
+ * to `out` and returns the tank that would be struck, if any. Used by the dispersion circle of the HUD, not by live shells.
  */
 export function traceShot(
 	w: WorldRefs,
