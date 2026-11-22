@@ -4,6 +4,11 @@ import { CREW, CREW_ROLES, type CrewRole } from '../config'
 export class Crew {
 	wounded: Record<CrewRole, boolean> = Crew.healthy()
 	medkit = true
+	/**
+	 * People aboard (`TankDef.crew`). With three the commander also lays the gun, with two he loads it as well: his
+	 * wound then costs everything he does.
+	 */
+	size: 2 | 3 | 4 = 4
 
 	private static healthy(): Record<CrewRole, boolean> {
 		return { commander: false, gunner: false, driver: false, loader: false }
@@ -29,8 +34,24 @@ export class Crew {
 		return this.wounded.driver ? CREW.speed : 1
 	}
 
+	/** The roles of the man who does `r`, his own title first. */
+	private duties(r: CrewRole): CrewRole[] {
+		if (r === 'driver' || this.size === 4) return [r]
+		if (this.size === 3) return r === 'loader' ? [r] : ['commander', 'gunner']
+		return ['commander', 'gunner', 'loader']
+	}
+	/** The man who does `r`, by his title: the commander for the gunner's work in a small crew. */
+	seatOf(r: CrewRole): CrewRole {
+		return this.duties(r)[0]
+	}
+	/** One role per man aboard. */
+	get seats(): CrewRole[] {
+		return CREW_ROLES.filter((r) => this.seatOf(r) === r)
+	}
+
+	/** Wound the man who does `r`. */
 	wound(r: CrewRole) {
-		this.wounded[r] = true
+		for (const duty of this.duties(r)) this.wounded[duty] = true
 	}
 
 	/** Use the medkit on everyone wounded; false when there is nothing to treat or no kit left. */

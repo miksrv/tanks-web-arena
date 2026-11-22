@@ -1,5 +1,7 @@
 // Shared data types of the vehicle and ammunition tables.
 
+import type { EngineId } from './sound'
+
 export type Nation = 'ussr' | 'germany'
 export type Role = 'light' | 'medium' | 'heavy' | 'td' | 'spg'
 export type AmmoId = 'ap' | 'apcr' | 'he'
@@ -53,6 +55,8 @@ export interface HullLook {
 	spareTracks?: boolean
 	/** Schürzen side plates. */
 	skirts?: boolean
+	/** Ball-mounted machine gun in the front plate. */
+	bowMg?: boolean
 }
 
 /**
@@ -151,10 +155,13 @@ export interface TankDef {
 	id: string
 	nation: Nation
 	role: Role
+	engine: EngineId // the engine and running gear it sounds like (`ENGINES`)
 	name: string
 	hp: number
 	rating: number // battle rating for team balancing (≈ 2 light 1941 … 7 heavy 1944)
 	speed: number // m/s forward
+	crew?: 2 | 3 // people aboard when fewer than four: 3 = the commander is also the gunner, 2 = and the loader
+	aimSpread?: number // bloom of the dispersion circle at top speed (default DRIVE.aimSpread of the role)
 	reverse: number // m/s
 	accel: number // m/s²
 	hullTurn: number // rad/s

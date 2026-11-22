@@ -9,6 +9,7 @@ export const sturmtiger: TankDef = {
 	id: 'sturmtiger',
 	nation: 'germany',
 	role: 'td',
+	engine: 'hl230',
 	name: 'Sturmtiger',
 	hp: 1300,
 	rating: 7,

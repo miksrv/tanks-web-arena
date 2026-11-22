@@ -8,6 +8,7 @@ export const stuh42: TankDef = {
 	id: 'stuh42',
 	nation: 'germany',
 	role: 'td',
+	engine: 'hl120',
 	name: 'StuH 42',
 	hp: 760,
 	rating: 4.5,

@@ -9,6 +9,7 @@ export const luchs: TankDef = {
 	id: 'luchs',
 	nation: 'germany',
 	role: 'light',
+	engine: 'maybachSix',
 	name: 'Pz. II Luchs',
 	hp: 400,
 	rating: 2.5,

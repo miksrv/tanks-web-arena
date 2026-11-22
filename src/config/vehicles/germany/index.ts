@@ -16,7 +16,7 @@ import { pzwerfer } from './pzwerfer'
 import { stuh42 } from './stuh42'
 import { sturmtiger } from './sturmtiger'
 
-/** German vehicles in garage order (the second one is the garage's default pick). */
+/** German vehicles (the garage sorts them by class, see `tanksOf`). */
 export const GERMANY_TANKS: TankDef[] = [
 	luchs,
 	pz4h,

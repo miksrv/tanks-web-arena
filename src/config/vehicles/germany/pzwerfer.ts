@@ -9,6 +9,7 @@ export const pzwerfer: TankDef = {
 	id: 'pzwerfer',
 	nation: 'germany',
 	role: 'spg',
+	engine: 'opel',
 	name: 'Panzerwerfer 42',
 	hp: 320,
 	rating: 4,

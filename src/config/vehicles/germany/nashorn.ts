@@ -8,6 +8,7 @@ export const nashorn: TankDef = {
 	id: 'nashorn',
 	nation: 'germany',
 	role: 'td',
+	engine: 'hl120',
 	name: 'Nashorn',
 	hp: 620,
 	rating: 6,

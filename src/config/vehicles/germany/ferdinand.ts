@@ -9,6 +9,7 @@ export const ferdinand: TankDef = {
 	id: 'ferdinand',
 	nation: 'germany',
 	role: 'td',
+	engine: 'porsche',
 	name: 'Ferdinand',
 	hp: 1400,
 	rating: 7,

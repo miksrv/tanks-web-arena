@@ -9,6 +9,7 @@ export const pz3j: TankDef = {
 	id: 'pz3j',
 	nation: 'germany',
 	role: 'medium',
+	engine: 'hl120',
 	name: 'Pz. III J',
 	hp: 560,
 	rating: 3.5,
@@ -35,6 +36,7 @@ export const pz3j: TankDef = {
 		gunR: 0.045,
 		openTop: false,
 		hullLook: {
+			bowMg: true,
 			outline: [
 				[0.03, 0],
 				[0.96, 0],
