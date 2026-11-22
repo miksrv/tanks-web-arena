@@ -22,15 +22,16 @@ export const HUD = {
 		fade: 0.5, // s of that spent fading out (matches the CSS transition)
 	},
 	reticle: {
-		minPx: 14, // px, the smallest dispersion circle
-		maxShare: 0.6, // of the window height
-		artyRingPx: 30, // px, the reload ring in the artillery view
-		ringGapPx: 9, // px between the reticle and the reload ring
+		minPx: 14, // px, the smallest reticle (it is as wide as the converged dispersion, which is tiny without zoom)
+		maxShare: 0.7, // of the window height, the widest dispersion circle
+		linePx: 2, // px, the reticle's line: the reload ring runs along its middle
+		artyRingPx: 48, // px, the reload ring in the artillery view
 		readyFlash: 0.45, // s of the green "loaded" flash
-		traceTime: { direct: 4, howitzer: 12 }, // s of flight the gun marker follows
+		traceTime: { direct: 4, howitzer: 12 }, // s of flight the dispersion circle is traced over
 	},
 	minimap: {
 		size: 220, // minimap size in canvas pixels
+		rim: 40, // m of the mountain foot the map shows around the battlefield (as far as a tank can climb)
 		redrawInterval: 1 / 20, // s: nothing on the map moves faster than that
 		pingLife: 3, // s
 	},
@@ -56,10 +57,19 @@ export const HUD = {
 		refresh: 0.25, // s
 	},
 	status: {
+		/**
+		 * The player's vehicle panel: 'schema' = a top-down diagram of the vehicle that shows the damage, the health as
+		 * a thin bar, the number only for a moment after a hit; 'bar' = no diagram, the health bar with the number
+		 * always on.
+		 */
+		style: 'schema' as 'schema' | 'bar',
+		hpShow: 3, // s the health number stays after the health drops (schema style)
+		hitArc: 1.5, // s the diagram shows the side a hit came from
+		hitMarkLife: 12, // s a struck part of the diagram stays lit, fading out
 		hitFlash: 0.35, // s
 	},
 	garage: {
-		statMax: { hp: 1400, speed: 16, pen: 200, dmg: 2100, armor: 200, view: 410 }, // bar scale maxima for the vehicle cards
+		statMax: { hp: 1400, speed: 16, pen: 200, dmg: 2100, armor: 200 }, // bar scale maxima for the vehicle cards
 	},
 	/** Battle log colours. */
 	logColors: {
