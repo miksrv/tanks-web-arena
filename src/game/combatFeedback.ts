@@ -67,7 +67,12 @@ export class CombatFeedback {
 		if (owner === player) this.d.report.shot()
 		particles.muzzle(p.origin, p.dir, p.rocket ? p.caliber * 0.6 : p.caliber)
 		if (p.rocket || p.shock) audio.rocket(at)
-		if (!p.rocket) audio.shot(p.caliber, at)
+		if (!p.rocket) {
+			const { gun, shape } = owner.def
+			const brake = (shape.gunLook?.brake ?? 'none') !== 'none'
+			const howitzer = gun.howitzer === true || gun.derp === true || gun.mortar === true
+			audio.shot({ caliber: p.caliber, velocity: p.speed, brake, howitzer }, at)
+		}
 		if (owner === player) rig.addShake(p.shock ? MORTAR.shake : p.rocket ? 0.12 : 0.3 + p.caliber / 300)
 	}
 
@@ -83,7 +88,7 @@ export class CombatFeedback {
 			hud.log(msg.text, msg.color)
 			if (hit.tracked) hud.log('Гусеница сбита', COLOR.damage)
 			if (hit.fire) hud.log('Противник горит!', COLOR.fire)
-			if (hit.crew) hud.log(`Крит: ${woundedText(hit.crew)}`, COLOR.damage)
+			if (hit.crew) hud.log(`Крит: ${woundedText(target.crew.seatOf(hit.crew))}`, COLOR.damage)
 			if (hit.ammoRack === 'damaged') hud.log('Крит: боеукладка повреждена', COLOR.damage)
 			if (hit.engine) hud.log('Крит: двигатель повреждён', COLOR.damage)
 			if (hit.ring) hud.log('Крит: заклинило погон башни', COLOR.damage)
@@ -102,7 +107,7 @@ export class CombatFeedback {
 				audio.alarm()
 			}
 			if (hit.crew) {
-				const text = woundedText(hit.crew)
+				const text = woundedText(target.crew.seatOf(hit.crew))
 				hud.log(`${text[0].toUpperCase()}${text.slice(1)} — E аптечка`, COLOR.damage)
 			}
 			if (hit.ammoRack === 'damaged') hud.log('Боеукладка повреждена: перезарядка дольше', COLOR.damage)
@@ -111,6 +116,23 @@ export class CombatFeedback {
 			if (hit.gunHit) hud.log('Орудие повреждено: разброс больше — R ремкомплект', COLOR.damage)
 			const a = Math.atan2(by.pos.x - player.pos.x, by.pos.z - player.pos.z)
 			hud.hitFrom(-(a - rig.yaw))
+			hud.hitSide(a - player.yaw)
+			// The struck part: the turret, a track, or a plate of the hull (which side, by where the point lies)
+			const onLeft =
+				(hit.x - player.pos.x) * Math.cos(player.yaw) - (hit.z - player.pos.z) * Math.sin(player.yaw) > 0
+			hud.hitZone(
+				hit.part === 'tracks'
+					? onLeft
+						? 'trackL'
+						: 'trackR'
+					: hit.part === 'turret'
+						? 'turret'
+						: hit.face === 'side'
+							? onLeft
+								? 'left'
+								: 'right'
+							: hit.face,
+			)
 		}
 	}
 
@@ -161,13 +183,7 @@ export class CombatFeedback {
 			audio.explosion(t.pos)
 		}
 		hud.announce(killHtml(t, by))
-		if (t === player) {
-			hud.log('Ваш танк уничтожен', COLOR.bad)
-			hud.center(
-				'Танк уничтожен<br><small>Пробел — следующий союзник · бой продолжается</small>',
-				'<small>Наблюдение · Пробел — следующий союзник</small>',
-			)
-		}
+		if (t === player) hud.log('Ваш танк уничтожен', COLOR.bad)
 		if (by === player) hud.log(`Уничтожен ${t.def.name}!${t.detonated ? ' Боеукладка!' : ''}`, COLOR.good)
 		if (t === player && t.detonated) hud.log('Детонация боеукладки', COLOR.bad)
 		t.spottedBy = [true, true]

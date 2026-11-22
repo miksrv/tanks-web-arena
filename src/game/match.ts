@@ -6,7 +6,7 @@ import { Capture, type CaptureZone } from './capture'
 
 export type Phase = 'garage' | 'countdown' | 'battle' | 'result'
 /** Why the battle ended. */
-export type Outcome = 'destroyed' | 'capture' | 'time' | 'defended'
+export type Outcome = 'destroyed' | 'capture' | 'time' | 'defended' | 'left'
 
 const nationOfTeam: Nation[] = ['ussr', 'germany']
 
@@ -101,8 +101,8 @@ export class Match {
 		for (const team of [0, 1] as const) {
 			const names = shuffled(BOT_NAMES[nationOfTeam[team]])
 			rosters[team].forEach((id, i) => {
-				if (team === playerTeam && i === 0) tanks.unshift(new Tank(playerDef, team, 'Вы', true))
-				else tanks.push(new Tank(TANKS[id], team, names[i % names.length], false))
+				if (team === playerTeam && i === 0) tanks.unshift(new Tank(playerDef, team, 'Вы', true, terrain.season))
+				else tanks.push(new Tank(TANKS[id], team, names[i % names.length], false, terrain.season))
 			})
 		}
 		this.placeTeams(tanks, terrain)
@@ -152,6 +152,13 @@ export class Match {
 	debugText(): string {
 		const caps = this.capture.zones.map((z) => `${z.owner}:${Math.round(z.points)}/${z.capturing}`)
 		return `mode=${this.mode} capture=${caps.join(',')} outcome=${this.outcome}`
+	}
+
+	/** The player leaves the battle: their side loses it there and then. Returns false outside a battle. */
+	forfeit(team: 0 | 1): boolean {
+		if (this.phase !== 'battle') return false
+		this.finish((1 - team) as 0 | 1, 'left')
+		return true
 	}
 
 	private finish(winner: 0 | 1 | -1, outcome: Outcome) {

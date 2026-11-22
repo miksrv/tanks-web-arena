@@ -8,6 +8,7 @@ export const MATCH = {
 	roundTime: 360, // s
 	countdown: 4, // s before tanks may move
 	resultTime: 11, // s showing the result before the next round
+	wreckView: 4, // s the camera stays on the player's own wreck before it goes to a teammate
 	composition: { light: 1, medium: 2, heavy: 2, td: 1, spg: 1 } as Record<Role, number>,
 	ratingSpread: 1.5, // bots' vehicles are rated within this of the player's (the nearest when none is)
 	ratingTolerance: 0.5, // team rating sums may differ by this much

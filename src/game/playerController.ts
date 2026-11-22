@@ -1,4 +1,4 @@
-import { AMMO, AMMO_IDS, CONTROLS, DRIVE } from '../config'
+import { AMMO, AMMO_IDS, CONTROLS, DRIVE, MATCH } from '../config'
 import type { CameraRig } from '../camera'
 import type { Shells } from '../combat/shells'
 import type { Audio } from '../fx/audio'
@@ -7,7 +7,7 @@ import type { Input } from '../input'
 import type { Plane } from '../plane/plane'
 import type { Tank } from '../tank/tank'
 import type { Phase } from './match'
-import { COLOR } from './messages'
+import { COLOR, SPECTATE_HTML, wreckHtml } from './messages'
 import { Spotting } from './spotting'
 
 /**
@@ -24,12 +24,17 @@ const SIGNAL_KEYS: [string, Signal][] = [
 const MENU_KEY = 'KeyQ'
 
 /**
- * Keyboard and mouse → the player's tank, camera modes and consumables; spectating teammates after death; the plane
+ * Keyboard and mouse → the player's tank, camera modes and consumables; after death a few seconds on the player's
+ * own wreck, then spectating teammates (Enter leaves the battle); the plane
  * (V calls it in and back) while it flies.
  */
 export class PlayerController {
 	/** The teammate the camera follows once the player is dead. */
 	spectating: Tank | null = null
+	/** Seconds the camera still stays on the player's own wreck. */
+	private wreckView = 0
+	/** The player's death has been noticed this round. */
+	private dead = false
 	/** A click that came just before the reload ended. */
 	private queuedShot = false
 	/** The gun was reloading last frame (for the "loaded" cue). */
@@ -40,6 +45,8 @@ export class PlayerController {
 	private aimArmed = false
 	/** A team signal key was pressed (the game hands it to the bots). */
 	onSignal: ((s: Signal) => void) | null = null
+	/** The dead player asked to leave the battle (Enter). */
+	onLeave: (() => void) | null = null
 
 	constructor(
 		private readonly input: Input,
@@ -53,16 +60,20 @@ export class PlayerController {
 	resetRound() {
 		this.plane.reset()
 		this.spectating = null
+		this.wreckView = 0
+		this.dead = false
 		this.queuedShot = this.loading = this.seen = this.aimArmed = false
 	}
 
 	/** The tank the camera should follow this frame. */
 	cameraTarget(player: Tank): Tank {
-		return player.alive ? player : (this.spectating ?? player)
+		return player.alive || this.wreckView > 0 ? player : (this.spectating ?? player)
 	}
 
-	update(player: Tank, tanks: Tank[], phase: Phase, time: number) {
+	/** `dt` is the simulation step: 0 while the battle is paused. */
+	update(player: Tank, tanks: Tank[], phase: Phase, time: number, dt: number) {
 		this.globalKeys()
+		this.wreckWatch(player, phase, dt)
 		this.sixthSense(player, time)
 		this.aimCue(player)
 		const menu = this.signalMenu(player, phase)
@@ -80,6 +91,7 @@ export class PlayerController {
 		if (!player.alive) {
 			this.queuedShot = false
 			this.spectate(player, tanks)
+			if (phase === 'battle' && this.input.justPressed('Enter')) this.onLeave?.()
 			return
 		}
 		// While the signal menu is open the mouse moves its pointer: the camera and the gun stay put
@@ -93,7 +105,8 @@ export class PlayerController {
 		if (phase === 'battle')
 			for (const [key, sig] of SIGNAL_KEYS) if (this.input.justPressed(key)) this.onSignal?.(sig)
 		if (!menu) this.trigger(player, phase)
-		if (this.input.justPressed('KeyV')) this.callPlane(player, phase)
+		// The strike plane is switched off for now (it may come back as a game mechanic of its own); see `callPlane`
+		// if (this.input.justPressed('KeyV')) this.callPlane(player, phase)
 	}
 
 	/**
@@ -112,6 +125,23 @@ export class PlayerController {
 		const sig = menu.close()
 		if (sig && can) this.onSignal?.(sig)
 		return false
+	}
+
+	/**
+	 * The player's tank is knocked out: the camera stays on the wreck while the centre panel counts down, then goes to
+	 * a teammate. The count stops with the battle (the result screen takes the centre).
+	 */
+	private wreckWatch(player: Tank, phase: Phase, dt: number) {
+		if (player.alive) return
+		if (!this.dead) {
+			this.dead = true
+			this.wreckView = MATCH.wreckView
+		}
+		if (this.wreckView <= 0) return
+		this.wreckView -= dt
+		if (phase !== 'battle') return
+		if (this.wreckView > 0) this.hud.center(wreckHtml(this.wreckView))
+		else this.hud.centerSlim(SPECTATE_HTML)
 	}
 
 	/** Right button held: look around while the gun stays laid where it was. */
@@ -139,20 +169,20 @@ export class PlayerController {
 		this.seen = seen
 	}
 
-	/** V in battle: the plane appears above the tank; the tank stands still until the player comes back. */
-	private callPlane(player: Tank, phase: Phase) {
-		const { plane, rig, hud } = this
-		if (phase !== 'battle') return
-		if (plane.cooldown > 0) {
-			hud.log(`Самолёт будет готов через ${Math.ceil(plane.cooldown)} с`, COLOR.warn)
-			return
-		}
-		this.queuedShot = false
-		plane.launch(player, rig.yaw, player.def.nation)
-		rig.setMode('plane', null)
-		rig.pitch = 0.15
-		hud.log('Самолёт в воздухе: мышь — курс, W / S — газ, ЛКМ или пробел — бомба, V — назад в танк', COLOR.good)
-	}
+	// Switched off with its key above. V in battle: the plane appears above the tank; the tank stands still until the player comes back.
+	// private callPlane(player: Tank, phase: Phase) {
+	// 	const { plane, rig, hud } = this
+	// 	if (phase !== 'battle') return
+	// 	if (plane.cooldown > 0) {
+	// 		hud.log(`Самолёт будет готов через ${Math.ceil(plane.cooldown)} с`, COLOR.warn)
+	// 		return
+	// 	}
+	// 	this.queuedShot = false
+	// 	plane.launch(player, rig.yaw, player.def.nation)
+	// 	rig.setMode('plane', null)
+	// 	rig.pitch = 0.15
+	// 	hud.log('Самолёт в воздухе: мышь — курс, W / S — газ, ЛКМ или пробел — бомба, V — назад в танк', COLOR.good)
+	// }
 
 	/** Flying: the mouse sets the course, W / S the throttle, LMB or Space drops a bomb, V returns to the tank. */
 	private fly(player: Tank, phase: Phase) {
@@ -183,7 +213,7 @@ export class PlayerController {
 	private spectate(player: Tank, tanks: Tank[]) {
 		const allies = tanks.filter((t) => t.team === player.team && t.alive)
 		if (!this.spectating?.alive) this.spectating = allies[0] ?? null
-		if (this.input.justPressed('Space') && allies.length) {
+		if (this.wreckView <= 0 && this.input.justPressed('Space') && allies.length) {
 			const i = this.spectating ? allies.indexOf(this.spectating) : -1
 			this.spectating = allies[(i + 1) % allies.length]
 		}
