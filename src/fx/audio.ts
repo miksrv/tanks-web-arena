@@ -1,5 +1,7 @@
-import { AUDIO_FX } from '../config'
-import { EngineSound, type NoiseKind } from './engineSound'
+import { AUDIO_FX, GUN_SOUND, type EngineId } from '../config'
+import { makeImpulse, makeNoise } from './audioBuffers'
+import { EngineMix, type EngineSource } from './engineMix'
+import type { EngineState, NoiseKind } from './engineSound'
 
 /** Where a sound comes from on the map; `null` is the listener's own tank (centred, full volume). */
 export type SoundAt = { x: number; z: number } | null
@@ -16,6 +18,14 @@ function storedMute(): boolean {
 	}
 }
 
+/** What a gun sounds like: its size, how fast the shell leaves it, and what is on the muzzle. */
+export interface GunVoice {
+	caliber: number // mm
+	velocity: number // m/s
+	brake: boolean // a muzzle brake throws the blast sideways: louder and harsher
+	howitzer: boolean // a short barrel and a small charge: a boom with little crack
+}
+
 /** A one-shot's entry point: gain-adjusted volume `v` and how far toward the edge of its reach it is (0…1). */
 interface Voice {
 	node: AudioNode
@@ -23,16 +33,18 @@ interface Voice {
 	far: number
 }
 
-// Procedural sound: diesel engine and tracks, layered gunfire, armour hits, ricochets, explosions. No assets.
+// Procedural sound: engines and tracks (each vehicle in the voice of its own engine, see `ENGINES`), layered
+// gunfire voiced by the gun, armour hits, ricochets, explosions. No assets.
 // One-shots are built from noise layers (crack, blast, rumble) and sine partials (sub thump, metal ring),
-// fade and darken with distance, are panned by their bearing from the camera and feed a shared outdoor reverb.
+// fade and darken with distance, are panned by their bearing from the camera and feed a shared outdoor reverb;
+// gunfire and explosions far away arrive late, at the speed of sound.
 export class Audio {
 	private ctx: AudioContext | null = null
 	private buffers: Record<NoiseKind, AudioBuffer> | null = null
 	private master: GainNode | null = null
 	private mix: GainNode | null = null
 	private reverb: ConvolverNode | null = null
-	private engineSound: EngineSound | null = null
+	private engines: EngineMix | null = null
 	/** The looping rain hiss and the level it should be at (kept even before the context exists). */
 	private rainGain: GainNode | null = null
 	private rainLevel = 0
@@ -63,7 +75,7 @@ export class Audio {
 			return
 		}
 		const ctx = (this.ctx = new AudioContext())
-		this.buffers = { white: this.makeNoise(ctx, 'white'), brown: this.makeNoise(ctx, 'brown') }
+		this.buffers = { white: makeNoise(ctx, 'white'), brown: makeNoise(ctx, 'brown') }
 		// mix → compressor (several booms at once must not clip) → master (mute) → speakers
 		this.master = ctx.createGain()
 		this.master.gain.value = this.muted ? 0 : 1
@@ -79,11 +91,11 @@ export class Audio {
 		this.mix.gain.value = 0.8
 		this.mix.connect(comp)
 		this.reverb = ctx.createConvolver()
-		this.reverb.buffer = this.makeImpulse(ctx, 2.6)
+		this.reverb.buffer = makeImpulse(ctx, 2.6)
 		const wet = ctx.createGain()
 		wet.gain.value = 0.55
 		this.reverb.connect(wet).connect(this.mix)
-		this.engineSound = new EngineSound(ctx, this.mix, this.buffers)
+		this.engines = new EngineMix(ctx, this.mix, this.buffers, (at, reach) => this.place(at, reach))
 		this.startRain(ctx, this.mix, this.buffers.white)
 	}
 
@@ -110,42 +122,6 @@ export class Audio {
 		if (this.ctx && this.rainGain) this.rainGain.gain.setTargetAtTime(level, this.ctx.currentTime, 0.5)
 	}
 
-	/** Two seconds of looping noise: white for cracks and hiss, brown (integrated white) for blasts and rumble. */
-	private makeNoise(ctx: AudioContext, kind: NoiseKind): AudioBuffer {
-		const len = ctx.sampleRate * 2
-		const buf = ctx.createBuffer(1, len, ctx.sampleRate)
-		const d = buf.getChannelData(0)
-		let last = 0
-		for (let i = 0; i < len; i++) {
-			const w = Math.random() * 2 - 1
-			if (kind === 'white') d[i] = w
-			else {
-				last = (last + 0.02 * w) / 1.02
-				d[i] = last * 3.5
-			}
-		}
-		return buf
-	}
-
-	/** Open-field reverb: a short pre-delay, then decaying stereo noise that darkens as it fades. */
-	private makeImpulse(ctx: AudioContext, seconds: number): AudioBuffer {
-		const rate = ctx.sampleRate
-		const len = Math.floor(rate * seconds)
-		const pre = Math.floor(rate * 0.025)
-		const buf = ctx.createBuffer(2, len, rate)
-		for (let ch = 0; ch < 2; ch++) {
-			const d = buf.getChannelData(ch)
-			let lp = 0
-			for (let i = pre; i < len; i++) {
-				const t = (i - pre) / rate
-				const k = 0.6 * Math.exp(-t * 1.5) + 0.03 // one-pole lowpass coefficient: the tail gets duller
-				lp += k * (Math.random() * 2 - 1 - lp)
-				d[i] = lp * Math.exp(-t * 2.4)
-			}
-		}
-		return buf
-	}
-
 	/** The node a sound connects to: through a stereo panner when off-centre. */
 	private panned(ctx: AudioContext, out: AudioNode, pan: number): AudioNode {
 		if (Math.abs(pan) < 0.01) return out
@@ -159,7 +135,7 @@ export class Audio {
 	 * Entry chain for a world sound at `at` heard up to `reach` metres: air absorption (distant sounds lose
 	 * their crack), panning, and a reverb send that grows with distance. `null` when it is too far to hear.
 	 */
-	private voice(at: SoundAt, reach: number): Voice | null {
+	private voice(at: SoundAt, reach: number, travels = false): Voice | null {
 		if (!this.ctx || !this.mix || !this.reverb) return null
 		const ctx = this.ctx
 		const [v, pan, d] = this.place(at, reach)
@@ -172,7 +148,13 @@ export class Audio {
 		const send = ctx.createGain()
 		send.gain.value = 0.15 + 0.6 * far
 		air.connect(send).connect(this.reverb)
-		return { node: air, v, far }
+		const lag = travels ? Math.min(GUN_SOUND.maxLag, d / GUN_SOUND.sound) : 0
+		if (lag < 0.05) return { node: air, v, far }
+		// Sound takes its time over the field: the flash comes first, the report after it
+		const late = ctx.createDelay(GUN_SOUND.maxLag)
+		late.delayTime.value = lag
+		late.connect(air)
+		return { node: late, v, far }
 	}
 
 	/** Filtered noise with a fast attack and exponential decay; the filter can sweep to `freqEnd`. */
@@ -262,27 +244,90 @@ export class Audio {
 		return [v * v * 0.6 + v * 0.4, side * panWidth * Math.min(1, d / panNear), d]
 	}
 
-	/** Cannon: supersonic crack, muzzle blast, sub-bass thump and a rolling echo; bigger guns are lower and longer. */
-	shot(caliber: number, at: SoundAt) {
-		const s = this.voice(at, 1000)
+	/**
+	 * Cannon. Layers: the supersonic crack (sharp on long high-velocity guns, almost none on howitzers), the muzzle
+	 * blast and a sub-bass thump (lower and longer with the calibre), the bark of a muzzle brake, the echo rolling
+	 * back from the country around. Inside the player's own tank: the breech, the barrel ringing, the spent case.
+	 */
+	shot(gun: GunVoice, at: SoundAt) {
+		const s = this.voice(at, 1000, true)
 		if (!s) return
-		const k = Math.min(1.6, Math.max(0.5, caliber / 85))
-		const v = s.v * Math.min(1.25, 0.55 + 0.45 * k)
+		const G = GUN_SOUND
+		const k = Math.min(1.9, Math.max(0.3, gun.caliber / G.refCaliber))
+		const auto = gun.caliber < G.autoCaliber
+		const crack = Math.min(1, Math.max(0, (gun.velocity - G.crackFrom) / (G.crackFull - G.crackFrom)))
+		const boom = gun.howitzer ? 1 : 0
+		const brake = gun.brake ? 1 : 0
+		const vary = 0.95 + Math.random() * 0.1
+		const v = s.v * Math.min(1.3, 0.5 + 0.42 * k + 0.1 * brake)
 		const near = 1 - s.far
-		this.noise(s.node, 'white', 0, 0.55 * v * near, 0.07, 'highpass', 1800, 1800, 0.5, 0.001)
-		this.noise(s.node, 'brown', 0, 1.1 * v, 0.35 + 0.35 * k, 'lowpass', 2400 / k, 110, 0.6, 0.002)
-		this.partial(s.node, 0, 95 / Math.sqrt(k), 0.9 * v, 0.25 + 0.2 * k, 0.35)
-		this.noise(s.node, 'brown', 0.12, 0.35 * v, 1.0 + 0.6 * k, 'lowpass', 380, 90, 0.5, 0.15)
-		if (!at) {
-			// Inside the turret: recoil and the breech kicking back
-			this.ring(s.node, 0.04, 170 / Math.sqrt(k), 0.07, 0.35)
-			this.noise(s.node, 'white', 0.05, 0.12, 0.05, 'bandpass', 2600, 2600, 2)
+		const long = auto ? 0.5 : 1 + 0.25 * boom
+		this.noise(
+			s.node,
+			'white',
+			0,
+			(0.2 + 0.55 * crack) * v * near,
+			0.035 + 0.035 * k,
+			'highpass',
+			1400 + 1100 * crack,
+			1400,
+			0.5,
+			0.001,
+		)
+		const top = ((2500 - 900 * boom + 700 * crack) / Math.pow(k, 0.8)) * vary
+		this.noise(s.node, 'brown', 0, 1.1 * v, (0.3 + 0.38 * k) * long, 'lowpass', top, 105, 0.6, 0.002)
+		if (brake)
+			this.noise(
+				s.node,
+				'white',
+				0.004,
+				0.32 * v,
+				0.08 + 0.05 * k,
+				'bandpass',
+				950 / Math.sqrt(k),
+				420,
+				0.9,
+				0.001,
+			)
+		const thump = ((95 - 22 * boom) / Math.sqrt(k)) * vary
+		this.partial(s.node, 0, thump, (0.85 + 0.2 * boom) * v, (0.24 + 0.22 * k) * long, 0.35)
+		if (k > 1.2) this.partial(s.node, 0.01, thump * 0.52, 0.45 * v, 0.5 + 0.25 * k, 0.5)
+		if (auto) return
+		this.noise(s.node, 'brown', 0.12, 0.35 * v, 1.0 + 0.7 * k, 'lowpass', 380, 90, 0.5, 0.15)
+		// The report coming back off the hills and the tree lines
+		this.noise(
+			s.node,
+			'brown',
+			0.3 + Math.random() * 0.15,
+			0.16 * v,
+			0.5 + 0.3 * k,
+			'lowpass',
+			650 / k,
+			140,
+			0.6,
+			0.03,
+		)
+		if (at) return
+		const steel = 1 / Math.sqrt(k)
+		this.ring(s.node, 0.04, 170 * steel, 0.07, 0.35)
+		this.ring(s.node, 0.02, 520 * steel * vary, 0.035 * (0.5 + 0.5 * crack), 0.5)
+		this.noise(s.node, 'white', 0.05, 0.12, 0.05, 'bandpass', 2600, 2600, 2)
+		this.noise(s.node, 'brown', 0.09, 0.3, 0.12, 'lowpass', 500 * steel, 160, 0.8, 0.002)
+		// The spent case drops out of the breech and rolls on the floor
+		const drop = 0.5 + 0.12 * k
+		for (const [dt, g] of [
+			[0, 1],
+			[0.13, 0.55],
+			[0.22, 0.3],
+		] as const) {
+			this.ring(s.node, drop + dt, 1250 * steel * (0.96 + Math.random() * 0.08), 0.045 * g, 0.22)
+			this.noise(s.node, 'white', drop + dt, 0.05 * g, 0.03, 'bandpass', 3400, 3400, 2, 0.001)
 		}
 	}
 
 	/** Rocket leaving the rails: a sharp ignition and a roaring hiss that tears away. */
 	rocket(at: SoundAt) {
-		const s = this.voice(at, 800)
+		const s = this.voice(at, 800, true)
 		if (!s) return
 		const v = s.v
 		this.noise(s.node, 'white', 0, 0.35 * v * (1 - s.far), 0.05, 'highpass', 2000, 2000, 0.5, 0.001)
@@ -317,7 +362,7 @@ export class Audio {
 
 	/** A shell striking the ground: a thud, and for big HE a blast with dirt raining down. */
 	impact(at: SoundAt, big: boolean) {
-		const s = this.voice(at, big ? 900 : 500)
+		const s = this.voice(at, big ? 900 : 500, big)
 		if (!s) return
 		const v = s.v
 		if (!big) {
@@ -333,7 +378,7 @@ export class Audio {
 
 	/** A tank brewing up: blast, the ammunition going a beat later, scattering debris. */
 	explosion(at: SoundAt) {
-		const s = this.voice(at, 1400)
+		const s = this.voice(at, 1400, true)
 		if (!s) return
 		const v = s.v
 		this.noise(s.node, 'white', 0, 0.5 * v * (1 - s.far), 0.12, 'highpass', 1000, 1000, 0.5, 0.001)
@@ -392,11 +437,16 @@ export class Audio {
 		}
 	}
 
-	/** Per-frame engine note. */
-	engine(throttle: number, speed: number, maxSpeed: number, alive: boolean) {
-		if (this.ctx && this.engineSound)
-			this.engineSound.update(this.ctx.currentTime, throttle, speed, maxSpeed, alive)
+	/** Per frame: the listener's own engine, in the voice of `id`. */
+	engine(id: EngineId, state: EngineState) {
+		this.engines?.own(id, state)
 	}
+
+	/** Per frame: the other vehicles whose engines may be heard around the listener. */
+	traffic(sources: readonly EngineSource[]) {
+		this.engines?.traffic(sources, this.ear)
+	}
+
 	/** Pause: everything falls silent (engine included) and resumes where it stopped. */
 	setPaused(on: boolean) {
 		if (this.paused === on) return
