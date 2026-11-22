@@ -28,6 +28,7 @@ import {
 	rollKit,
 	rollMode,
 	rollStyle,
+	askedWeather,
 	rollWeather,
 	weighted,
 } from './style'
@@ -129,7 +130,7 @@ export class Terrain implements LayoutTarget {
 		this.params = ARCHETYPES[this.archetype]
 		const season = weighted(extra(), this.params.seasons, 'summer')
 		this.season = spec.season ?? (this.archetype === 'classic' ? style.season : season)
-		this.weather = spec.weather ?? rollWeather(seed, this.season)
+		this.weather = askedWeather(spec.weather, this.season) ?? rollWeather(spec.weatherSeed ?? seed, this.season)
 		this.mode = spec.mode ?? rollMode(seed)
 		this.defender = mulberry32(seed * 31 + 17)() < 0.5 ? 0 : 1
 		this.relief_ = archetypeRelief(this.archetype, style.relief)

@@ -21,6 +21,19 @@ export const WEATHER: Record<Weather, WeatherDef> = {
 	snow: { label: 'снегопад', view: 0.8, fog: 0.55, artyFog: 0.65 },
 }
 
+/** What a map can be asked for: a weather, or «Осадки» (Precipitation): rain, or snowfall on a winter map. */
+export type WeatherChoice = Exclude<Weather, 'rain' | 'snow'> | 'precip'
+
+/** Names and descriptions on the weather cards of the garage. */
+export const WEATHER_CHOICES: Record<WeatherChoice, { name: string; note: string }> = {
+	clear: { name: 'Ясный день', note: 'Солнце и чистое небо: видно дальше всего.' },
+	overcast: { name: 'Пасмурно', note: 'Серый день без теней, лёгкая дымка вдали.' },
+	dawn: { name: 'Рассвет', note: 'Раннее утро: низкое солнце и утренняя дымка.' },
+	dusk: { name: 'Закат', note: 'Вечер: длинные тени и сумерки, вдали видно хуже.' },
+	fog: { name: 'Туман', note: 'Густой туман: противника видно только вблизи, бой накоротке.' },
+	precip: { name: 'Осадки', note: 'Дождь, а на зимних картах снегопад: обзор заметно хуже.' },
+}
+
 /** Roll weights per season (rain never falls in winter, snow only then). */
 export const WEATHER_ODDS: Record<'summer' | 'autumn' | 'winter', Partial<Record<Weather, number>>> = {
 	summer: { clear: 0.38, overcast: 0.14, dawn: 0.1, dusk: 0.12, fog: 0.1, rain: 0.16 },

@@ -56,7 +56,9 @@ export type { Archetype, TreeSpecies, Weather }
 /** What a map is asked to be; anything left out is rolled from the seed. */
 export interface MapSpec {
 	season?: Season
-	weather?: Weather
+	weather?: Weather | 'precip'
+	/** Rolls the weather when none is asked for (a named map has one seed but a new weather every battle). */
+	weatherSeed?: number
 	mode?: BattleMode
 	archetype?: Archetype
 }
