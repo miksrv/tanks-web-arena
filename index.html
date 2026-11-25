@@ -1398,6 +1398,20 @@
 			#report .none {
 				color: var(--dim);
 			}
+			#garage .copyright {
+				position: absolute;
+				left: 14px;
+				bottom: 10px;
+				font-size: 11px;
+				color: var(--dim);
+			}
+			#garage .copyright a {
+				color: var(--dim);
+				text-underline-offset: 2px;
+			}
+			#garage .copyright a:hover {
+				color: var(--khaki);
+			}
 			#garage .inner {
 				max-width: 1400px;
 				margin: 28px auto;
@@ -1998,6 +2012,14 @@
 						<div class="tanks" id="tankList"></div>
 						<button class="arrow" id="carNext" aria-label="Вперёд">&#8250;</button>
 					</div>
+				</div>
+				<div class="copyright">
+					Copyright &copy;
+					<a href="https://miksoft.pro" target="_blank" rel="noopener">Mik</a>
+					<span id="copyYear"></span>, v<span id="appVersion"></span>
+					<a href="https://github.com/miksrv/tanks-web-arena" target="_blank" rel="noopener nofollow"
+						>GitHub</a
+					>
 				</div>
 			</div>
 		</div>
