@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+### Patch Changes
+
+- Garage: copyright line with the game version and a GitHub link in the bottom-left corner
+
 ## 0.2.0
 
 Two Lend-Lease vehicles, detailed tank models, a voice for every engine and gun, and battle statistics.

@@ -220,6 +220,8 @@ export class Garage {
 			}
 		}
 		$('goBtn').onclick = () => this.onGo?.()
+		$('copyYear').textContent = String(new Date().getFullYear())
+		$('appVersion').textContent = __APP_VERSION__
 		for (const c of Array.from($('garage').querySelectorAll<HTMLElement>('[data-count]')))
 			c.textContent = vehicleCount(tanksOf(c.dataset.count as Nation).length)
 		this.buildChoices()
