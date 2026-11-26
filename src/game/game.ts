@@ -227,6 +227,7 @@ export class Game {
 		this.resupplying = false
 		this.report.reset()
 		this.rig.setMode('chase', this.player)
+		this.rig.snap()
 		this.rig.yaw = this.player.yaw
 		this.rig.pitch = 0.3
 		this.hud.showGarage(false)

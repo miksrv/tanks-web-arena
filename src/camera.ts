@@ -152,6 +152,12 @@ export class CameraRig {
 		this.camera.updateProjectionMatrix()
 	}
 
+	/** A new round: the chase camera jumps straight to its place instead of gliding over from the last map. */
+	snap() {
+		this.initialized = false
+		this.shake = 0
+	}
+
 	update(dt: number, target: Tank, w: WorldRefs) {
 		if (this.mode === 'sniper') {
 			const f = CAMERA.sniperFov[this.zoomLevel]

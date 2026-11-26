@@ -68,7 +68,7 @@ Audit of 159 maps (150 random seeds and the 9 named ones). Any fix of the first 
 - [x] ~~**[V]** «Завершить бой» (Leave the battle) counts as survived, and medals are awarded for a forfeited battle. `src/game/records.ts:112`, `src/game/game.ts:304-307`~~
 - [ ] **[A]** Two tabs overwrite each other's battle history (records are loaded once, saved whole). `src/game/records.ts:103-135`
 - [ ] **[A]** A simultaneous double capture is not a draw: the first zone wins, so Germany always wins the tie in standard mode. `src/game/capture.ts:58-64`
-- [ ] **[A]** The camera's `smoothPos` and `initialized` are never reset: a new round starts with a swoop from the previous map. `src/camera.ts:202-207`
+- [x] ~~**[A]** The camera's `smoothPos` and `initialized` are never reset: a new round starts with a swoop from the previous map. `src/camera.ts:202-207`~~
 - [ ] **[A]** `go()` has no phase guard: the `?autostart` timer or Enter on a focused hidden button can restart a round mid-battle. `src/game/game.ts:170-173`
 - [ ] **[A]** `devicePixelRatio` is read once: moving the window to another monitor or zooming leaves the old scale ceiling. `src/game/game.ts:83-87,127-130`
 - [x] ~~**[A]** Keys can stick on macOS: no `keyup` for a key released while Cmd is held; release all on Meta `keyup`. `src/input.ts:24-33`~~
