@@ -104,7 +104,7 @@ Audit of 159 maps (150 random seeds and the 9 named ones). Any fix of the first 
 ## 7. Build and deploy
 
 - [x] ~~**[V]** Deploy has a window with a broken site: `mirror --delete` removes the old bundles before the new `index.html` is uploaded (the comment claims the opposite). Mirror without `--delete`, put `index.html`, then delete. `.github/workflows/deploy.yml:62-63`~~
-- [ ] **[V]** No favicon: every visit gets a 404 for `/favicon.ico`; an inline SVG data-URI icon keeps `public/` empty. `index.html`
+- [x] ~~**[V]** No favicon: every visit gets a 404 for `/favicon.ico`; an inline SVG data-URI icon keeps `public/` empty. `index.html`~~
 - [ ] **[A]** `.htaccess`: hashed `.webp` files are not in the one-year cache rule. `public/.htaccess:10`
 - [ ] **[A]** `.htaccess`: `Header set` is not wrapped in `IfModule mod_headers.c` (a 500 for the whole site without the module). `public/.htaccess:12`
 - [ ] **[A]** `.htaccess`: DEFLATE lists `application/javascript` only; if the host serves `text/javascript` the bundle goes out uncompressed (check with `curl -I -H 'Accept-Encoding: gzip'`). `public/.htaccess:4`
