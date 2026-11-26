@@ -64,7 +64,7 @@ Audit of 159 maps (150 random seeds and the 9 named ones). Any fix of the first 
 
 ## 4. Game loop, camera, records
 
-- [ ] **[V]** Camera shake never decays while paused: Esc right after a shot or a hit leaves the picture vibrating for the whole pause. `src/camera.ts:163-165`
+- [x] ~~**[V]** Camera shake never decays while paused: Esc right after a shot or a hit leaves the picture vibrating for the whole pause. `src/camera.ts:163-165`~~
 - [ ] **[V]** «Завершить бой» (Leave the battle) counts as survived, and medals are awarded for a forfeited battle. `src/game/records.ts:112`, `src/game/game.ts:304-307`
 - [ ] **[A]** Two tabs overwrite each other's battle history (records are loaded once, saved whole). `src/game/records.ts:103-135`
 - [ ] **[A]** A simultaneous double capture is not a draw: the first zone wins, so Germany always wins the tie in standard mode. `src/game/capture.ts:58-64`
