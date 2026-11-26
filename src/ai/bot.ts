@@ -90,7 +90,12 @@ export class BotBrain implements Bot {
 
 	/** Sent somewhere by the team (to break up a capture, or by the player's order): stays put there. */
 	get defending() {
-		return !!this.team?.defenders.has(this.tank) || this.now < this.orderUntil
+		return !!this.team?.defenders.has(this.tank) || this.onOrder
+	}
+
+	/** Following the player's order, until it runs out. */
+	get onOrder() {
+		return this.now < this.orderUntil
 	}
 
 	/** Taking a base or sent to defend one: it fights from there instead of going off after the enemy. */
