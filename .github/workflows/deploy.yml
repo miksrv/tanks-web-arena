@@ -50,17 +50,18 @@ jobs:
         run: echo "machine ${{ secrets.FTP_HOSTNAME }} login ${{ secrets.FTP_USERNAME }} password ${{ secrets.FTP_PASSWORD }}" > ~/.netrc
 
       # One lftp session (credentials from ~/.netrc above). The site is static: Vite writes
-      # index.html plus hashed bundles in assets/. The bundles go first with `--delete`, so
-      # chunks from previous builds are removed and the new ones are in place before the new
-      # index.html that references them is uploaded, with no window where the page is broken.
+      # index.html plus hashed bundles in assets/. The new bundles are uploaded first (old ones
+      # kept), then the new index.html that references them, and only then are the bundles of
+      # previous builds deleted: a page loaded at any moment finds every file it asks for.
       # Only assets/ is synced with `--delete`: nothing else on the hosting is touched.
       # Every other file from public/ must be listed here explicitly, or it never reaches the site.
       - name: Upload site
         run: |
           lftp ${{ secrets.FTP_HOSTNAME }} <<'EOF'
           set cmd:fail-exit yes
-          mirror -R --delete --parallel=10 assets /assets
+          mirror -R --parallel=10 assets /assets
           put -O / index.html
+          mirror -R --delete --parallel=10 assets /assets
           put -O / .htaccess
           put -O / og-image.jpg
           bye
