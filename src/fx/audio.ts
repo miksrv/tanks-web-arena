@@ -62,10 +62,11 @@ export class Audio {
 		}
 		window.addEventListener('keydown', start)
 		window.addEventListener('mousedown', start)
-		// Browsers suspend the context while the tab is hidden; bring it back when the player returns
+		// Silent while the tab is hidden (engines and rain would play on in the background); back when the player returns
 		document.addEventListener('visibilitychange', () => {
-			if (!document.hidden && !this.paused && this.ctx?.state === 'suspended')
-				this.ctx.resume().catch(() => undefined)
+			if (!this.ctx) return
+			if (document.hidden) this.ctx.suspend().catch(() => undefined)
+			else if (!this.paused && this.ctx.state === 'suspended') this.ctx.resume().catch(() => undefined)
 		})
 	}
 
