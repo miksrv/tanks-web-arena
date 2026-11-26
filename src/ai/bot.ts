@@ -35,7 +35,8 @@ export class BotBrain implements Bot {
 	private readonly role: RoleAi
 	private readonly avoidance: Avoidance
 	private team: TeamTactics | null = null
-	private retarget = 0
+	/** s until the target is picked again; spread at the start so the bots do not all retarget on one frame. */
+	private retarget = Math.random() * BOT_AI.core.retarget
 	private path: Pt[] = []
 	private wp = 0
 	/** The tank's hit counter last frame: a change means it was struck (fire ticks do not count). */
