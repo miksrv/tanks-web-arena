@@ -168,6 +168,8 @@ export class Game {
 	}
 
 	private go() {
+		// Only from the garage: a stray Enter or the `?autostart` timer must not restart a running round
+		if (this.match.phase !== 'garage') return
 		this.startRound()
 		this.input.lock()
 	}
