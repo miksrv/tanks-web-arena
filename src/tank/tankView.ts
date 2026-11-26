@@ -27,6 +27,11 @@ export class TankView {
 	readonly hullTop: number
 	readonly turretY: number
 	private readonly material: THREE.MeshStandardMaterial
+	/**
+	 * The same paint for the road wheels: an InstancedMesh needs its own shader program, and sharing one material
+	 * with plain meshes makes three.js look the program up again on every draw.
+	 */
+	private readonly wheelMaterial: THREE.MeshStandardMaterial
 	private trackMaterial: THREE.MeshStandardMaterial | null = null
 	/** Distance run by the left (x) and the right (y) track, in tiles of the link texture. */
 	private readonly trackScroll = { value: new THREE.Vector2() }
@@ -76,6 +81,8 @@ export class TankView {
 			roughnessMap: relief,
 		})
 		this.material.onBeforeCompile = maskPaint
+		this.wheelMaterial = this.material.clone()
+		this.wheelMaterial.onBeforeCompile = maskPaint
 
 		const body = new TankBuilder(weatherPainter(season, seed))
 		const turret = new TankBuilder(weatherPainter(season, seed + 3, dims.top))
@@ -106,8 +113,8 @@ export class TankView {
 		this.wheelList = layout.wheels
 		const wheel = wheelGeometry(new THREE.Color(TANK_PAINT.schemes[nation][season].base))
 		this.owned.push(wheel)
-		this.wheels = new THREE.InstancedMesh(wheel, this.material, this.wheelList.length)
-		this.wheels.castShadow = true
+		// No shadow of their own: they sit inside the hull's and the tracks' shadow
+		this.wheels = new THREE.InstancedMesh(wheel, this.wheelMaterial, this.wheelList.length)
 		this.group.add(this.wheels)
 		this.spin(0)
 	}
@@ -180,8 +187,10 @@ export class TankView {
 
 	hitFlash() {
 		this.flashTimer = TANK_VIEW.hitFlash
-		this.material.emissive.set('#ff9955')
-		this.material.emissiveIntensity = 0.6
+		for (const m of [this.material, this.wheelMaterial]) {
+			m.emissive.set('#ff9955')
+			m.emissiveIntensity = 0.6
+		}
 	}
 
 	/** A shot: the barrel jumps back and runs out again (looks only: the muzzle point does not move). */
@@ -197,12 +206,13 @@ export class TankView {
 		}
 		if (this.flashTimer <= 0) return
 		this.flashTimer -= dt
-		if (this.flashTimer <= 0) this.material.emissiveIntensity = 0
+		if (this.flashTimer <= 0) this.material.emissiveIntensity = this.wheelMaterial.emissiveIntensity = 0
 	}
 
 	/** Burnt-out wreck: dark paint, turret knocked askew. */
 	setWreck(on: boolean) {
 		this.material.color.set(on ? wreckColor : '#ffffff')
+		this.wheelMaterial.color.set(on ? wreckColor : '#ffffff')
 		this.trackMaterial?.color.set(on ? wreckColor : '#ffffff')
 		this.flight = null
 		if (this.def.shape.turret) {
@@ -251,6 +261,7 @@ export class TankView {
 	dispose() {
 		for (const g of this.owned) g.dispose()
 		this.material.dispose()
+		this.wheelMaterial.dispose()
 		this.trackMaterial?.dispose()
 		this.wheels.dispose()
 	}

@@ -77,7 +77,7 @@ Audit of 159 maps (150 random seeds and the 9 named ones). Any fix of the first 
 
 ## 5. Rendering and performance
 
-- [ ] **[A]** Tank wheels (InstancedMesh) share a material with plain meshes: three.js re-resolves the program every frame (~15 % of main-thread work). Give wheels their own material and drop their shadow (up to 14 fewer shadow draw calls). `src/tank/tankView.ts:109-110,137`
+- [x] ~~**[A]** Tank wheels (InstancedMesh) share a material with plain meshes: three.js re-resolves the program every frame (~15 % of main-thread work). Give wheels their own material and drop their shadow (up to 14 fewer shadow draw calls). `src/tank/tankView.ts:109-110,137`~~
 - [ ] **[A]** Static scenery is never culled and is fully redrawn into the shadow map every frame: one InstancedMesh per prop kind and one merged building mesh span the map, the shadow box covers ~6 % of it (100–150k wasted triangles). Split trees, bushes, rocks by sector and buildings by settlement. `src/world/props/meshes.ts:68-73,153-165`, `src/world/buildings/buildings.ts:44-46`
 - [ ] **[A]** The shadow camera follows the target without texel snapping: shadow edges may crawl while moving (from code, not observed). `src/render/environment.ts:78-80`
 - [ ] **[A]** A falling tree re-uploads whole instance buffers every frame for ~1.1 s; use `addUpdateRange`. `src/world/props/meshes.ts:217-224`
