@@ -33,7 +33,7 @@ function updateSpeed(me: Tank, dt: number, t: Terrain) {
 	let target = 0
 	const crew = me.crew.drive * me.engine
 	if (me.throttle > 0) target = def.speed * surface * slopeF * crew
-	else if (me.throttle < 0) target = -def.reverse * surface * crew
+	else if (me.throttle < 0) target = -def.reverse * surface * slopeF * crew
 	if (me.tracked > 0 || surface === 0) target = 0
 	const braking = me.throttle === 0 || Math.sign(me.throttle) !== Math.sign(me.speed)
 	const ground = DRIVE.softGroundAccel + (1 - DRIVE.softGroundAccel) * surface
