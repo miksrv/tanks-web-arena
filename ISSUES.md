@@ -71,7 +71,7 @@ Audit of 159 maps (150 random seeds and the 9 named ones). Any fix of the first 
 - [ ] **[A]** The camera's `smoothPos` and `initialized` are never reset: a new round starts with a swoop from the previous map. `src/camera.ts:202-207`
 - [ ] **[A]** `go()` has no phase guard: the `?autostart` timer or Enter on a focused hidden button can restart a round mid-battle. `src/game/game.ts:170-173`
 - [ ] **[A]** `devicePixelRatio` is read once: moving the window to another monitor or zooming leaves the old scale ceiling. `src/game/game.ts:83-87,127-130`
-- [ ] **[A]** Keys can stick on macOS: no `keyup` for a key released while Cmd is held; release all on Meta `keyup`. `src/input.ts:24-33`
+- [x] ~~**[A]** Keys can stick on macOS: no `keyup` for a key released while Cmd is held; release all on Meta `keyup`. `src/input.ts:24-33`~~
 - [ ] **[A]** Test hooks on the live site: `?round=` and `?speed=` still write records, `?round=abc` gives a round that never ends, `?tank=constructor` passes the `in` check. `src/game/testHooks.ts:33-43`
 - [ ] **[A]** The plane is unreachable (its entry is commented out) but still built and updated every frame: `Plane`, `PlaneView`, `Shells.drop`, the `'plane'` camera mode, `#planeHud`, `src/config/plane.ts`. Remove. `src/game/playerController.ts:108-109,172-185`, `src/game/game.ts:47,113,331,341,372`
 
