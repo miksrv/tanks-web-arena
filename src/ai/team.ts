@@ -14,6 +14,8 @@ export interface Member {
 	capture(w: WorldRefs, force: boolean): boolean
 	readonly capturing: boolean
 	readonly defending: boolean
+	/** On the player's order (it holds for a while whatever the team decides). */
+	readonly onOrder: boolean
 }
 
 const pick = <T>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)]
@@ -120,7 +122,11 @@ export class TeamTactics {
 				m.defend(w, z)
 			}
 		}
-		if (w.zones.every((z) => z.points <= 0 || z.capturing === this.team)) this.defenders.clear()
+		// No capture left: release the defenders, except those the player sent back until their order runs out
+		if (w.zones.every((z) => z.points <= 0 || z.capturing === this.team)) {
+			const ordered = new Set(members.filter((m) => m.onOrder && m.tank.alive).map((m) => m.tank))
+			for (const t of this.defenders) if (!ordered.has(t)) this.defenders.delete(t)
+		}
 	}
 
 	/** The player's "attack that one": everyone who can see it prefers it for a while. */

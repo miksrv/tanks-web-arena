@@ -77,7 +77,9 @@ function collideWithTank(me: Tank, o: Tank, dt: number) {
 			const rammer = mine >= rel - mine ? me : o
 			const victim = rammer === me ? o : me
 			o.speed *= COLLISION.ramSpeedKept
-			if (o.team !== me.team) rammer.stats.rams++
+			// A bump into a friend slows both down but harms neither
+			if (o.team === me.team) return
+			rammer.stats.rams++
 			const dmg = rel * COMBAT.ramDamageMult
 			victim.damage(dmg * (rammer.mass / victim.mass) * COLLISION.rammerBonus, rammer)
 			rammer.damage(dmg * (victim.mass / rammer.mass), victim)

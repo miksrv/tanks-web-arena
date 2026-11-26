@@ -22,6 +22,7 @@ export function launch(me: Tank): ShotParams {
 	const origin = new THREE.Vector3()
 	const dir = new THREE.Vector3()
 	me.view.muzzle(origin, dir)
+	const breech = me.view.breech(new THREE.Vector3())
 	if (!g.salvo) me.view.recoil()
 	const sigma = me.reticle / 100 / 2 // the circle's radius is 2σ at 100 m
 	let speed = g.shellSpeed * am.speedMult
@@ -37,6 +38,7 @@ export function launch(me: Tank): ShotParams {
 	me.bloom += g.bloomShot ?? DRIVE.bloomShot
 	return {
 		origin,
+		breech,
 		dir,
 		speed,
 		ammo: am,

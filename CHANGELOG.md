@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+### Patch Changes
+
+- Bug fixes and optimisation: point-blank shots, bot driving and orders, camera, sound, site loading
+
 ## 0.2.1
 
 ### Patch Changes

@@ -31,9 +31,11 @@ function updateSpeed(me: Tank, dt: number, t: Terrain) {
 	const uphill = Math.max(0, slopeAhead * dir)
 	const slopeF = Math.max(DRIVE.minSlopeSpeed, 1 - Math.atan(uphill) * RAD_TO_DEG * DRIVE.slopeSpeed)
 	let target = 0
+	// A part throttle (bots easing off in a turn or in traffic) asks for that share of the top speed
 	const crew = me.crew.drive * me.engine
-	if (me.throttle > 0) target = def.speed * surface * slopeF * crew
-	else if (me.throttle < 0) target = -def.reverse * surface * crew
+	const share = surface * slopeF * crew * Math.min(1, Math.abs(me.throttle))
+	if (me.throttle > 0) target = def.speed * share
+	else if (me.throttle < 0) target = -def.reverse * share
 	if (me.tracked > 0 || surface === 0) target = 0
 	const braking = me.throttle === 0 || Math.sign(me.throttle) !== Math.sign(me.speed)
 	const ground = DRIVE.softGroundAccel + (1 - DRIVE.softGroundAccel) * surface

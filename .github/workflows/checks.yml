@@ -2,6 +2,8 @@ name: Checks
 
 on:
   pull_request:
+    # The defaults plus ready_for_review: a draft marked ready is checked at once, not on the next push
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
       - 'release/**'

@@ -109,7 +109,8 @@ export class TankRecords {
 		rec.battles++
 		if (match.winner === player.team) rec.wins++
 		else if (match.winner === -1) rec.draws++
-		if (player.alive) rec.survived++
+		// Leaving the battle is a loss, not a survival
+		if (player.alive && match.outcome !== 'left') rec.survived++
 		rec.kills += player.kills
 		rec.damage += damage
 		rec.taken += Math.round(player.def.hp - Math.max(0, player.hp))

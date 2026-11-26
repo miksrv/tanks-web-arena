@@ -168,6 +168,8 @@ export class Game {
 	}
 
 	private go() {
+		// Only from the garage: a stray Enter or the autostart timer must not restart a round
+		if (this.match.phase !== 'garage') return
 		this.startRound()
 		this.input.lock()
 	}
@@ -227,8 +229,7 @@ export class Game {
 		this.resupplying = false
 		this.report.reset()
 		this.rig.setMode('chase', this.player)
-		this.rig.yaw = this.player.yaw
-		this.rig.pitch = 0.3
+		this.rig.snap(this.player.yaw, 0.3)
 		this.hud.showGarage(false)
 		this.hud.showResult('')
 		this.hud.center('')
@@ -301,7 +302,7 @@ export class Game {
 		const { match, hud } = this
 		// The bots stop thinking now: let them roll to a halt instead of driving on blind for the whole result screen
 		for (const b of this.bots) b.tank.throttle = b.tank.steer = 0
-		const medals = awardMedals(this.player, this.tanks, match)
+		const medals = match.outcome === 'left' ? [] : awardMedals(this.player, this.tanks, match)
 		hud.showResult(resultHtml(match.winner, match.outcome, this.player, medals))
 		// Automated runs (`?autostart`) play with nobody at the controls: they leave the history alone
 		if (!this.opts.autostart) this.records.add(this.player, match, medals, this.report.totals())

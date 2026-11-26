@@ -35,10 +35,12 @@ export class BotBrain implements Bot {
 	private readonly role: RoleAi
 	private readonly avoidance: Avoidance
 	private team: TeamTactics | null = null
-	private retarget = 0
+	/** s until the target is picked again; spread at the start so the bots do not all retarget on one frame. */
+	private retarget = Math.random() * BOT_AI.core.retarget
 	private path: Pt[] = []
 	private wp = 0
-	private lastHp: number
+	/** The tank's hit counter last frame: a change means it was struck (fire ticks do not count). */
+	private lastHits: number
 	/** Game time before which the bot waits at the base (staggered departure). */
 	private departAt = 0
 	/** s left of backing away from an unseen attacker, hull toward the blow. */
@@ -64,7 +66,7 @@ export class BotBrain implements Bot {
 	constructor(readonly tank: Tank) {
 		this.avoidance = new Avoidance(tank)
 		this.skill = BOTS.skillMin + Math.random() * (BOTS.skillMax - BOTS.skillMin)
-		this.lastHp = tank.hp
+		this.lastHits = tank.hits
 		this.gunner = new BotGunner(tank, this.skill)
 		this.fighter = new Fighter(tank, this.gunner)
 		this.role = createRoleAi(tank)
@@ -90,7 +92,12 @@ export class BotBrain implements Bot {
 
 	/** Sent somewhere by the team (to break up a capture, or by the player's order): stays put there. */
 	get defending() {
-		return !!this.team?.defenders.has(this.tank) || this.now < this.orderUntil
+		return !!this.team?.defenders.has(this.tank) || this.onOrder
+	}
+
+	/** Following the player's order, until it runs out. */
+	get onOrder() {
+		return this.now < this.orderUntil
 	}
 
 	/** Taking a base or sent to defend one: it fights from there instead of going off after the enemy. */
@@ -119,7 +126,7 @@ export class BotBrain implements Bot {
 		const p = this.role.plan(w, this)
 		this.mode = p.mode
 		this.setPath(p.path, p.holdSpot)
-		this.lastHp = this.tank.hp
+		this.lastHits = this.tank.hits
 	}
 
 	update(dt: number, w: WorldRefs, shells: Shells, time: number) {
@@ -132,8 +139,9 @@ export class BotBrain implements Bot {
 		this.avoidance.tick(dt)
 		this.updateTarget(w, time)
 		this.useConsumables(time)
-		const hurt = me.hp < this.lastHp - 1
-		this.lastHp = me.hp
+		// By the hit counter, not by hit points: fire damage per frame grows with the frame time
+		const hurt = me.hits !== this.lastHits
+		this.lastHits = me.hits
 
 		const enemyNear = nearestEnemyDist(w, me, time)
 		if (this.mode === 'advance' && this.pathDone) this.mode = this.holdSpot ? 'hold' : 'engage'

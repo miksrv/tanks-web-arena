@@ -1,19 +1,23 @@
 # Apache config for the static build on the shared hosting (copied into dist/ by Vite).
 
 <IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+    AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json image/svg+xml
 </IfModule>
 
 <IfModule mod_expires.c>
     ExpiresActive On
-    # Vite names bundles by their content hash, so they can be cached for a year
-    <FilesMatch "\.(js|css|woff2?)$">
+    # Vite names bundles (and the map shots) by their content hash, so they can be cached for a year
+    <FilesMatch "\.(js|css|woff2?|webp)$">
         ExpiresDefault "access plus 1 year"
-        Header set Cache-Control "public, max-age=31536000, immutable"
+        <IfModule mod_headers.c>
+            Header set Cache-Control "public, max-age=31536000, immutable"
+        </IfModule>
     </FilesMatch>
     # The page must always be fresh, otherwise it would reference a removed bundle
     <FilesMatch "^index\.html$">
         ExpiresDefault "access plus 0 seconds"
-        Header set Cache-Control "no-cache"
+        <IfModule mod_headers.c>
+            Header set Cache-Control "no-cache"
+        </IfModule>
     </FilesMatch>
 </IfModule>

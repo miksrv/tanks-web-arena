@@ -25,6 +25,7 @@ export const BOT_AI = {
 		stuckTime: 2.5, // s of no progress before backing out
 		reverseTime: 1.8, // s of backing out (or pivoting) after getting stuck
 		stuckEventsToReroute: 3, // times stuck in a row before the route is redirected
+		stuckClearDistance: 15, // m away from where it last got stuck that wipe the count of times stuck
 		tankCone: 0.9, // rad: half-angle of the cone ahead in which another tank counts as being in the way
 		yieldMax: 3, // s: longest a bot gives way to the same traffic before it drives around it instead
 		yieldCooldown: 2.5, // s before it gives way again

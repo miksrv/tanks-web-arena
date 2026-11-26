@@ -29,7 +29,11 @@ export class Input {
 			if (['Space', 'Tab', 'ShiftLeft', 'ShiftRight'].includes(e.code) || e.code.startsWith('Arrow'))
 				e.preventDefault()
 		})
-		window.addEventListener('keyup', (e) => this.keys.delete(e.code))
+		window.addEventListener('keyup', (e) => {
+			// macOS sends no keyup for keys released while Cmd is held: drop them all with Cmd
+			if (e.code === 'MetaLeft' || e.code === 'MetaRight') this.keys.clear()
+			else this.keys.delete(e.code)
+		})
 		window.addEventListener('blur', () => this.releaseAll())
 		document.addEventListener('pointerlockchange', () => {
 			this.locked = document.pointerLockElement === el

@@ -152,6 +152,14 @@ export class CameraRig {
 		this.camera.updateProjectionMatrix()
 	}
 
+	/** A new round: the chase camera faces `yaw`, `pitch` and jumps straight there instead of gliding from the last map. */
+	snap(yaw: number, pitch: number) {
+		this.yaw = yaw
+		this.pitch = pitch
+		this.initialized = false
+		this.shake = 0
+	}
+
 	update(dt: number, target: Tank, w: WorldRefs) {
 		if (this.mode === 'sniper') {
 			const f = CAMERA.sniperFov[this.zoomLevel]
@@ -161,8 +169,10 @@ export class CameraRig {
 			}
 		}
 		this.shake = Math.max(0, this.shake - dt * 3)
-		const sx = (Math.random() - 0.5) * this.shake
-		const sy = (Math.random() - 0.5) * this.shake
+		// Paused (dt 0): the shake holds its strength but the picture stays still
+		const k = dt > 0 ? this.shake : 0
+		const sx = (Math.random() - 0.5) * k
+		const sy = (Math.random() - 0.5) * k
 		const t = target
 		const hullTop = t.pos.y + t.view.hullTop
 		if (this.mode === 'arty') {

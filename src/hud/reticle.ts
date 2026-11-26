@@ -17,6 +17,7 @@ const R = HUD.reticle
 export class Reticle {
 	private ringReady = 0 // s left of the green "loaded" flash on the reload ring
 	private readonly gunO = new THREE.Vector3()
+	private readonly gunB = new THREE.Vector3()
 	private readonly gunD = new THREE.Vector3()
 	private readonly gunP = new THREE.Vector3()
 	private readonly tmp = new THREE.Vector3()
@@ -97,13 +98,14 @@ export class Reticle {
 			return
 		}
 		player.view.muzzle(this.gunO, this.gunD)
+		player.view.breech(this.gunB)
 		const g = player.def.gun
 		const speed = g.howitzer
 			? (howitzerSolve(player.aimDist, player.aimTarget.y - this.gunO.y)?.speed ?? 100)
 			: g.shellSpeed * player.ammoDef.speedMult
 		const gravity = g.howitzer ? HOWITZER.gravity : GRAVITY
 		const maxTime = g.howitzer ? R.traceTime.howitzer : R.traceTime.direct
-		traceShot(w, this.gunO, this.gunD, speed, gravity, maxTime, player, this.gunP)
+		traceShot(w, this.gunO, this.gunD, speed, gravity, maxTime, player, this.gunP, this.gunB)
 		const p = this.tmp.copy(this.gunP).project(rig.camera)
 		if (p.z > 1) {
 			show(el, false)

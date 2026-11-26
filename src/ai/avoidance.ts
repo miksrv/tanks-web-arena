@@ -30,6 +30,8 @@ export class Avoidance {
 	private throttleCap: number | null = null
 	private stuckTimer = 0
 	private stuckEvents = 0
+	/** Where the bot last got stuck: once it is far enough from there, it is no longer stuck "in a row". */
+	private readonly stuckAt = { x: NaN, z: NaN }
 	/** s left of backing out (or pivoting, when something is behind too) after getting stuck. */
 	private reverseTimer = 0
 	private unstickSteer = 0
@@ -200,13 +202,19 @@ export class Avoidance {
 	private checkStuck(w: WorldRefs, dt: number, path: Pt[], wp: number): Pt[] | null {
 		const me = this.me
 		const moved = Math.hypot(me.pos.x - this.lastPos.x, me.pos.z - this.lastPos.z)
-		if (Math.abs(me.throttle) > 0.3 && moved < 0.3 * dt * 4) this.stuckTimer += dt
+		// Stuck: under 30 % of the speed asked for (a part throttle in traffic really is slow), capped at 4 m/s
+		const asked = Math.abs(me.throttle) * (me.throttle > 0 ? me.def.speed : me.def.reverse)
+		if (Math.abs(me.throttle) > 0.3 && moved < 0.3 * dt * Math.min(4, asked)) this.stuckTimer += dt
 		else this.stuckTimer = 0
+		const away = Math.hypot(me.pos.x - this.stuckAt.x, me.pos.z - this.stuckAt.z)
+		if (this.reverseTimer <= 0 && away > BOT_AI.avoidance.stuckClearDistance) this.stuckEvents = 0
 		this.lastPos.x = me.pos.x
 		this.lastPos.z = me.pos.z
 		if (this.stuckTimer <= BOT_AI.avoidance.stuckTime || this.reverseTimer > 0) return null
 		this.reverseTimer = BOT_AI.avoidance.reverseTime
 		this.stuckTimer = 0
+		this.stuckAt.x = me.pos.x
+		this.stuckAt.z = me.pos.z
 		// Back out with the nose swinging away from whatever is in front (reverse steering is mirrored); with
 		// something behind as well, pivot on the spot instead
 		const t = this.tankInWay(w)
