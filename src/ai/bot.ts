@@ -38,7 +38,8 @@ export class BotBrain implements Bot {
 	private retarget = 0
 	private path: Pt[] = []
 	private wp = 0
-	private lastHp: number
+	/** The tank's hit counter last frame: a change means it was struck (fire ticks do not count). */
+	private lastHits: number
 	/** Game time before which the bot waits at the base (staggered departure). */
 	private departAt = 0
 	/** s left of backing away from an unseen attacker, hull toward the blow. */
@@ -64,7 +65,7 @@ export class BotBrain implements Bot {
 	constructor(readonly tank: Tank) {
 		this.avoidance = new Avoidance(tank)
 		this.skill = BOTS.skillMin + Math.random() * (BOTS.skillMax - BOTS.skillMin)
-		this.lastHp = tank.hp
+		this.lastHits = tank.hits
 		this.gunner = new BotGunner(tank, this.skill)
 		this.fighter = new Fighter(tank, this.gunner)
 		this.role = createRoleAi(tank)
@@ -124,7 +125,7 @@ export class BotBrain implements Bot {
 		const p = this.role.plan(w, this)
 		this.mode = p.mode
 		this.setPath(p.path, p.holdSpot)
-		this.lastHp = this.tank.hp
+		this.lastHits = this.tank.hits
 	}
 
 	update(dt: number, w: WorldRefs, shells: Shells, time: number) {
@@ -137,8 +138,9 @@ export class BotBrain implements Bot {
 		this.avoidance.tick(dt)
 		this.updateTarget(w, time)
 		this.useConsumables(time)
-		const hurt = me.hp < this.lastHp - 1
-		this.lastHp = me.hp
+		// By the hit counter, not by hit points: fire damage per frame grows with the frame time
+		const hurt = me.hits !== this.lastHits
+		this.lastHits = me.hits
 
 		const enemyNear = nearestEnemyDist(w, me, time)
 		if (this.mode === 'advance' && this.pathDone) this.mode = this.holdSpot ? 'hold' : 'engage'

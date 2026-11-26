@@ -36,7 +36,7 @@ Measured baseline (production build, headless Chrome): steady 60 fps, JS about 6
 - [ ] **[A]** A bot on the player's order («Атакую!» Attacking!, «Нужна помощь!» Need help!) still stops to regroup. `src/ai/roles/strike.ts:85,105`
 - [ ] **[A]** Bots change shell at the only moment it costs 2.5 s (gun loaded); `facingArmor` has no hysteresis, so a turning target causes repeated swaps. `src/ai/gunner.ts:231`, `src/ai/targeting.ts:27-31`
 - [ ] **[A]** Cover spots and the reverse into them ignore buildings: the bot backs into a wall and grinds on it. `src/ai/positions.ts:114-136`, `src/ai/steering.ts:16-24`
-- [ ] **[A]** "Hurt" depends on the frame rate (`hp < lastHp − 1` per frame): fire damage triggers evade at 20 fps or with `?speed=3+`; use the `tank.hits` counter. `src/ai/bot.ts:135`
+- [x] ~~**[A]** "Hurt" depends on the frame rate (`hp < lastHp − 1` per frame): fire damage triggers evade at 20 fps or with `?speed=3+`; use the `tank.hits` counter. `src/ai/bot.ts:135`~~
 - [ ] **[A]** `faceToward` does almost nothing for turreted tanks (threshold 144°): hulls stay side-on to the enemy while regrouping or in cover. `src/ai/steering.ts:29`
 - [ ] **[A]** Artillery picks targets it will not fire at (reach 1150 m, fire held beyond 0.95 of it and under 60 m). `src/ai/targeting.ts:13`, `src/ai/gunner.ts:200`
 - [ ] **[A]** The low-HP retreat is undone within seconds: a scout goes to the next lookout, a TD is pulled back to its group. `src/ai/roles/light.ts:83-87`, `src/ai/roles/td.ts:66-88`
