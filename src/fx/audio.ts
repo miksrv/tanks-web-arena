@@ -74,7 +74,8 @@ export class Audio {
 		document.addEventListener('visibilitychange', () => {
 			if (!this.ctx) return
 			if (document.hidden) this.ctx.suspend().catch(() => undefined)
-			else if (!this.paused && this.ctx.state === 'suspended') this.ctx.resume().catch(() => undefined)
+			// Whatever the state says: a suspend still under way after a quick switch would otherwise win
+			else if (!this.paused) this.ctx.resume().catch(() => undefined)
 		})
 	}
 

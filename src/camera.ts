@@ -152,8 +152,10 @@ export class CameraRig {
 		this.camera.updateProjectionMatrix()
 	}
 
-	/** A new round: the chase camera jumps straight to its place instead of gliding over from the last map. */
-	snap() {
+	/** A new round: the chase camera faces `yaw`, `pitch` and jumps straight there instead of gliding from the last map. */
+	snap(yaw: number, pitch: number) {
+		this.yaw = yaw
+		this.pitch = pitch
 		this.initialized = false
 		this.shake = 0
 	}

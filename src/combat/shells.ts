@@ -129,11 +129,21 @@ export class Shells {
 	update(dt: number, w: WorldRefs) {
 		for (let i = this.list.length - 1; i >= 0; i--) {
 			const s = this.list[i]
-			// The first step starts at the gun's pivot: the barrel may already reach into a tank alongside
-			const ax = s.from ? s.from.x : s.x
-			const ay = s.from ? s.from.y : s.y
-			const az = s.from ? s.from.z : s.z
+			// The barrel may already reach into a tank alongside: tanks only (a barrel poking through a wall or over
+			// a rock is not a hit on it) from the gun's pivot to the muzzle, before the first step
+			const from = s.from
 			s.from = null
+			if (from) {
+				const c0 = this.sweepTanks(s, w, from.x, from.y, from.z, s.x, s.y, s.z, null)
+				if (c0) {
+					this.resolve(s, w, c0, from.x, from.y, from.z, s.x, s.y, s.z)
+					this.list.splice(i, 1)
+					continue
+				}
+			}
+			const ax = s.x
+			const ay = s.y
+			const az = s.z
 			// The exact parabola over the step, so the fall of shot does not depend on the frame rate
 			const bx = s.x + s.vx * dt
 			const by = s.y + s.vy * dt - 0.5 * s.gravity * dt * dt
@@ -156,21 +166,56 @@ export class Shells {
 				}
 				continue
 			}
-			this.count(c)
-			if (c.kind === 'tank' && c.tank && c.hit) this.applyHit(s, c.tank, c.hit)
-			const imp: Impact = {
-				x: ax + (bx - ax) * c.t,
-				y: ay + (by - ay) * c.t,
-				z: az + (bz - az) * c.t,
-				he: s.he,
-				splash: s.splash,
-				shock: s.shock,
-			}
-			this.onImpact?.(imp, s.owner)
-			if (s.he && s.splash > 0) this.splash(imp, s, w, c.tank)
+			this.resolve(s, w, c, ax, ay, az, bx, by, bz)
 			this.list.splice(i, 1)
 		}
 		this.writeTracers()
+	}
+
+	/** The shell meets `c` on the step a → b: the hit, the impact and the splash. */
+	private resolve(
+		s: Shell,
+		w: WorldRefs,
+		c: Contact,
+		ax: number,
+		ay: number,
+		az: number,
+		bx: number,
+		by: number,
+		bz: number,
+	) {
+		this.count(c)
+		if (c.kind === 'tank' && c.tank && c.hit) this.applyHit(s, c.tank, c.hit)
+		const imp: Impact = {
+			x: ax + (bx - ax) * c.t,
+			y: ay + (by - ay) * c.t,
+			z: az + (bz - az) * c.t,
+			he: s.he,
+			splash: s.splash,
+			shock: s.shock,
+		}
+		this.onImpact?.(imp, s.owner)
+		if (s.he && s.splash > 0) this.splash(imp, s, w, c.tank)
+	}
+
+	/** The earliest tank or wreck on the step a → b (earlier than `best`, if given). */
+	private sweepTanks(
+		s: Shell,
+		w: WorldRefs,
+		ax: number,
+		ay: number,
+		az: number,
+		bx: number,
+		by: number,
+		bz: number,
+		best: Contact | null,
+	): Contact | null {
+		for (const t of w.tanks) {
+			if (t === s.owner || !t.nearSegment(ax, az, bx, bz)) continue
+			const h = testShell(t, ax, ay, az, bx, by, bz, s.spec)
+			if (h && h.t < (best?.t ?? 2)) best = { t: h.t, kind: t.alive ? 'tank' : 'wreck', tank: t, hit: h }
+		}
+		return best
 	}
 
 	/** The earliest contact on the step a → b: tanks and wrecks, buildings, the ground, then rocks. */
@@ -184,12 +229,7 @@ export class Shells {
 		by: number,
 		bz: number,
 	): Contact | null {
-		let best: Contact | null = null
-		for (const t of w.tanks) {
-			if (t === s.owner || !t.nearSegment(ax, az, bx, bz)) continue
-			const h = testShell(t, ax, ay, az, bx, by, bz, s.spec)
-			if (h && h.t < (best?.t ?? 2)) best = { t: h.t, kind: t.alive ? 'tank' : 'wreck', tank: t, hit: h }
-		}
+		let best = this.sweepTanks(s, w, ax, ay, az, bx, by, bz, null)
 		const tb = w.buildings.raySegment(ax, ay, az, bx, by, bz)
 		// A wall or the ground in front of a tank: the tank behind it is not the one hit (and takes the blast)
 		if (tb >= 0 && tb < (best?.t ?? 2)) best = { t: tb, kind: 'building', tank: null, hit: null }
