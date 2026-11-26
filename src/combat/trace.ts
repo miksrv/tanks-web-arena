@@ -5,7 +5,8 @@ import type { Tank, WorldRefs } from '../tank/tank'
 /**
  * Where a shell fired right now would land: the parabola from `origin` along `dir` at `speed` under `gravity`,
  * marched in short segments against tanks (other than `self`), buildings and the ground. Writes the end point
- * to `out` and returns the tank that would be struck, if any. Used by the dispersion circle of the HUD, not by live shells.
+ * to `out` and returns the tank that would be struck, if any. The first segment starts at `from` (the gun's pivot)
+ * when given, so a tank closer than the muzzle still counts. Used by the dispersion circle of the HUD, not by live shells.
  */
 export function traceShot(
 	w: WorldRefs,
@@ -16,11 +17,12 @@ export function traceShot(
 	maxTime: number,
 	self: Tank | null,
 	out: THREE.Vector3,
+	from: THREE.Vector3 = origin,
 ): Tank | null {
 	const step = Math.max(0.004, 7 / speed) // ≈ 7 m per segment
-	let ax = origin.x
-	let ay = origin.y
-	let az = origin.z
+	let ax = from.x
+	let ay = from.y
+	let az = from.z
 	let t = 0
 	const vx = dir.x * speed
 	const vz = dir.z * speed

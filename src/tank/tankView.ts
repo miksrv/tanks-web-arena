@@ -167,6 +167,11 @@ export class TankView {
 	}
 
 	/** World muzzle position and forward direction (the gun's world matrix must be current). */
+	/** The gun's pivot in the world (the breech end of the barrel). */
+	breech(out: THREE.Vector3) {
+		return out.setFromMatrixPosition(this.gun.matrixWorld)
+	}
+
 	muzzle(out: THREE.Vector3, dir?: THREE.Vector3) {
 		out.copy(this.muzzleLocal).applyMatrix4(this.gun.matrixWorld)
 		if (dir) dir.set(0, 0, 1).transformDirection(this.gun.matrixWorld)

@@ -19,6 +19,8 @@ export interface WorldRefs {
 /** One projectile leaving the muzzle. */
 export interface ShotParams {
 	origin: THREE.Vector3
+	/** The gun's pivot: the first step of the shell is swept from here, so a target closer than the barrel is hit. */
+	breech: THREE.Vector3
 	dir: THREE.Vector3
 	speed: number
 	ammo: AmmoDef

@@ -26,6 +26,8 @@ interface Shell {
 	shock: boolean
 	/** s until the next puff of its trail. */
 	trail: number
+	/** Where the first step is swept from (the gun's pivot), so a tank inside the barrel's reach is not passed through. */
+	from: THREE.Vector3 | null
 }
 
 export interface Impact {
@@ -93,6 +95,7 @@ export class Shells {
 			bomb: false,
 			shock: p.shock,
 			trail: 0,
+			from: p.breech,
 		})
 		this.onFire?.(owner, p)
 	}
@@ -119,22 +122,25 @@ export class Shells {
 			bomb: true,
 			shock: false,
 			trail: 0,
+			from: null,
 		})
 	}
 
 	update(dt: number, w: WorldRefs) {
 		for (let i = this.list.length - 1; i >= 0; i--) {
 			const s = this.list[i]
-			const ax = s.x
-			const ay = s.y
-			const az = s.z
+			// The first step starts at the gun's pivot: the barrel may already reach into a tank alongside
+			const ax = s.from ? s.from.x : s.x
+			const ay = s.from ? s.from.y : s.y
+			const az = s.from ? s.from.z : s.z
+			s.from = null
 			// The exact parabola over the step, so the fall of shot does not depend on the frame rate
 			const bx = s.x + s.vx * dt
 			const by = s.y + s.vy * dt - 0.5 * s.gravity * dt * dt
 			const bz = s.z + s.vz * dt
 			s.vy -= s.gravity * dt
 			s.life -= dt
-			s.dist += Math.hypot(bx - ax, by - ay, bz - az)
+			s.dist += Math.hypot(bx - s.x, by - s.y, bz - s.z)
 			const c = this.sweep(s, w, ax, ay, az, bx, by, bz)
 			if (!c) {
 				s.x = bx

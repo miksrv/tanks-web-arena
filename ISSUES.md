@@ -8,7 +8,7 @@ Measured baseline (production build, headless Chrome): steady 60 fps, JS about 6
 
 ## 1. Combat and vehicles
 
-- [ ] **[V]** Point-blank shots pass through the target: the shell starts at the muzzle, already inside or past the neighbour's hit box (gap up to ~1 m: 2–3 of 10 hit nose-on, 0 of 10 side-on); the reticle armour hint is blind the same way. `src/world/obb.ts:99`, `src/combat/shells.ts:182`
+- [x] ~~**[V]** Point-blank shots pass through the target: the shell starts at the muzzle, already inside or past the neighbour's hit box (gap up to ~1 m: 2–3 of 10 hit nose-on, 0 of 10 side-on); the reticle armour hint is blind the same way. `src/world/obb.ts:99`, `src/combat/shells.ts:182`~~
 - [ ] **[V]** Reversing uphill ignores the slope penalty: a Tiger on 25° drives forward at ~1.6 m/s and backward at 4 m/s. `src/tank/drive.ts:36`
 - [ ] **[A]** Hit boxes ignore hull pitch and roll: on a 15° slope the drawn nose and tail are ~0.8 m off the boxes (up to ~1.5 m at 31°). `src/tank/hitBoxes.ts:17-29`, `src/tank/tank.ts:431`
 - [ ] **[A]** Ground contact is sampled every 2.5 m: a shell buried in a crest 1–2 m in front of a hull often counts as a hull hit; the impact is drawn up to 2.5 m long and under the surface. `src/combat/shells.ts:203-210`
