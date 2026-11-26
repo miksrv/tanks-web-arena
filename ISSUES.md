@@ -19,7 +19,7 @@ Measured baseline (production build, headless Chrome): steady 60 fps, JS about 6
 - [ ] **[A]** Splash distance is XZ only: a burst on a cliff top or roof gives full splash to a tank directly below. `src/combat/shells.ts:271`
 - [x] ~~**[A]** Ramming has no team check: a fast bot closing on a slower friend damages it. `src/tank/collisions.ts:70-83`~~
 - [ ] **[A]** `sweep` runs the full `testShell` (dice rolls, allocations) for every nearby tank, including wrecks and candidates that lose to an earlier contact; test boxes for all, roll only for the winner. `src/combat/shells.ts:184`
-- [ ] **[A]** Latent: the suspension loop is hard-coded to 5 samples but divides by `SUSPENSION.trackSamples`. `src/tank/suspension.ts:55-63`
+- [x] ~~**[A]** Latent: the suspension loop is hard-coded to 5 samples but divides by `SUSPENSION.trackSamples`. `src/tank/suspension.ts:55-63`~~
 - [ ] **[A]** Latent: `faceOf` uses `turretForward()` (with gun traverse) for casemates whose box does not rotate; harmless while arcs stay under ~37°. `src/combat/armor.ts:96`
 - [ ] **[A]** Pz. IV H and Pz. III J: the cupola box overhangs the turret box rear by ~7 cm (cosmetic).
 

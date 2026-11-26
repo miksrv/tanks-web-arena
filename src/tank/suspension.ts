@@ -52,15 +52,16 @@ function fitLine(h: (x: number, z: number) => number, sx: number, sz: number, fx
 	let sh = 0
 	let suu = 0
 	let suh = 0
-	for (let i = -2; i <= 2; i++) {
-		const u = i * L * 0.2
+	// trackSamples points spread evenly over −0.4L … 0.4L
+	const n = trackSamples
+	for (let i = 0; i < n; i++) {
+		const u = (i / (n - 1) - 0.5) * L * 0.8
 		const v = h(sx + fx * u, sz + fz * u)
 		su += u
 		sh += v
 		suu += u * u
 		suh += u * v
 	}
-	const n = trackSamples
 	const s = (n * suh - su * sh) / (n * suu - su * su)
 	return { s, c: (sh - s * su) / n }
 }
