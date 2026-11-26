@@ -30,6 +30,8 @@ export class Avoidance {
 	private throttleCap: number | null = null
 	private stuckTimer = 0
 	private stuckEvents = 0
+	/** m driven forward since the last time stuck: enough of it and the bot is no longer stuck "in a row". */
+	private freeRun = 0
 	/** s left of backing out (or pivoting, when something is behind too) after getting stuck. */
 	private reverseTimer = 0
 	private unstickSteer = 0
@@ -202,11 +204,14 @@ export class Avoidance {
 		const moved = Math.hypot(me.pos.x - this.lastPos.x, me.pos.z - this.lastPos.z)
 		if (Math.abs(me.throttle) > 0.3 && moved < 0.3 * dt * 4) this.stuckTimer += dt
 		else this.stuckTimer = 0
+		if (this.reverseTimer <= 0 && (this.freeRun += moved) > BOT_AI.avoidance.stuckClearDistance)
+			this.stuckEvents = 0
 		this.lastPos.x = me.pos.x
 		this.lastPos.z = me.pos.z
 		if (this.stuckTimer <= BOT_AI.avoidance.stuckTime || this.reverseTimer > 0) return null
 		this.reverseTimer = BOT_AI.avoidance.reverseTime
 		this.stuckTimer = 0
+		this.freeRun = 0
 		// Back out with the nose swinging away from whatever is in front (reverse steering is mirrored); with
 		// something behind as well, pivot on the spot instead
 		const t = this.tankInWay(w)

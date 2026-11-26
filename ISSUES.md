@@ -29,7 +29,7 @@ Measured baseline (production build, headless Chrome): steady 60 fps, JS about 6
 - [ ] **[A]** Bots never fire on the move: bloom at cruise speed (4–14) is far above their firing threshold (0.33–0.65), so defenders, capturers and retreating bots take fire without answering. Needs a short halt to shoot. `src/ai/gunner.ts:244`, `src/tank/gunnery.ts:105-111`
 - [ ] **[A]** "Too close, back off" fights the 5 m leash to the firing position: the bot jerks back and forth, never opens the range and cannot settle its aim; the reverse steering there is not mirrored. `src/ai/fight.ts:73,108-112`
 - [x] ~~**[V]** The «Защищайте базу!» (Defend the base!) signal is undone within 0.4 s: `defendBases` clears the defenders whenever no capture is in progress. `src/ai/team.ts:123`, `src/game/teamSignals.ts:87`~~
-- [ ] **[V]** `stuckEvents` never resets on progress: "third stuck in a row" is the third of the whole battle. `src/ai/avoidance.ts:216`
+- [x] ~~**[V]** `stuckEvents` never resets on progress: "third stuck in a row" is the third of the whole battle. `src/ai/avoidance.ts:216`~~
 - [ ] **[A]** A broken track counts as stuck (an event every 2.5 s, a reroute every 7.5 s), and the reroute is applied in any mode: in `hold` the bot can stay parked until an enemy appears. `src/ai/avoidance.ts:203`, `src/ai/bot.ts:153-154`
 - [ ] **[A]** The "target hidden" timer runs only with the gun loaded and settled: an IS-2 whose target went behind a house waits ~14 s before it moves. `src/ai/gunner.ts:113,253`
 - [ ] **[A]** The group "front" counts tanks no longer in the push (retreated, defending, resupplying): healthy tanks stop to regroup for up to 25 s of every 40 s. `src/ai/team.ts:201-205`
