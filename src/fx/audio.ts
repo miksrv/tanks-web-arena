@@ -55,10 +55,18 @@ export class Audio {
 	private readonly ear = { x: 0, z: 0, yaw: 0 }
 
 	constructor() {
-		const start = () => {
-			this.ensure()
+		// Every key or click tries to start the sound until the context really runs: a first key that is not an
+		// activating gesture (Esc) leaves it suspended
+		const stop = () => {
 			window.removeEventListener('keydown', start)
 			window.removeEventListener('mousedown', start)
+		}
+		const start = () => {
+			this.ensure()
+			const ctx = this.ctx
+			if (!ctx) return
+			if (ctx.state === 'running') stop()
+			else ctx.onstatechange = () => ctx.state === 'running' && stop()
 		}
 		window.addEventListener('keydown', start)
 		window.addEventListener('mousedown', start)
