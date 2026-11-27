@@ -38,7 +38,8 @@ export class AdaptiveResolution {
 	 */
 	update(raw: number, targetFps: number) {
 		this.frames++
-		this.spent += raw
+		// One long frame (a round start, a map upload) is the main thread, not the GPU: it counts as two at most
+		this.spent += Math.min(raw, 2 / targetFps)
 		this.budget += 1 / targetFps
 		this.cooldown -= raw
 		if (this.frames < windowFrames) return
