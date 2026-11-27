@@ -70,6 +70,7 @@ export const BOT_AI = {
 		firePosBlind: 2.5, // …sooner when the target stays hidden from it this long, s
 		duckMinReload: 3, // s: guns that reload faster keep shooting from the spot instead of ducking into cover
 		reverseSpeed: 3, // m/s, rough, to time the way back out of cover
+		faceArc: 0.45, // rad: a turreted tank standing still turns its hull (front armour) to within this of the threat
 	},
 	/** Scoring of spots to stand on. */
 	positions: {

@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { BOT_AI } from '../config'
 import { wrapAngle } from '../core/math'
 import type { Tank, WorldRefs } from '../tank/tank'
 import type { DriveCommand, Pt } from './types'
@@ -23,10 +24,14 @@ export function reverseTo(me: Tank, cmd: DriveCommand, p: Pt) {
 	cmd.throttle = -0.8
 }
 
-/** Turn the hull on the spot so the gun arc covers `p`. */
+/**
+ * Turn the hull on the spot toward `p`: a casemate until its gun arc covers it, a turreted tank until its front
+ * armour faces it (the turret covers `p` anyway, so the hull would otherwise stay side-on).
+ */
 export function faceToward(me: Tank, cmd: DriveCommand, p: Pt) {
 	const d = wrapAngle(Math.atan2(p.x - me.pos.x, p.z - me.pos.z) - me.yaw)
-	if (Math.abs(d) > me.def.gun.arc * 0.8) cmd.steer = clamp(d * 2, -1, 1)
+	const arc = me.def.shape.turret ? BOT_AI.fight.faceArc : me.def.gun.arc * 0.8
+	if (Math.abs(d) > arc) cmd.steer = clamp(d * 2, -1, 1)
 }
 
 /** Another tank (or a wreck) stands on the point: close enough is good enough, do not try to drive through it. */
