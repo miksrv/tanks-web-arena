@@ -1,5 +1,5 @@
 import { inZone } from '../game/capture'
-import { AMMO, BOTS } from '../config'
+import { AMMO, BOT_AI, BOTS } from '../config'
 import { HOWITZER } from '../combat/ballistics'
 import { penChance } from '../combat/armor'
 import { Spotting } from '../game/spotting'
@@ -8,9 +8,14 @@ import { gunHasLos } from './lineOfFire'
 
 const distXZ = (a: Tank, b: Tank) => Math.hypot(a.pos.x - b.pos.x, a.pos.z - b.pos.z)
 
-/** How far a bot looks for targets: the whole map for artillery. */
+/** How far a bot looks for targets: nearly the whole map for artillery. */
 export function reachOf(me: Tank): number {
-	return me.def.gun.howitzer ? HOWITZER.maxRange : BOTS.engageRange
+	return me.def.gun.howitzer ? HOWITZER.maxRange * BOT_AI.gunner.artyMaxReach : BOTS.engageRange
+}
+
+/** Within the distances `me` fires at: artillery also has a minimum range. */
+export function inReach(me: Tank, d: number): boolean {
+	return d <= reachOf(me) && (!me.def.gun.howitzer || d >= BOT_AI.gunner.artyMinRange)
 }
 
 /**
@@ -111,11 +116,10 @@ export function pickTarget(
 ): Tank | null {
 	let best: Tank | null = null
 	let bs = Infinity
-	const reach = reachOf(me)
 	for (const o of w.tanks) {
 		if (o.team === me.team || !o.alive || !Spotting.visibleTo(me.team, o, time)) continue
 		const d = distXZ(me, o)
-		if (d > reach) continue
+		if (!inReach(me, d)) continue
 		const score = targetScore(w, me, o, current, d) * (o === focus ? 0.45 : 1)
 		if (score < bs) {
 			bs = score

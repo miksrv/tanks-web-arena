@@ -88,6 +88,7 @@ export const BOT_AI = {
 		aimErrorReroll: 1.5, // s
 		minReaction: 0.3, // s after a target appears
 		artyMinRange: 60, // m
+		artyMaxReach: 0.95, // × HOWITZER.maxRange: the farthest a bot's artillery fires (and picks targets)
 		artyMaxMovingSpeed: 2.5, // m/s: faster targets are not worth a slow shell
 		mortarMinRange: 0.6, // × the blast radius: closer than this a rocket mortar holds its fire
 		hopelessPenChance: 0.12,

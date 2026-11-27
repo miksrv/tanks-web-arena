@@ -12,7 +12,7 @@ import { vantage } from './positions'
 import { createRoleAi, type Bot, type RoleAi } from './roles'
 import { routeAcross } from './routes'
 import { driveToSpot, faceToward, friendSpots, occupied, steerTo } from './steering'
-import { nearestEnemyDist, pickTarget, reachOf } from './targeting'
+import { inReach, nearestEnemyDist, pickTarget } from './targeting'
 import { inZone, type CaptureZone } from '../game/capture'
 import { spotInZone, type TeamTactics } from './team'
 import type { BotMode, DriveCommand, Pt } from './types'
@@ -362,7 +362,7 @@ export class BotBrain implements Bot {
 		const by = me.lastHitBy
 		if (!by?.alive || by.team === me.team) return
 		const seen = Spotting.visibleTo(me.team, by, time)
-		if (seen && this.dist(by) <= reachOf(me) && this.target !== by && (!this.target || gunHasLos(w, me, by))) {
+		if (seen && inReach(me, this.dist(by)) && this.target !== by && (!this.target || gunHasLos(w, me, by))) {
 			this.target = by
 			this.retarget = BOT_AI.core.retargetAfterHit
 			this.fighter.retarget()

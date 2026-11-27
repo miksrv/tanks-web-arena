@@ -1,12 +1,12 @@
 import * as THREE from 'three'
 import { AMMO, BOT_AI, BOTS, type AmmoId } from '../config'
-import { HOWITZER, flightTime, howitzerSolve, solveElevation } from '../combat/ballistics'
+import { flightTime, howitzerSolve, solveElevation } from '../combat/ballistics'
 import { penChance } from '../combat/armor'
 import type { Shells } from '../combat/shells'
 import { wrapAngle } from '../core/math'
 import type { Tank, WorldRefs } from '../tank/tank'
 import { friendInLine, gunSight, losBlocker, turretPoint } from './lineOfFire'
-import { facingArmor } from './targeting'
+import { facingArmor, inReach } from './targeting'
 import type { Pt } from './types'
 
 /** Which side of `t` faces `me` (+1 right, −1 left), or 0 when we see its front or rear. */
@@ -197,7 +197,7 @@ export class BotGunner {
 	 */
 	private artilleryHold(w: WorldRefs, t: Tank, d: number): HoldFire | null {
 		const me = this.me
-		if (d > HOWITZER.maxRange * 0.95 || d < BOT_AI.gunner.artyMinRange) return 'arty-range'
+		if (!inReach(me, d)) return 'arty-range'
 		if (Math.abs(t.speed) > BOT_AI.gunner.artyMaxMovingSpeed && t.tracked <= 0) return 'moving'
 		const r = (me.def.gun.splash ?? 4) + 4
 		const friend = w.tanks.some(
