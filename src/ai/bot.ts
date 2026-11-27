@@ -406,8 +406,7 @@ export class BotBrain implements Bot {
 		// In a base circle it shoots from where it stands: ducking out of it would give the capture up
 		if (this.target && !this.holdingCircle && this.fighter.duck(w, cmd, this.target, time)) return
 		if (driveToSpot(w, me, cmd, this.holdSpot, 8, 0.7)) return
-		if (!me.def.gun.howitzer && me.def.shape.turret) return
-		// Turn the hull so the gun arc covers the target (or the enemy base)
+		// Turn the hull so the gun arc (or, on a turreted tank, the front armour) covers the target (or the enemy base)
 		faceToward(me, cmd, this.target ? this.target.pos : w.terrain.bases[1 - me.team])
 	}
 

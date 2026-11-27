@@ -179,9 +179,8 @@ export class PropMeshes {
 		this.group.add(this.fenceMesh)
 	}
 
-	/** A standing or falling tree: rotated about its base toward its fall direction (fallT 0..1 eases to 85°). */
 	/**
-	 * Write a tree's matrices. `partial`: a falling tree in battle, whose 16 floats are added to the upload ranges
+	 * A standing or falling tree: rotated about its base toward its fall direction (fallT 0..1 eases to 85°). `partial`: a falling tree in battle, whose 16 floats are added to the upload ranges
 	 * so only they go to the GPU (not while building, when the whole buffer is uploaded anyway).
 	 */
 	writeTree(t: Tree, partial = false) {

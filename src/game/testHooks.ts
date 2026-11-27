@@ -43,7 +43,7 @@ export function readTestOptions(search = location.search): TestOptions {
 	if (round !== null) MATCH.roundTime = round
 	return {
 		autostart: params.has('autostart'),
-		unrecorded: params.has('autostart') || round !== null || speed !== null,
+		unrecorded: params.has('autostart') || round !== null || (speed !== null && speed !== 1),
 		seed: Number.isFinite(seed) ? seed : null,
 		tankId: key<string>('tank', TANKS),
 		timeScale: speed ?? 1,

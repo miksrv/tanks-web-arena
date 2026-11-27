@@ -26,7 +26,8 @@ export function facingArmor(me: Tank, t: Tank, turret = false): number {
 	const dx = me.pos.x - t.pos.x
 	const dz = me.pos.z - t.pos.z
 	const l = Math.hypot(dx, dz) || 1
-	const f = turret ? t.turretForward() : { x: t.fx, z: t.fz }
+	// A casemate's box turns with the hull, not with the gun's traverse
+	const f = turret && t.def.shape.turret ? t.turretForward() : { x: t.fx, z: t.fz }
 	const c = (dx * f.x + dz * f.z) / l // +1 = we are in front of it
 	const a = t.def.armor
 	const frontOrRear = c > 0.5 || c < -0.5

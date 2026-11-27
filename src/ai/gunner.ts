@@ -138,6 +138,14 @@ export class BotGunner {
 			this.why = laying
 			return
 		}
+		// About to fire: the line of fire must be clear now, not as of the last probe
+		if (!g.howitzer && this.sightAge > 0) {
+			this.watchSight(w, target, true)
+			if (!this.sight) {
+				this.why = this.blocker
+				return
+			}
+		}
 		this.why = 'fire'
 		const shot = me.fire()
 		if (shot) {
@@ -268,8 +276,8 @@ export class BotGunner {
 	}
 
 	/** Line of fire to the target: probed a few times a second, not every frame (a probe is a terrain and building walk). */
-	private watchSight(w: WorldRefs, t: Tank) {
-		if (t === this.sightFor && this.sightAge < BOT_AI.gunner.sightInterval) return
+	private watchSight(w: WorldRefs, t: Tank, fresh = false) {
+		if (!fresh && t === this.sightFor && this.sightAge < BOT_AI.gunner.sightInterval) return
 		this.sightFor = t
 		this.sightAge = 0
 		this.sight = gunSight(w, this.me, t)

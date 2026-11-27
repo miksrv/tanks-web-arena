@@ -1,4 +1,5 @@
 import { RENDER } from '../config'
+import { onPixelRatioChange } from './renderer'
 
 /**
  * Frame pacing on any refresh rate. Rendering is gated by a schedule that advances by the target interval, so the
@@ -12,12 +13,26 @@ export class FramePacer {
 	/** ms between refreshes, smoothed (0 until measured). */
 	private refresh = 0
 	private samples = 0
-	/** The shortest smoothed refresh seen: the panel's own rate, not a slowed-down one under load. */
+	/**
+	 * The shortest smoothed refresh seen: the panel's own rate, not a slowed-down one under load. Measured anew when
+	 * the tab comes back or the window moves to another monitor (`remeasure`): the panel may have changed.
+	 */
 	private fastest = Infinity
 
 	/** The display's refresh rate, Hz (Infinity until measured). */
 	get refreshRate() {
-		return 1000 / this.fastest
+		return this.fastest === Infinity ? Infinity : 1000 / this.fastest
+	}
+
+	constructor() {
+		document.addEventListener('visibilitychange', () => document.hidden || this.remeasure())
+		onPixelRatioChange(() => this.remeasure())
+	}
+
+	/** Forget the measured panel rate (another monitor, a tab shown again, power saving switched on or off). */
+	private remeasure() {
+		this.refresh = this.samples = 0
+		this.fastest = Infinity
 	}
 
 	/** Call on every rAF callback; returns true when this one should simulate and render. */
@@ -30,7 +45,9 @@ export class FramePacer {
 			this.refresh = this.refresh ? this.refresh + (gap - this.refresh) * 0.05 : gap
 			if (++this.samples > 30) this.fastest = Math.min(this.fastest, this.refresh)
 		}
-		if (this.refresh * (1 + RENDER.nearRate) >= interval) {
+		// The panel's own interval (the smoothed gap grows under load, which would switch the pacing on and off)
+		const panel = this.fastest === Infinity ? this.refresh : this.fastest
+		if (panel * (1 + RENDER.nearRate) >= interval) {
 			this.nextAt = now + interval
 			return true
 		}
