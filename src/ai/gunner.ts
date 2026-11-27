@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { AMMO, BOT_AI, BOTS, type AmmoId } from '../config'
+import { AMMO, BOT_AI, BOTS, COMBAT, type AmmoId } from '../config'
 import { flightTime, howitzerSolve, solveElevation } from '../combat/ballistics'
 import { penChance } from '../combat/armor'
 import type { Shells } from '../combat/shells'
@@ -217,18 +217,28 @@ export class BotGunner {
 		return friend ? 'friend-near' : null
 	}
 
-	/** Ammo choice from the plate we are most likely to hit. */
+	/**
+	 * Ammo choice from the plate we are most likely to hit. The shell in the gun keeps its place until the plate is
+	 * clearly wrong for it (a turning target would flip it back and forth), and the swap is made while it is free:
+	 * early in the reload (or costs little). Otherwise it swaps only out of a shell that cannot go through.
+	 */
 	private chooseAmmo(facing: number) {
 		const me = this.me
 		const g = me.def.gun
 		const heGun = !!g.derp || !!g.mortar
 		let want: AmmoId = heGun ? 'he' : 'ap'
 		if (!heGun) {
-			if (facing <= g.pen * AMMO.he.penMult * 0.85)
+			const thin = g.pen * AMMO.he.penMult * (me.ammo === 'he' ? 0.95 : 0.85)
+			if (facing <= thin)
 				want = 'he' // thin plate: HE goes through and hits 45 % harder
-			else if (penChance(g.pen, facing) < 0.35 && me.ammoCount.apcr > 0) want = 'apcr'
+			else if (penChance(g.pen, facing) < (me.ammo === 'apcr' ? 0.45 : 0.35) && me.ammoCount.apcr > 0)
+				want = 'apcr'
 		}
-		if (want !== me.ammo && me.reload <= 0.1) me.setAmmo(want)
+		if (want === me.ammo) return
+		// What the swap adds to the reload (see Tank.setAmmo)
+		const cost = Math.min(me.reloadTime, COMBAT.swapReloadMax) - me.reload
+		const useless = penChance(me.shellPen, facing) < BOT_AI.gunner.hopelessPenChance
+		if (cost <= BOT_AI.gunner.freeSwap || useless) me.setAmmo(want)
 	}
 
 	/** Loaded, settled and past the reaction delay? */
