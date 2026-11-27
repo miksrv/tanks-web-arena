@@ -21,7 +21,7 @@ export class AdaptiveResolution {
 
 	constructor(
 		private readonly renderer: THREE.WebGLRenderer,
-		private readonly max: number,
+		private max: number,
 		private readonly min: number,
 		private readonly onLowestScaleTooSlow: () => void,
 	) {
@@ -54,6 +54,14 @@ export class AdaptiveResolution {
 			this.setScale(Math.min(this.max, this.current + step))
 			this.cooldown = this.retry
 		}
+	}
+
+	/** A new ceiling (the window moved to another monitor, the page was zoomed): a scale at the old one follows it. */
+	setMax(max: number) {
+		if (max === this.max) return
+		const atMax = this.current >= this.max
+		this.max = max
+		if (atMax || this.current > max) this.setScale(max)
 	}
 
 	private setScale(v: number) {

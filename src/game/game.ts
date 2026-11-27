@@ -15,7 +15,7 @@ import { AdaptiveResolution } from '../render/adaptiveResolution'
 import { Environment } from '../render/environment'
 import { FpsCounter, FramePacer } from '../render/framePacer'
 import { Plane } from '../plane/plane'
-import { createRenderer, freezeShadows } from '../render/renderer'
+import { createRenderer, freezeShadows, onPixelRatioChange } from '../render/renderer'
 import { resupplyAll } from '../tank/ammo'
 import { type Tank, type WorldRefs } from '../tank/tank'
 import { ZoneMarkers, zonesFor } from './capture'
@@ -128,6 +128,7 @@ export class Game {
 			this.renderer.setSize(window.innerWidth, window.innerHeight)
 			this.rig.resize(window.innerWidth, window.innerHeight)
 		})
+		onPixelRatioChange(() => this.resolution.setMax(Math.min(window.devicePixelRatio, RENDER.maxScale)))
 		requestAnimationFrame(this.frame)
 	}
 
