@@ -32,7 +32,10 @@ export class AdaptiveResolution {
 		return this.current
 	}
 
-	/** Feed the raw (unscaled) time since the previous rendered frame and the frame-rate target, both per frame. */
+	/**
+	 * Feed the raw (unscaled) time since the previous rendered frame and the frame-rate target, both per frame. The
+	 * target is what the display can show: a 30 Hz panel (Safari Low Power Mode, a TV) is not a slow GPU.
+	 */
 	update(raw: number, targetFps: number) {
 		this.frames++
 		this.spent += raw

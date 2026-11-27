@@ -256,7 +256,7 @@ export class Game {
 		const dt = paused ? 0 : Math.min(RENDER.maxStep, raw) * this.timeScale
 		this.last = now
 		this.time += dt
-		this.resolution.update(raw, targetFps)
+		this.resolution.update(raw, Math.min(targetFps, this.pacer.refreshRate))
 		this.fps.count(raw)
 		this.audio.setPaused(paused)
 

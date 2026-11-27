@@ -11,6 +11,14 @@ export class FramePacer {
 	private lastAt = 0
 	/** ms between refreshes, smoothed (0 until measured). */
 	private refresh = 0
+	private samples = 0
+	/** The shortest smoothed refresh seen: the panel's own rate, not a slowed-down one under load. */
+	private fastest = Infinity
+
+	/** The display's refresh rate, Hz (Infinity until measured). */
+	get refreshRate() {
+		return 1000 / this.fastest
+	}
 
 	/** Call on every rAF callback; returns true when this one should simulate and render. */
 	shouldRender(now: number, targetFps: number): boolean {
@@ -18,7 +26,10 @@ export class FramePacer {
 		const gap = now - this.lastAt
 		this.lastAt = now
 		// Only refresh-sized gaps: a hidden tab or a hitch says nothing about the panel
-		if (gap > 0 && gap < 50) this.refresh = this.refresh ? this.refresh + (gap - this.refresh) * 0.05 : gap
+		if (gap > 0 && gap < 50) {
+			this.refresh = this.refresh ? this.refresh + (gap - this.refresh) * 0.05 : gap
+			if (++this.samples > 30) this.fastest = Math.min(this.fastest, this.refresh)
+		}
 		if (this.refresh * (1 + RENDER.nearRate) >= interval) {
 			this.nextAt = now + interval
 			return true
