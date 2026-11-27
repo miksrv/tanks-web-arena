@@ -90,10 +90,13 @@ export function hitBoxes(
 	return { t: best, x, y, z, part, nx, ny, nz }
 }
 
-/** Which face of the hull (or turret) a box normal belongs to. */
+/**
+ * Which face of the hull (or turret) a box normal belongs to. A casemate's box turns with the hull, not with the
+ * gun's traverse (see `placeBoxes`), so its faces are the hull's.
+ */
 function faceOf(tank: Tank, h: BoxHit): Face {
 	if (h.ny > ZONES.topNormalY) return 'top'
-	const fwd = h.part === 'hull' ? { x: tank.fx, z: tank.fz } : tank.turretForward()
+	const fwd = h.part === 'hull' || !tank.def.shape.turret ? { x: tank.fx, z: tank.fz } : tank.turretForward()
 	const d = h.nx * fwd.x + h.nz * fwd.z
 	return d > ZONES.frontDot ? 'front' : d < -ZONES.frontDot ? 'rear' : 'side'
 }
