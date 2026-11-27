@@ -304,8 +304,8 @@ export class Game {
 		for (const b of this.bots) b.tank.throttle = b.tank.steer = 0
 		const medals = match.outcome === 'left' ? [] : awardMedals(this.player, this.tanks, match)
 		hud.showResult(resultHtml(match.winner, match.outcome, this.player, medals))
-		// Automated runs (`?autostart`) play with nobody at the controls: they leave the history alone
-		if (!this.opts.autostart) this.records.add(this.player, match, medals, this.report.totals())
+		// Automated runs (`?autostart`) and changed rules (`?round`, `?speed`) leave the history alone
+		if (!this.opts.unrecorded) this.records.add(this.player, match, medals, this.report.totals())
 		hud.center('')
 		hud.setReport(this.report.html())
 		// The next map is built once the result screen is up, not in the frame that shows it
