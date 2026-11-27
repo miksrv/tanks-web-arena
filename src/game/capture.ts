@@ -54,13 +54,14 @@ export class Capture {
 
 	constructor(readonly zones: CaptureZone[]) {}
 
-	/** Advance every circle; returns the side that has just captured one, else null. */
-	update(dt: number, tanks: Tank[]): 0 | 1 | null {
+	/** Advance every circle; returns the side that has just captured one, −1 if both did in the same frame, else null. */
+	update(dt: number, tanks: Tank[]): 0 | 1 | -1 | null {
+		let won: 0 | 1 | -1 | null = null
 		for (const z of this.zones) {
-			const won = this.updateZone(z, dt, tanks)
-			if (won !== null) return won
+			const side = this.updateZone(z, dt, tanks)
+			if (side !== null) won = won === null || won === side ? side : -1
 		}
-		return null
+		return won
 	}
 
 	private updateZone(z: CaptureZone, dt: number, tanks: Tank[]): 0 | 1 | null {

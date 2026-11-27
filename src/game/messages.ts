@@ -56,7 +56,9 @@ export function resultHtml(winner: 0 | 1 | -1 | null, outcome: Outcome, player: 
 		winner === -1 || winner === null
 			? outcome === 'destroyed'
 				? 'Все машины уничтожены'
-				: 'Время вышло'
+				: outcome === 'capture'
+					? 'Обе базы захвачены'
+					: 'Время вышло'
 			: OUTCOME[outcome](NATION_LABEL[winner === 0 ? 'ussr' : 'germany'])
 	const s = player.stats
 	const stats = [
