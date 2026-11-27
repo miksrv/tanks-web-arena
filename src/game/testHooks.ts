@@ -8,9 +8,13 @@ import { ARCHETYPES, MATCH, MODE_LABEL, TANKS, WEATHER, type Archetype, type Bat
  * - `&weather=fog` forces the weather of every map, `&mode=encounter` the battle mode, `&map=steppe` the archetype
  * - `&view=top` puts the satellite camera over the map centre (screenshots of the whole map)
  * - `&debug` logs the match state every 5 s to the console
+ *
+ * A round or speed override makes the run a test: its battles stay out of the history.
  */
 export interface TestOptions {
 	autostart: boolean
+	/** Nobody at the controls (`?autostart`) or changed rules (`?round`, `?speed`): battles are not recorded. */
+	unrecorded: boolean
 	seed: number | null
 	tankId: string | null
 	timeScale: number
@@ -23,24 +27,31 @@ export interface TestOptions {
 
 export function readTestOptions(search = location.search): TestOptions {
 	const params = new URLSearchParams(search)
-	const num = (name: string) => (params.has(name) ? Number(params.get(name)) : null)
-	const tank = params.get('tank')
-	const round = num('round')
-	const speed = num('speed')
-	const weather = params.get('weather')
-	const mode = params.get('mode')
-	const map = params.get('map')
+	// A positive finite number, or null (drops `?speed=abc`, `?round=-1`, `?round=Infinity`)
+	const positive = (name: string) => {
+		const v = params.has(name) ? Number(params.get(name)) : NaN
+		return Number.isFinite(v) && v > 0 ? v : null
+	}
+	// Own keys only: `?tank=constructor` must not pass for a vehicle
+	const key = <T extends string>(name: string, table: object) => {
+		const v = params.get(name)
+		return v !== null && Object.hasOwn(table, v) ? (v as T) : null
+	}
+	const seed = params.has('seed') ? Number(params.get('seed')) : NaN
+	const round = positive('round')
+	const speed = positive('speed')
 	if (round !== null) MATCH.roundTime = round
 	return {
 		autostart: params.has('autostart'),
-		seed: num('seed'),
-		tankId: tank && tank in TANKS ? tank : null,
-		timeScale: speed !== null && speed > 0 ? speed : 1, // also drops NaN from `?speed=abc`
+		unrecorded: params.has('autostart') || round !== null || (speed !== null && speed !== 1),
+		seed: Number.isFinite(seed) ? seed : null,
+		tankId: key<string>('tank', TANKS),
+		timeScale: speed ?? 1,
 		overviewTop: params.get('view') === 'top',
 		debug: params.has('debug'),
-		weather: weather && weather in WEATHER ? (weather as Weather) : null,
-		mode: mode && mode in MODE_LABEL ? (mode as BattleMode) : null,
-		archetype: map && map in ARCHETYPES ? (map as Archetype) : null,
+		weather: key<Weather>('weather', WEATHER),
+		mode: key<BattleMode>('mode', MODE_LABEL),
+		archetype: key<Archetype>('map', ARCHETYPES),
 	}
 }
 

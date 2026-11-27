@@ -23,23 +23,23 @@ export function hullPose(t: Terrain, x: number, z: number, fx: number, fz: numbe
 		const g = t.ground(px, pz)
 		return deck && deck.h > g ? deck.h : g
 	}
-	const rx = fz
-	const rz = -fx // right vector
+	const lx = fz
+	const lz = -fx // left vector (+x of the model is the hull's left side)
 	let cL = 0
 	let cR = 0
 	let slope = 0
 	for (const side of SIDES) {
-		const sx = x + rx * side * W * trackInset
-		const sz = z + rz * side * W * trackInset
+		const sx = x + lx * side * W * trackInset
+		const sz = z + lz * side * W * trackInset
 		const line = fitLine(hAt, sx, sz, fx, fz, L)
-		if (side < 0) cL = line.c
+		if (side > 0) cL = line.c
 		else cR = line.c
 		slope += line.s / 2
 	}
 	return {
 		pitch: Math.atan(slope),
-		// Positive roll (rotation about the forward axis) lifts the right side
-		roll: THREE.MathUtils.clamp(Math.atan2(cR - cL, W * trackInset * 2), -maxRoll, maxRoll),
+		// Positive roll (rotation about the forward axis) lifts the left side
+		roll: THREE.MathUtils.clamp(Math.atan2(cL - cR, W * trackInset * 2), -maxRoll, maxRoll),
 		y: Math.max(hAt(x, z) - sink, (cL + cR) / 2),
 	}
 }

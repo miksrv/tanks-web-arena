@@ -59,7 +59,7 @@
   - Empty circle: the points stay where they are.
   - Your own base can only be taken by the enemy; the neutral base starts being taken by the side with more tanks in the circle, the other side counts as defenders for it.
   - 100 points — victory. The capture bar under the clock (green — we are capturing, red — we are being captured), circles and progress on the minimap, a warning in the log when the enemy starts taking the base.
-- Victory: the enemy team is destroyed (both teams gone in the same instant — a draw) or the base is captured; after 6 minutes — in Assault the defence, otherwise whoever has more survivors, a draw if equal. Result screen 11 s: the reason, personal numbers (damage, spotting damage, blocked, destroyed, spotted) and medals; then the garage and a **new map** (new seed, everything is regenerated; a named map — its own seed).
+- Victory: the enemy team is destroyed (both teams gone in the same instant — a draw) or the base is captured (both bases in the same instant — a draw); after 6 minutes — in Assault the defence, otherwise whoever has more survivors, a draw if equal. Result screen 11 s: the reason, personal numbers (damage, spotting damage, blocked, destroyed, spotted) and medals; then the garage and a **new map** (new seed, everything is regenerated; a named map — its own seed).
 
 ## Battle report (`src/game/battleReport.ts`)
 

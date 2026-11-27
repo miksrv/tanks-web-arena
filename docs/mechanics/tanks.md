@@ -41,7 +41,7 @@ Code: `src/tank/tank.ts`, model: `src/tank/tankView.ts` and `src/tank/model/`, s
 
 Gun types: regular (AP by default), SPG howitzers (`howitzer`: indirect fire, top-down view), "derp guns" (`derp`: direct fire, HE by default), autocannons (`bloomShot` 0.35: a burst barely opens up the reticle) and rocket launchers (`salvo`: one press launches a series of rockets at 0.1 s intervals along the current position of the rails, each with its own dispersion; HE only; howitzer ballistics) and the rocket mortar (`mortar`, the Sturmtiger: see below). The team composition is picked by roles, the vehicle within a role is chosen at random.
 
-Armour is given "effective" against a vertical plate: the slope of the front plates of the T-34, IS-2 and SU-100 is already included in the number. Roof 10–30 mm — for splash and indirect fire.
+Armour is given "effective" against a vertical plate: the slope of the front plates of the T-34, IS-2 and SU-100 is already included in the number. Roof 3–40 mm (rocket trucks to the Sturmtiger) — for splash and indirect fire.
 
 Rocket mortar (`gun.mortar`, numbers in `MORTAR`): direct fire with a slow rocket-assisted HE round (153 m/s, a visible arc and a smoke trail; the aim readout shows the flight time). HE only, 10 rounds. The round is loaded at a halt: faster than 1 m/s the loading runs at ×0.4, the reload ring turns red and the readout says «ЗАРЯЖАНИЕ ТОЛЬКО НА МЕСТЕ» (loading only at a halt). The burst is a shock wave: within the blast radius a track is knocked off with a chance of 0.9 × closeness and a crew member is concussed with 0.6 × closeness, even when the roof armour took all the splash damage; trees, haystacks and fences within 1.3 × the radius go down.
 
@@ -58,7 +58,7 @@ Rocket mortar (`gun.mortar`, numbers in `MORTAR`): direct fire with a slow rocke
 
 - The turret target is the aim point (for the player — the camera ray through the screen centre; while RMB is held, the aim is kept and «обзор» (look around) lights up under the reticle). The turret traverses at `turretTurn`.
 - Turretless vehicles: sector `±arc`; if the target is outside the sector and there is no manual steering, the hull turns itself.
-- Elevation/depression by class (−5…−8° / +16…+17°, howitzers up to +69°), speed 1.5 rad/s.
+- Depression −3…−10° on direct-fire guns, elevation +11…+23°; howitzers up to +69°, rocket rails +3…+63°. Speed 1.5 rad/s.
 
 ## Model (`tankView.ts`, `src/tank/model/`)
 

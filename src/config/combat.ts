@@ -5,7 +5,7 @@ import type { Role } from './types'
 export const COMBAT = {
 	penRng: 0.25, // ±25 % on penetration
 	dmgRng: 0.25, // ±25 % on damage
-	overmatch: 3, // caliber ≥ 3 × plate thickness: no ricochet, no slope bonus
+	overmatch: 3, // caliber ≥ 3 × plate thickness: no ricochet, stronger normalisation (the slope still counts)
 	heNonPenFactor: 0.5, // HE that fails to penetrate: dmg × 0.5 − armour × heArmorFactor
 	heArmorFactor: 1.1, // each mm of armour takes this much off a blast (non-penetrating HE and splash)
 	minSlopeCos: 0.2, // cap on the slope multiplier of effective armour (1 / 0.2 = 5×)
@@ -75,6 +75,7 @@ export const MORTAR = {
 	fellRadius: 1.3, // × the blast radius: trees, haystacks and fences inside go down
 	trailStep: 0.03, // s between the smoke puffs behind the rocket
 	shake: 0.9, // camera shake of the shot for the player
+	shellLife: 12, // s of flight: the slow round (153 m/s) still crosses the whole map
 }
 
 /** Hulls against walls, props and each other. */

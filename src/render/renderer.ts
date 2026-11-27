@@ -14,6 +14,21 @@ export function createRenderer(pixelRatio: number): THREE.WebGLRenderer {
 }
 
 /**
+ * Calls `cb` whenever the device pixel ratio changes (the window moved to another monitor, the page was zoomed): a
+ * resize event does not always come with it, a media query on the current ratio does.
+ */
+export function onPixelRatioChange(cb: () => void) {
+	matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`).addEventListener(
+		'change',
+		() => {
+			cb()
+			onPixelRatioChange(cb)
+		},
+		{ once: true },
+	)
+}
+
+/**
  * Nothing moves (the garage backdrop, a paused battle): render the shadow map once more and keep it, instead of
  * redrawing every caster each frame.
  */

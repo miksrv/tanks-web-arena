@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { HUD } from '../config'
-import { $, createEl, ndcToScreen, setStyle } from './dom'
+import { $, createEl, ndcToScreen, setStyle, show } from './dom'
 
 const N = HUD.notifications
 
@@ -96,13 +96,13 @@ export class Notifications {
 			pp.pos.y += dt * N.popupRise
 			const p = this.tmp.copy(pp.pos).project(camera)
 			if (p.z > 1) {
-				pp.el.style.display = 'none'
+				show(pp.el, false)
 				continue
 			}
 			const s = ndcToScreen(p.x, p.y)
-			pp.el.style.display = 'block'
-			pp.el.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -50%)`
-			pp.el.style.opacity = String(Math.min(1, pp.life))
+			show(pp.el, true)
+			setStyle(pp.el, 'transform', `translate(${s.x.toFixed(1)}px, ${s.y.toFixed(1)}px) translate(-50%, -50%)`)
+			setStyle(pp.el, 'opacity', Math.min(1, pp.life).toFixed(2))
 		}
 	}
 }

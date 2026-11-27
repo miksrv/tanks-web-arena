@@ -12,7 +12,7 @@ import { vantage } from './positions'
 import { createRoleAi, type Bot, type RoleAi } from './roles'
 import { routeAcross } from './routes'
 import { driveToSpot, faceToward, friendSpots, occupied, steerTo } from './steering'
-import { nearestEnemyDist, pickTarget, reachOf } from './targeting'
+import { inReach, nearestEnemyDist, pickTarget } from './targeting'
 import { inZone, type CaptureZone } from '../game/capture'
 import { spotInZone, type TeamTactics } from './team'
 import type { BotMode, DriveCommand, Pt } from './types'
@@ -158,7 +158,7 @@ export class BotBrain implements Bot {
 
 		const cmd = this.drive(w, time)
 		this.evade(dt, cmd)
-		const reroute = this.avoidance.update(w, dt, this.path, this.wp)
+		const reroute = this.avoidance.update(w, dt, this.path, this.wp, cmd.throttle)
 		if (reroute) this.setPath(reroute, this.holdSpot)
 		this.avoidance.apply(dt, cmd)
 		me.throttle = cmd.throttle
@@ -362,7 +362,7 @@ export class BotBrain implements Bot {
 		const by = me.lastHitBy
 		if (!by?.alive || by.team === me.team) return
 		const seen = Spotting.visibleTo(me.team, by, time)
-		if (seen && this.dist(by) <= reachOf(me) && this.target !== by && (!this.target || gunHasLos(w, me, by))) {
+		if (seen && inReach(me, this.dist(by)) && this.target !== by && (!this.target || gunHasLos(w, me, by))) {
 			this.target = by
 			this.retarget = BOT_AI.core.retargetAfterHit
 			this.fighter.retarget()
@@ -406,8 +406,7 @@ export class BotBrain implements Bot {
 		// In a base circle it shoots from where it stands: ducking out of it would give the capture up
 		if (this.target && !this.holdingCircle && this.fighter.duck(w, cmd, this.target, time)) return
 		if (driveToSpot(w, me, cmd, this.holdSpot, 8, 0.7)) return
-		if (!me.def.gun.howitzer && me.def.shape.turret) return
-		// Turn the hull so the gun arc covers the target (or the enemy base)
+		// Turn the hull so the gun arc (or, on a turreted tank, the front armour) covers the target (or the enemy base)
 		faceToward(me, cmd, this.target ? this.target.pos : w.terrain.bases[1 - me.team])
 	}
 

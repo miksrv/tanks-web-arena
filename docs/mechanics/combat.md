@@ -78,7 +78,7 @@ The hitboxes stayed the same (hull and turret) plus a small commander's cupola b
 - Ramming: closing speed > 3 m/s → damage `1.4 · speed · mass ratio` (mass = hit points), doubled for the rammed vehicle. The rammer is the one that brought more of the closing speed; it gets the ram ribbon. A pair is resolved once per frame, both vehicles lose speed.
 - Rocket artillery (`gun.salvo`): a shot launches a salvo, the remaining rockets leave on their own at `salvoInterval` intervals (`Tank.salvoTick`, polled by the game loop), each along the current position of the rails with its own dispersion; the reload counts from the first rocket. HE only, an attempt to switch the shell is rejected.
 - Empty rack: no shot happens, the gun switches to another shell on its own with the switch delay (see "Ammunition").
-- HE splash: everyone within the radius takes `0.6 · dmg · (1 − d/r)` minus `roof · 1.1`, 30 % chance to knock off a track.
+- HE splash: everyone within the radius takes `0.6 · dmg · (1 − d/r)` minus `roof · 1.1`; a track is knocked off with a chance of `0.3 · (1 − d/r)`.
 - The kill is credited to whoever dealt the last damage (including fire and ramming). A destroyed tank becomes a wreck: dark, turret askew, smoking. After an ammo rack detonation the turret flies off (9–13 m/s upward, 1.5–4 m/s sideways, tumbling) and lands on the hull roof or on the ground nearby — also cover only by the hull (the turret box stays in place).
 
 ## Artillery view (SPG, Shift)

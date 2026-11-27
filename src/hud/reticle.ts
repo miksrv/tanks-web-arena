@@ -104,7 +104,7 @@ export class Reticle {
 			? (howitzerSolve(player.aimDist, player.aimTarget.y - this.gunO.y)?.speed ?? 100)
 			: g.shellSpeed * player.ammoDef.speedMult
 		const gravity = g.howitzer ? HOWITZER.gravity : GRAVITY
-		const maxTime = g.howitzer ? R.traceTime.howitzer : R.traceTime.direct
+		const maxTime = g.howitzer ? R.traceTime.howitzer : g.mortar ? R.traceTime.mortar : R.traceTime.direct
 		traceShot(w, this.gunO, this.gunD, speed, gravity, maxTime, player, this.gunP, this.gunB)
 		const p = this.tmp.copy(this.gunP).project(rig.camera)
 		if (p.z > 1) {
@@ -128,7 +128,8 @@ export class Reticle {
 	 */
 	private updateReloadRing(player: Tank, reticlePx: number, dt: number, aiming: boolean) {
 		const ring = $('ring')
-		const [track, arc] = Array.from(ring.children)
+		const track = ring.children[0]
+		const arc = ring.children[1]
 		const loading = player.reload > 0
 		this.ringReady = loading ? R.readyFlash : Math.max(0, this.ringReady - dt)
 		const visible = aiming && (loading || this.ringReady > 0)

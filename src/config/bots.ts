@@ -70,6 +70,7 @@ export const BOT_AI = {
 		firePosBlind: 2.5, // …sooner when the target stays hidden from it this long, s
 		duckMinReload: 3, // s: guns that reload faster keep shooting from the spot instead of ducking into cover
 		reverseSpeed: 3, // m/s, rough, to time the way back out of cover
+		faceArc: 0.45, // rad: a turreted tank standing still turns its hull (front armour) to within this of the threat
 	},
 	/** Scoring of spots to stand on. */
 	positions: {
@@ -88,9 +89,12 @@ export const BOT_AI = {
 		aimErrorReroll: 1.5, // s
 		minReaction: 0.3, // s after a target appears
 		artyMinRange: 60, // m
+		artyMaxReach: 0.95, // × HOWITZER.maxRange: the farthest a bot's artillery fires (and picks targets)
 		artyMaxMovingSpeed: 2.5, // m/s: faster targets are not worth a slow shell
 		mortarMinRange: 0.6, // × the blast radius: closer than this a rocket mortar holds its fire
 		hopelessPenChance: 0.12,
+		sightInterval: 0.12, // s between line-of-fire probes to the target
+		freeSwap: 0.4, // s: a shell swap that adds at most this to the reload is made at once, a dearer one waits
 		/** rad: a long arc magnifies elevation errors, so a howitzer waits until the barrel is right on. */
 		artyPitchTolerance: 0.006,
 		scoutFinishHp: 0.25, // scouts give their position away for a target this weak: it may die

@@ -179,18 +179,28 @@ export class PropMeshes {
 		this.group.add(this.fenceMesh)
 	}
 
-	/** A standing or falling tree: rotated about its base toward its fall direction (fallT 0..1 eases to 85°). */
-	writeTree(t: Tree) {
+	/**
+	 * A standing or falling tree: rotated about its base toward its fall direction (fallT 0..1 eases to 85°). `partial`: a falling tree in battle, whose 16 floats are added to the upload ranges
+	 * so only they go to the GPU (not while building, when the whole buffer is uploaded anyway).
+	 */
+	writeTree(t: Tree, partial = false) {
 		const ang = t.fallT * t.fallT * 1.48
 		const axis = this.v.set(-t.dirZ, 0, t.dirX).normalize()
 		this.q.setFromAxisAngle(axis, -ang)
 		this.q.multiply(this.q2.setFromAxisAngle(AXIS_Y, (t.x * 13.1 + t.z * 7.7) % 6.28))
 		this.v.set(t.x, t.h - 0.2, t.z)
 		this.tmp.compose(this.v, this.q, this.sc.setScalar(t.s))
-		this.crowns.get(t.species)?.setMatrixAt(this.crownIndex.get(t) ?? 0, this.tmp)
+		const crown = this.crowns.get(t.species)
+		const ci = this.crownIndex.get(t) ?? 0
+		crown?.setMatrixAt(ci, this.tmp)
 		const [girth, height] = SPECIES[t.species].trunk
 		this.tmp.compose(this.v, this.q, this.sc.set(t.s * girth, t.s * height, t.s * girth))
-		this.trunks.setMatrixAt(this.trunkIndex.get(t) ?? 0, this.tmp)
+		const ti = this.trunkIndex.get(t) ?? 0
+		this.trunks.setMatrixAt(ti, this.tmp)
+		if (partial) {
+			crown?.instanceMatrix.addUpdateRange(ci * 16, 16)
+			this.trunks.instanceMatrix.addUpdateRange(ti * 16, 16)
+		}
 	}
 
 	writeHay(h: Hay, i: number) {
@@ -213,7 +223,7 @@ export class PropMeshes {
 		this.fenceMesh.instanceMatrix.needsUpdate = true
 	}
 
-	/** Upload the instance matrices of the trunks and of the crowns of the species that changed this frame. */
+	/** Upload the changed ranges of the trunks and of the crowns of the species that changed this frame. */
 	markTreesDirty(species: ReadonlySet<TreeSpecies>) {
 		if (!species.size) return
 		this.trunks.instanceMatrix.needsUpdate = true

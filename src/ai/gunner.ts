@@ -1,12 +1,12 @@
 import * as THREE from 'three'
-import { AMMO, BOT_AI, BOTS, type AmmoId } from '../config'
-import { HOWITZER, flightTime, howitzerSolve, solveElevation } from '../combat/ballistics'
+import { AMMO, BOT_AI, BOTS, COMBAT, type AmmoId } from '../config'
+import { flightTime, howitzerSolve, solveElevation } from '../combat/ballistics'
 import { penChance } from '../combat/armor'
 import type { Shells } from '../combat/shells'
 import { wrapAngle } from '../core/math'
 import type { Tank, WorldRefs } from '../tank/tank'
-import { friendInLine, gunSight, losBlocker, turretPoint } from './lineOfFire'
-import { facingArmor } from './targeting'
+import { friendInLine, gunSight, losBlocker, turretPoint, type GunSight } from './lineOfFire'
+import { facingArmor, inReach } from './targeting'
 import type { Pt } from './types'
 
 /** Which side of `t` faces `me` (+1 right, −1 left), or 0 when we see its front or rear. */
@@ -55,6 +55,11 @@ export class BotGunner {
 	trackHunter = false
 	/** The target's hull is hidden from our gun but its turret is not: lay on the turret. */
 	private aimTurret = false
+	/** The last line-of-fire probe: its target, age (s), result and, when blocked, what blocks it. */
+	private sightFor: Tank | null = null
+	private sightAge = Infinity
+	private sight: GunSight | null = null
+	private blocker: HoldFire = 'los-terrain'
 	private aimErr = { x: 0, y: 0, z: 0 }
 	private aimErrTimer = 0
 	private reaction = 0
@@ -68,6 +73,7 @@ export class BotGunner {
 	tick(dt: number) {
 		this.aimErrTimer -= dt
 		this.reaction -= dt
+		this.sightAge += dt
 	}
 
 	resetRound() {
@@ -94,6 +100,11 @@ export class BotGunner {
 			this.why = 'stealth'
 			return
 		}
+		if (!g.howitzer) {
+			// The hidden-target timer runs whatever the gun is doing: a bot reloading behind a house moves on too
+			this.watchSight(w, target)
+			this.noLosTimer = this.sight ? 0 : this.noLosTimer + dt
+		}
 		if (g.howitzer) {
 			const hold = this.artilleryHold(w, target, d)
 			if (hold) {
@@ -110,7 +121,7 @@ export class BotGunner {
 		}
 		const facing = facingArmor(me, target, this.aimTurret)
 		if (!g.howitzer) this.chooseAmmo(facing)
-		const hold = this.readiness() ?? (g.howitzer ? null : this.lineOfFireHold(w, target, d, facing, dt))
+		const hold = this.readiness() ?? (g.howitzer ? null : this.lineOfFireHold(w, target, d, facing))
 		if (hold) {
 			this.why = hold
 			return
@@ -126,6 +137,14 @@ export class BotGunner {
 		if (laying) {
 			this.why = laying
 			return
+		}
+		// About to fire: the line of fire must be clear now, not as of the last probe
+		if (!g.howitzer && this.sightAge > 0) {
+			this.watchSight(w, target, true)
+			if (!this.sight) {
+				this.why = this.blocker
+				return
+			}
 		}
 		this.why = 'fire'
 		const shot = me.fire()
@@ -197,7 +216,7 @@ export class BotGunner {
 	 */
 	private artilleryHold(w: WorldRefs, t: Tank, d: number): HoldFire | null {
 		const me = this.me
-		if (d > HOWITZER.maxRange * 0.95 || d < BOT_AI.gunner.artyMinRange) return 'arty-range'
+		if (!inReach(me, d)) return 'arty-range'
 		if (Math.abs(t.speed) > BOT_AI.gunner.artyMaxMovingSpeed && t.tracked <= 0) return 'moving'
 		const r = (me.def.gun.splash ?? 4) + 4
 		const friend = w.tanks.some(
@@ -217,18 +236,28 @@ export class BotGunner {
 		return friend ? 'friend-near' : null
 	}
 
-	/** Ammo choice from the plate we are most likely to hit. */
+	/**
+	 * Ammo choice from the plate we are most likely to hit. The shell in the gun keeps its place until the plate is
+	 * clearly wrong for it (a turning target would flip it back and forth), and the swap is made while it is free:
+	 * early in the reload (or costs little). Otherwise it swaps only out of a shell that cannot go through.
+	 */
 	private chooseAmmo(facing: number) {
 		const me = this.me
 		const g = me.def.gun
 		const heGun = !!g.derp || !!g.mortar
 		let want: AmmoId = heGun ? 'he' : 'ap'
 		if (!heGun) {
-			if (facing <= g.pen * AMMO.he.penMult * 0.85)
+			const thin = g.pen * AMMO.he.penMult * (me.ammo === 'he' ? 0.95 : 0.85)
+			if (facing <= thin)
 				want = 'he' // thin plate: HE goes through and hits 45 % harder
-			else if (penChance(g.pen, facing) < 0.35 && me.ammoCount.apcr > 0) want = 'apcr'
+			else if (penChance(g.pen, facing) < (me.ammo === 'apcr' ? 0.45 : 0.35) && me.ammoCount.apcr > 0)
+				want = 'apcr'
 		}
-		if (want !== me.ammo && me.reload <= 0.1) me.setAmmo(want)
+		if (want === me.ammo) return
+		// What the swap adds to the reload (see Tank.setAmmo)
+		const cost = Math.min(me.reloadTime, COMBAT.swapReloadMax) - me.reload
+		const useless = penChance(me.shellPen, facing) < BOT_AI.gunner.hopelessPenChance
+		if (cost <= BOT_AI.gunner.freeSwap || useless) me.setAmmo(want)
 	}
 
 	/** Loaded, settled and past the reaction delay? */
@@ -246,12 +275,20 @@ export class BotGunner {
 		return null
 	}
 
+	/** Line of fire to the target: probed a few times a second, not every frame (a probe is a terrain and building walk). */
+	private watchSight(w: WorldRefs, t: Tank, fresh = false) {
+		if (!fresh && t === this.sightFor && this.sightAge < BOT_AI.gunner.sightInterval) return
+		this.sightFor = t
+		this.sightAge = 0
+		this.sight = gunSight(w, this.me, t)
+		if (!this.sight) this.blocker = losBlocker(w, this.me, t)
+	}
+
 	/** Direct fire: our muzzle to the target through buildings or terrain = no shot; no friends in the line. */
-	private lineOfFireHold(w: WorldRefs, t: Tank, d: number, facing: number, dt: number): HoldFire | null {
+	private lineOfFireHold(w: WorldRefs, t: Tank, d: number, facing: number): HoldFire | null {
 		const me = this.me
-		const sight = gunSight(w, me, t)
-		this.noLosTimer = sight ? 0 : this.noLosTimer + dt
-		if (!sight) return losBlocker(w, me, t)
+		const sight = this.sight
+		if (!sight) return this.blocker
 		// The visible part changed (the target went hull-down, or came out): lay on it before shooting
 		const turret = sight === 'turret'
 		if (turret !== this.aimTurret) {

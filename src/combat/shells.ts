@@ -90,7 +90,7 @@ export class Shells {
 			splash: p.splash,
 			howitzer: p.howitzer,
 			gravity: p.howitzer ? HOWITZER.gravity : GRAVITY,
-			life: p.howitzer ? COMBAT.howitzerShellLife : COMBAT.shellLife,
+			life: p.howitzer ? COMBAT.howitzerShellLife : p.shock ? MORTAR.shellLife : COMBAT.shellLife,
 			dist: 0,
 			bomb: false,
 			shock: p.shock,
@@ -314,7 +314,10 @@ export class Shells {
 		const crewChance = s.shock ? MORTAR.crewChance : CREW.splashChance
 		for (const t of w.tanks) {
 			if (!t.alive || t === direct) continue
-			const d = Math.hypot(t.pos.x - imp.x, t.pos.z - imp.z) - t.radius * COMBAT.splashHullShare
+			// Height counts too: a burst on a roof or a cliff top is far from a tank below it
+			const top = t.pos.y + t.view.hullTop + t.def.shape.tH
+			const dy = imp.y < t.pos.y ? t.pos.y - imp.y : imp.y > top ? imp.y - top : 0
+			const d = Math.hypot(t.pos.x - imp.x, dy, t.pos.z - imp.z) - t.radius * COMBAT.splashHullShare
 			if (d > s.splash) continue
 			const k = 1 - Math.max(0, d) / s.splash
 			const raw = s.spec.dmg * COMBAT.splashDamage * k * (1 + (Math.random() - 0.5) * COMBAT.splashRng)

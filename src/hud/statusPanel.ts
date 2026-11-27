@@ -154,9 +154,13 @@ export class StatusPanel {
 			['teamB', 1],
 		] as const) {
 			const el = $(id)
-			const members = tanks.filter((t) => t.team === team)
-			if (el.childElementCount !== members.length) el.innerHTML = '<div class="pip"></div>'.repeat(members.length)
-			members.forEach((t, i) => setClass(el.children[i] as HTMLElement, t.alive ? 'pip' : 'pip dead'))
+			let n = 0
+			for (const t of tanks) if (t.team === team) n++
+			if (el.childElementCount !== n) el.innerHTML = '<div class="pip"></div>'.repeat(n)
+			let i = 0
+			for (const t of tanks) {
+				if (t.team === team) setClass(el.children[i++] as HTMLElement, t.alive ? 'pip' : 'pip dead')
+			}
 		}
 	}
 }

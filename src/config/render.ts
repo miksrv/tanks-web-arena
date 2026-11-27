@@ -6,6 +6,7 @@ export const RENDER = {
 	maxScale: 1.25, // render scale ceiling (× devicePixelRatio capped here); the adaptive scaler works below it
 	minScale: 0.75,
 	earlySlack: 2, // ms: a frame may come this early and still count as on time (rAF stamps jitter)
+	nearRate: 0.1, // a panel at most this much faster than the target renders every refresh (60.5 Hz: no skipped frame)
 	maxStep: 0.05, // s: longer frames are simulated slower rather than in one big step
 	maxRawFrame: 0.25, // s: a longer gap between frames (hidden tab, hitch) is counted as this much
 }

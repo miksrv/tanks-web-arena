@@ -21,7 +21,7 @@ export class AdaptiveResolution {
 
 	constructor(
 		private readonly renderer: THREE.WebGLRenderer,
-		private readonly max: number,
+		private max: number,
 		private readonly min: number,
 		private readonly onLowestScaleTooSlow: () => void,
 	) {
@@ -32,10 +32,14 @@ export class AdaptiveResolution {
 		return this.current
 	}
 
-	/** Feed the raw (unscaled) time since the previous rendered frame and the frame-rate target, both per frame. */
+	/**
+	 * Feed the raw (unscaled) time since the previous rendered frame and the frame-rate target, both per frame. The
+	 * target is what the display can show: a 30 Hz panel (Safari Low Power Mode, a TV) is not a slow GPU.
+	 */
 	update(raw: number, targetFps: number) {
 		this.frames++
-		this.spent += raw
+		// One long frame (a round start, a map upload) is the main thread, not the GPU: it counts as two at most
+		this.spent += Math.min(raw, 2 / targetFps)
 		this.budget += 1 / targetFps
 		this.cooldown -= raw
 		if (this.frames < windowFrames) return
@@ -54,6 +58,14 @@ export class AdaptiveResolution {
 			this.setScale(Math.min(this.max, this.current + step))
 			this.cooldown = this.retry
 		}
+	}
+
+	/** A new ceiling (the window moved to another monitor, the page was zoomed): a scale at the old one follows it. */
+	setMax(max: number) {
+		if (max === this.max) return
+		const atMax = this.current >= this.max
+		this.max = max
+		if (atMax || this.current > max) this.setScale(max)
 	}
 
 	private setScale(v: number) {

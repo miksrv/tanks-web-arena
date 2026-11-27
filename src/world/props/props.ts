@@ -176,7 +176,7 @@ export class Props {
 		for (let i = this.falling.length - 1; i >= 0; i--) {
 			const t = this.falling[i]
 			t.fallT = Math.min(1, t.fallT + dt * PROPS.fallSpeed)
-			this.meshes.writeTree(t)
+			this.meshes.writeTree(t, true)
 			dirty.add(t.species)
 			if (t.fallT >= 1) this.falling.splice(i, 1)
 		}

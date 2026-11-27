@@ -81,8 +81,8 @@ export abstract class StrikeAi implements RoleAi {
 
 	/** How far we are past the point the team allows (≤ 0 = fine). */
 	aheadBy(bot: Bot, w: WorldRefs, engaged: boolean): number {
-		// The last enemy, or a base to take or save, does not wait for the group
-		if (bot.hunting || bot.onObjective) return -Infinity
+		// The last enemy, a base to take or save, or the player's order does not wait for the group
+		if (bot.hunting || bot.onObjective || bot.onOrder) return -Infinity
 		const me = bot.tank
 		const p = bot.tactics.progress(w, me.pos.x, me.pos.z)
 		if (p < cfg.regroupMinProgress) return -Infinity
@@ -114,7 +114,7 @@ export abstract class StrikeAi implements RoleAi {
 		}
 		if (bot.mode !== 'regroup') return
 		this.regroupTimer += f.dt
-		if (this.aheadBy(bot, w, false) < -cfg.regroupHysteresis || this.regroupTimer > cfg.regroupMax || bot.hunting) {
+		if (this.aheadBy(bot, w, false) < -cfg.regroupHysteresis || this.regroupTimer > cfg.regroupMax) {
 			bot.mode = 'advance'
 			this.regroupSpot = null
 			this.regroupCooldown = cfg.regroupCooldown

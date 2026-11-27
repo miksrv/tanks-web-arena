@@ -15,12 +15,12 @@ Measured baseline (production build, headless Chrome): steady 60 fps, JS about 6
 - [ ] **[A]** A shell stopped by a rock bursts at the middle of the step (up to ~8 m short of the rock, often in mid-air), and splash is counted from there. `src/combat/shells.ts:197-198`, `src/world/props/props.ts:153`
 - [ ] **[A]** SU-57: the gun shield is drawn above the casemate hit box (`tH` 0.45, `mountY` 1.25), so shots at the shield pass through and the mantlet zone is ~2 cm; Marder III overhangs by ~0.2 m. `src/config/vehicles/ussr/su57.ts:33,60`
 - [ ] **[A]** Howitzers and rocket launchers overshoot at short range (under ~40 m for SPGs, ~57 m for BM-13 and Panzerwerfer): launch speed assumes the solved elevation, the barrel is clamped to `elevMax`. `src/tank/gunnery.ts:35`
-- [ ] **[A]** Sturmtiger rounds vanish silently after ~900 m of flight (`shellLife` 6 s at 153 m/s); the dispersion trace stops at ~610 m. `src/config/combat.ts:42`, `src/config/hud.ts:30`
-- [ ] **[A]** Splash distance is XZ only: a burst on a cliff top or roof gives full splash to a tank directly below. `src/combat/shells.ts:271`
+- [x] ~~**[A]** Sturmtiger rounds vanish silently after ~900 m of flight (`shellLife` 6 s at 153 m/s); the dispersion trace stops at ~610 m. `src/config/combat.ts:42`, `src/config/hud.ts:30`~~
+- [x] ~~**[A]** Splash distance is XZ only: a burst on a cliff top or roof gives full splash to a tank directly below. `src/combat/shells.ts:271`~~
 - [x] ~~**[A]** Ramming has no team check: a fast bot closing on a slower friend damages it. `src/tank/collisions.ts:70-83`~~
 - [ ] **[A]** `sweep` runs the full `testShell` (dice rolls, allocations) for every nearby tank, including wrecks and candidates that lose to an earlier contact; test boxes for all, roll only for the winner. `src/combat/shells.ts:184`
 - [x] ~~**[A]** Latent: the suspension loop is hard-coded to 5 samples but divides by `SUSPENSION.trackSamples`. `src/tank/suspension.ts:55-63`~~
-- [ ] **[A]** Latent: `faceOf` uses `turretForward()` (with gun traverse) for casemates whose box does not rotate; harmless while arcs stay under ~37°. `src/combat/armor.ts:96`
+- [x] ~~**[A]** Latent: `faceOf` uses `turretForward()` (with gun traverse) for casemates whose box does not rotate; harmless while arcs stay under ~37°. `src/combat/armor.ts:96`~~
 - [ ] **[A]** Pz. IV H and Pz. III J: the cupola box overhangs the turret box rear by ~7 cm (cosmetic).
 
 ## 2. Bots
@@ -31,22 +31,22 @@ Measured baseline (production build, headless Chrome): steady 60 fps, JS about 6
 - [x] ~~**[V]** The «Защищайте базу!» (Defend the base!) signal is undone within 0.4 s: `defendBases` clears the defenders whenever no capture is in progress. `src/ai/team.ts:123`, `src/game/teamSignals.ts:87`~~
 - [x] ~~**[V]** `stuckEvents` never resets on progress: "third stuck in a row" is the third of the whole battle. `src/ai/avoidance.ts:216`~~
 - [ ] **[A]** A broken track counts as stuck (an event every 2.5 s, a reroute every 7.5 s), and the reroute is applied in any mode: in `hold` the bot can stay parked until an enemy appears. `src/ai/avoidance.ts:203`, `src/ai/bot.ts:153-154`
-- [ ] **[A]** The "target hidden" timer runs only with the gun loaded and settled: an IS-2 whose target went behind a house waits ~14 s before it moves. `src/ai/gunner.ts:113,253`
+- [x] ~~**[A]** The "target hidden" timer runs only with the gun loaded and settled: an IS-2 whose target went behind a house waits ~14 s before it moves. `src/ai/gunner.ts:113,253`~~
 - [ ] **[A]** The group "front" counts tanks no longer in the push (retreated, defending, resupplying): healthy tanks stop to regroup for up to 25 s of every 40 s. `src/ai/team.ts:201-205`
-- [ ] **[A]** A bot on the player's order («Атакую!» Attacking!, «Нужна помощь!» Need help!) still stops to regroup. `src/ai/roles/strike.ts:85,105`
-- [ ] **[A]** Bots change shell at the only moment it costs 2.5 s (gun loaded); `facingArmor` has no hysteresis, so a turning target causes repeated swaps. `src/ai/gunner.ts:231`, `src/ai/targeting.ts:27-31`
+- [x] ~~**[A]** A bot on the player's order («Атакую!» Attacking!, «Нужна помощь!» Need help!) still stops to regroup. `src/ai/roles/strike.ts:85,105`~~
+- [x] ~~**[A]** Bots change shell at the only moment it costs 2.5 s (gun loaded); `facingArmor` has no hysteresis, so a turning target causes repeated swaps. `src/ai/gunner.ts:231`, `src/ai/targeting.ts:27-31`~~
 - [ ] **[A]** Cover spots and the reverse into them ignore buildings: the bot backs into a wall and grinds on it. `src/ai/positions.ts:114-136`, `src/ai/steering.ts:16-24`
 - [x] ~~**[A]** "Hurt" depends on the frame rate (`hp < lastHp − 1` per frame): fire damage triggers evade at 20 fps or with `?speed=3+`; use the `tank.hits` counter. `src/ai/bot.ts:135`~~
-- [ ] **[A]** `faceToward` does almost nothing for turreted tanks (threshold 144°): hulls stay side-on to the enemy while regrouping or in cover. `src/ai/steering.ts:29`
-- [ ] **[A]** Artillery picks targets it will not fire at (reach 1150 m, fire held beyond 0.95 of it and under 60 m). `src/ai/targeting.ts:13`, `src/ai/gunner.ts:200`
+- [x] ~~**[A]** `faceToward` does almost nothing for turreted tanks (threshold 144°): hulls stay side-on to the enemy while regrouping or in cover. `src/ai/steering.ts:29`~~
+- [x] ~~**[A]** Artillery picks targets it will not fire at (reach 1150 m, fire held beyond 0.95 of it and under 60 m). `src/ai/targeting.ts:13`, `src/ai/gunner.ts:200`~~
 - [ ] **[A]** The low-HP retreat is undone within seconds: a scout goes to the next lookout, a TD is pulled back to its group. `src/ai/roles/light.ts:83-87`, `src/ai/roles/td.ts:66-88`
 - [ ] **[A]** A defender that drops out (retreat, broken track) is still counted as sent: no replacement, the capture runs on. `src/ai/team.ts:112-118`, `src/ai/roles/common.ts:14`
 - [ ] **[A]** Hit by an unseen enemy while holding, the bot backs ~10 m and returns to the same spot; SPGs do not react at all. `src/ai/bot.ts:361-366,400`
 - [ ] **[A]** A whole strike group picks its hold spot around one point; two bots choosing at once can take the same spot. `src/ai/roles/strike.ts:49-51`, `src/ai/steering.ts:47`
 - [ ] **[A]** Skilled bots hold fire on a "hopeless" plate and never move for a better angle. `src/ai/gunner.ts:263-270`
-- [ ] **[A]** Full line-of-fire check every frame for every loaded bot that cannot shoot, plus `losBlocker` computed only for the debug label; check at 5–10 Hz. `src/ai/gunner.ts:252-254`
+- [x] ~~**[A]** Full line-of-fire check every frame for every loaded bot that cannot shoot, plus `losBlocker` computed only for the debug label; check at 5–10 Hz. `src/ai/gunner.ts:252-254`~~
 - [x] ~~**[A]** All bots retarget on the same frame (`retarget` starts at 0 for everyone). `src/ai/bot.ts:38,308-311`~~
-- [ ] **[A]** Obstacle probes and the traffic scan run for bots that are not driving. `src/ai/avoidance.ts:52-55`
+- [x] ~~**[A]** Obstacle probes and the traffic scan run for bots that are not driving. `src/ai/avoidance.ts:52-55`~~
 - [ ] **[A]** Per-frame garbage in bot code: an object per visible enemy (`team.ts:180`), per bot (`bot.ts:141,373`), a closure per bot (`avoidance.ts:82`), a `slab` closure per `raySegment` (`src/world/obb.ts:113`), `turretForward()` (`tank.ts:222`). Low impact.
 
 ## 3. Map generation
@@ -67,12 +67,12 @@ Audit of 159 maps (150 random seeds and the 9 named ones). Any fix of the first 
 - [x] ~~**[V]** Camera shake never decays while paused: Esc right after a shot or a hit leaves the picture vibrating for the whole pause. `src/camera.ts:163-165`~~
 - [x] ~~**[V]** «Завершить бой» (Leave the battle) counts as survived, and medals are awarded for a forfeited battle. `src/game/records.ts:112`, `src/game/game.ts:304-307`~~
 - [ ] **[A]** Two tabs overwrite each other's battle history (records are loaded once, saved whole). `src/game/records.ts:103-135`
-- [ ] **[A]** A simultaneous double capture is not a draw: the first zone wins, so Germany always wins the tie in standard mode. `src/game/capture.ts:58-64`
+- [x] ~~**[A]** A simultaneous double capture is not a draw: the first zone wins, so Germany always wins the tie in standard mode. `src/game/capture.ts:58-64`~~
 - [x] ~~**[A]** The camera's `smoothPos` and `initialized` are never reset: a new round starts with a swoop from the previous map. `src/camera.ts:202-207`~~
 - [x] ~~**[A]** `go()` has no phase guard: the `?autostart` timer or Enter on a focused hidden button can restart a round mid-battle. `src/game/game.ts:170-173`~~
-- [ ] **[A]** `devicePixelRatio` is read once: moving the window to another monitor or zooming leaves the old scale ceiling. `src/game/game.ts:83-87,127-130`
+- [x] ~~**[A]** `devicePixelRatio` is read once: moving the window to another monitor or zooming leaves the old scale ceiling. `src/game/game.ts:83-87,127-130`~~
 - [x] ~~**[A]** Keys can stick on macOS: no `keyup` for a key released while Cmd is held; release all on Meta `keyup`. `src/input.ts:24-33`~~
-- [ ] **[A]** Test hooks on the live site: `?round=` and `?speed=` still write records, `?round=abc` gives a round that never ends, `?tank=constructor` passes the `in` check. `src/game/testHooks.ts:33-43`
+- [x] ~~**[A]** Test hooks on the live site: `?round=` and `?speed=` still write records, `?round=abc` gives a round that never ends, `?tank=constructor` passes the `in` check. `src/game/testHooks.ts:33-43`~~
 - [ ] **[A]** The plane is unreachable (its entry is commented out) but still built and updated every frame: `Plane`, `PlaneView`, `Shells.drop`, the `'plane'` camera mode, `#planeHud`, `src/config/plane.ts`. Remove. `src/game/playerController.ts:108-109,172-185`, `src/game/game.ts:47,113,331,341,372`
 
 ## 5. Rendering and performance
@@ -80,16 +80,16 @@ Audit of 159 maps (150 random seeds and the 9 named ones). Any fix of the first 
 - [x] ~~**[A]** Tank wheels (InstancedMesh) share a material with plain meshes: three.js re-resolves the program every frame (~15 % of main-thread work). Give wheels their own material and drop their shadow (up to 14 fewer shadow draw calls). `src/tank/tankView.ts:109-110,137`~~
 - [ ] **[A]** Static scenery is never culled and is fully redrawn into the shadow map every frame: one InstancedMesh per prop kind and one merged building mesh span the map, the shadow box covers ~6 % of it (100–150k wasted triangles). Split trees, bushes, rocks by sector and buildings by settlement. `src/world/props/meshes.ts:68-73,153-165`, `src/world/buildings/buildings.ts:44-46`
 - [ ] **[A]** The shadow camera follows the target without texel snapping: shadow edges may crawl while moving (from code, not observed). `src/render/environment.ts:78-80`
-- [ ] **[A]** A falling tree re-uploads whole instance buffers every frame for ~1.1 s; use `addUpdateRange`. `src/world/props/meshes.ts:217-224`
-- [ ] **[A]** Adaptive resolution compares the frame time with 60 fps, not with the display rate: on a 30 Hz display (Safari Low Power Mode, TV) the scale drops to the minimum and shadow quality is lowered for the whole session. `src/render/adaptiveResolution.ts:36-57`
-- [ ] **[A]** One main-thread hitch (round start, map upload) can count as GPU slowness and drop the scale. `src/render/adaptiveResolution.ts:36-45`
-- [ ] **[A]** The frame pacer skips a frame periodically on displays slightly above 60 Hz (60.5 Hz: every 2 s, 61 Hz: every second). `src/render/framePacer.ts:12-17`
+- [x] ~~**[A]** A falling tree re-uploads whole instance buffers every frame for ~1.1 s; use `addUpdateRange`. `src/world/props/meshes.ts:217-224`~~
+- [x] ~~**[A]** Adaptive resolution compares the frame time with 60 fps, not with the display rate: on a 30 Hz display (Safari Low Power Mode, TV) the scale drops to the minimum and shadow quality is lowered for the whole session. `src/render/adaptiveResolution.ts:36-57`~~
+- [x] ~~**[A]** One main-thread hitch (round start, map upload) can count as GPU slowness and drop the scale. `src/render/adaptiveResolution.ts:36-45`~~
+- [x] ~~**[A]** The frame pacer skips a frame periodically on displays slightly above 60 Hz (60.5 Hz: every 2 s, 61 Hz: every second). `src/render/framePacer.ts:12-17`~~
 - [ ] **[A]** The full scene renders while nothing changes: 60 fps in a paused battle, 30 fps in the garage under a 90 % opaque overlay. `src/game/game.ts:363-382`
-- [ ] **[A]** Every `resize` event re-renders all garage portrait cards (~13 WebGL renders per event); debounce. `src/hud/garage.ts:248-250,355-362`
-- [ ] **[A]** Small per-frame HUD costs: `Array.from(ring.children)` (`src/hud/reticle.ts:129`), `tanks.filter` twice (`src/hud/statusPanel.ts:157`), popup styles written unconditionally (`src/hud/notifications.ts:99-105`).
+- [x] ~~**[A]** Every `resize` event re-renders all garage portrait cards (~13 WebGL renders per event); debounce. `src/hud/garage.ts:248-250,355-362`~~
+- [x] ~~**[A]** Small per-frame HUD costs: `Array.from(ring.children)` (`src/hud/reticle.ts:129`), `tanks.filter` twice (`src/hud/statusPanel.ts:157`), popup styles written unconditionally (`src/hud/notifications.ts:99-105`).~~
 - [ ] **[A]** Small per-frame garbage in the simulation: `hitBoxes` tuples (`src/combat/armor.ts:74-78`), `hullPose` closure and objects (`src/tank/suspension.ts:22,65`), `collideWithWorld` array (`src/tank/collisions.ts:23`), `resupplyAll` `.map` (`src/tank/ammo.ts:95`). Low priority: GC is 3 ms per 10 s.
 - [ ] **[A]** Tank world matrices are updated twice per frame (`src/game/game.ts:332` and the renderer). Negligible.
-- [ ] **[A]** Wheel geometry is built per tank instead of cached per shape (round-start cost only). `src/tank/tankView.ts:107`
+- [x] ~~**[A]** Wheel geometry is built per tank instead of cached per shape (round-start cost only). `src/tank/tankView.ts:107`~~
 - [ ] **[V]** The bundle is one 895 KB chunk (261 KB gzip); Vite warns about the size.
 
 ## 6. Audio
@@ -113,12 +113,12 @@ Audit of 159 maps (150 random seeds and the 9 named ones). Any fix of the first 
 
 ## 8. Docs and comments that disagree with the code
 
-- [ ] **[A]** `docs/mechanics/tanks.md:61` gun elevation "−5…−8° / +16…+17°": the config has −5.7…−9.7° and +11.5…+22.9° (rockets up to +63°).
-- [ ] **[A]** `docs/mechanics/tanks.md:44` "Roof 10–30 mm": the config ranges from 3 to 40 mm.
-- [ ] **[A]** `docs/mechanics/combat.md:81` "30 % chance to knock off a track" by splash: the code uses `0.3 × closeness`. `src/combat/shells.ts:277`
+- [x] ~~**[A]** `docs/mechanics/tanks.md:61` gun elevation "−5…−8° / +16…+17°": the config has −5.7…−9.7° and +11.5…+22.9° (rockets up to +63°).~~
+- [x] ~~**[A]** `docs/mechanics/tanks.md:44` "Roof 10–30 mm": the config ranges from 3 to 40 mm.~~
+- [x] ~~**[A]** `docs/mechanics/combat.md:81` "30 % chance to knock off a track" by splash: the code uses `0.3 × closeness`. `src/combat/shells.ts:277`~~
 - [ ] **[A]** `docs/mechanics/spotting-bots-match.md` says bots heading to a base fire on the move; they cannot (see Bots).
-- [ ] **[A]** `src/config/combat.ts:8` comment says overmatch means "no slope bonus"; the code still applies 1/cos (`combat.md` is right).
-- [ ] **[A]** `src/tank/suspension.ts:26-27` comment and the names `cL`/`cR` are swapped (the vector is the left one; the maths is consistent).
+- [x] ~~**[A]** `src/config/combat.ts:8` comment says overmatch means "no slope bonus"; the code still applies 1/cos (`combat.md` is right).~~
+- [x] ~~**[A]** `src/tank/suspension.ts:26-27` comment and the names `cL`/`cR` are swapped (the vector is the left one; the maths is consistent).~~
 
 ## Suggested order
 

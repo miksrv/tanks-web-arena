@@ -15,7 +15,7 @@ import { AdaptiveResolution } from '../render/adaptiveResolution'
 import { Environment } from '../render/environment'
 import { FpsCounter, FramePacer } from '../render/framePacer'
 import { Plane } from '../plane/plane'
-import { createRenderer, freezeShadows } from '../render/renderer'
+import { createRenderer, freezeShadows, onPixelRatioChange } from '../render/renderer'
 import { resupplyAll } from '../tank/ammo'
 import { type Tank, type WorldRefs } from '../tank/tank'
 import { ZoneMarkers, zonesFor } from './capture'
@@ -128,6 +128,7 @@ export class Game {
 			this.renderer.setSize(window.innerWidth, window.innerHeight)
 			this.rig.resize(window.innerWidth, window.innerHeight)
 		})
+		onPixelRatioChange(() => this.resolution.setMax(Math.min(window.devicePixelRatio, RENDER.maxScale)))
 		requestAnimationFrame(this.frame)
 	}
 
@@ -255,7 +256,7 @@ export class Game {
 		const dt = paused ? 0 : Math.min(RENDER.maxStep, raw) * this.timeScale
 		this.last = now
 		this.time += dt
-		this.resolution.update(raw, targetFps)
+		this.resolution.update(raw, Math.min(targetFps, this.pacer.refreshRate))
 		this.fps.count(raw)
 		this.audio.setPaused(paused)
 
@@ -304,8 +305,8 @@ export class Game {
 		for (const b of this.bots) b.tank.throttle = b.tank.steer = 0
 		const medals = match.outcome === 'left' ? [] : awardMedals(this.player, this.tanks, match)
 		hud.showResult(resultHtml(match.winner, match.outcome, this.player, medals))
-		// Automated runs (`?autostart`) play with nobody at the controls: they leave the history alone
-		if (!this.opts.autostart) this.records.add(this.player, match, medals, this.report.totals())
+		// Automated runs (`?autostart`) and changed rules (`?round`, `?speed`) leave the history alone
+		if (!this.opts.unrecorded) this.records.add(this.player, match, medals, this.report.totals())
 		hud.center('')
 		hud.setReport(this.report.html())
 		// The next map is built once the result screen is up, not in the frame that shows it

@@ -50,10 +50,18 @@ export class Avoidance {
 		this.yieldCooldown -= dt
 	}
 
-	/** Returns a new route to splice in when the bot keeps getting stuck, else null. */
-	update(w: WorldRefs, dt: number, path: Pt[], wp: number): Pt[] | null {
-		this.probe(w)
-		this.traffic(w, dt)
+	/**
+	 * Returns a new route to splice in when the bot keeps getting stuck, else null. `throttle`: the planned input;
+	 * the probes and the traffic scan only steer a bot driving forward (see `apply`), so a standing one skips them.
+	 */
+	update(w: WorldRefs, dt: number, path: Pt[], wp: number, throttle: number): Pt[] | null {
+		if (throttle > 0) {
+			this.probe(w)
+			this.traffic(w, dt)
+		} else {
+			this.steer = 0
+			this.throttleCap = null
+		}
 		return this.checkStuck(w, dt, path, wp)
 	}
 
