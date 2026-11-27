@@ -113,7 +113,7 @@ Audit of 159 maps (150 random seeds and the 9 named ones). Any fix of the first 
 
 ## 8. Docs and comments that disagree with the code
 
-- [ ] **[A]** `docs/mechanics/tanks.md:61` gun elevation "−5…−8° / +16…+17°": the config has −5.7…−9.7° and +11.5…+22.9° (rockets up to +63°).
+- [x] ~~**[A]** `docs/mechanics/tanks.md:61` gun elevation "−5…−8° / +16…+17°": the config has −5.7…−9.7° and +11.5…+22.9° (rockets up to +63°).~~
 - [ ] **[A]** `docs/mechanics/tanks.md:44` "Roof 10–30 mm": the config ranges from 3 to 40 mm.
 - [ ] **[A]** `docs/mechanics/combat.md:81` "30 % chance to knock off a track" by splash: the code uses `0.3 × closeness`. `src/combat/shells.ts:277`
 - [ ] **[A]** `docs/mechanics/spotting-bots-match.md` says bots heading to a base fire on the move; they cannot (see Bots).

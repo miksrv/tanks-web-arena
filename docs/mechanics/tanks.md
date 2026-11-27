@@ -58,7 +58,7 @@ Rocket mortar (`gun.mortar`, numbers in `MORTAR`): direct fire with a slow rocke
 
 - The turret target is the aim point (for the player — the camera ray through the screen centre; while RMB is held, the aim is kept and «обзор» (look around) lights up under the reticle). The turret traverses at `turretTurn`.
 - Turretless vehicles: sector `±arc`; if the target is outside the sector and there is no manual steering, the hull turns itself.
-- Elevation/depression by class (−5…−8° / +16…+17°, howitzers up to +69°), speed 1.5 rad/s.
+- Depression −3…−10° on direct-fire guns, elevation +11…+23°; howitzers up to +69°, rocket rails +3…+63°. Speed 1.5 rad/s.
 
 ## Model (`tankView.ts`, `src/tank/model/`)
 
