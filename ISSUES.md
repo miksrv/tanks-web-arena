@@ -44,7 +44,7 @@ Measured baseline (production build, headless Chrome): steady 60 fps, JS about 6
 - [ ] **[A]** Hit by an unseen enemy while holding, the bot backs ~10 m and returns to the same spot; SPGs do not react at all. `src/ai/bot.ts:361-366,400`
 - [ ] **[A]** A whole strike group picks its hold spot around one point; two bots choosing at once can take the same spot. `src/ai/roles/strike.ts:49-51`, `src/ai/steering.ts:47`
 - [ ] **[A]** Skilled bots hold fire on a "hopeless" plate and never move for a better angle. `src/ai/gunner.ts:263-270`
-- [ ] **[A]** Full line-of-fire check every frame for every loaded bot that cannot shoot, plus `losBlocker` computed only for the debug label; check at 5–10 Hz. `src/ai/gunner.ts:252-254`
+- [x] ~~**[A]** Full line-of-fire check every frame for every loaded bot that cannot shoot, plus `losBlocker` computed only for the debug label; check at 5–10 Hz. `src/ai/gunner.ts:252-254`~~
 - [x] ~~**[A]** All bots retarget on the same frame (`retarget` starts at 0 for everyone). `src/ai/bot.ts:38,308-311`~~
 - [ ] **[A]** Obstacle probes and the traffic scan run for bots that are not driving. `src/ai/avoidance.ts:52-55`
 - [ ] **[A]** Per-frame garbage in bot code: an object per visible enemy (`team.ts:180`), per bot (`bot.ts:141,373`), a closure per bot (`avoidance.ts:82`), a `slab` closure per `raySegment` (`src/world/obb.ts:113`), `turretForward()` (`tank.ts:222`). Low impact.

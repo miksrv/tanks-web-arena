@@ -92,6 +92,7 @@ export const BOT_AI = {
 		artyMaxMovingSpeed: 2.5, // m/s: faster targets are not worth a slow shell
 		mortarMinRange: 0.6, // × the blast radius: closer than this a rocket mortar holds its fire
 		hopelessPenChance: 0.12,
+		sightInterval: 0.12, // s between line-of-fire probes to the target
 		freeSwap: 0.4, // s: a shell swap that adds at most this to the reload is made at once, a dearer one waits
 		/** rad: a long arc magnifies elevation errors, so a howitzer waits until the barrel is right on. */
 		artyPitchTolerance: 0.006,

@@ -5,7 +5,7 @@ import { penChance } from '../combat/armor'
 import type { Shells } from '../combat/shells'
 import { wrapAngle } from '../core/math'
 import type { Tank, WorldRefs } from '../tank/tank'
-import { friendInLine, gunSight, losBlocker, turretPoint } from './lineOfFire'
+import { friendInLine, gunSight, losBlocker, turretPoint, type GunSight } from './lineOfFire'
 import { facingArmor, inReach } from './targeting'
 import type { Pt } from './types'
 
@@ -55,6 +55,11 @@ export class BotGunner {
 	trackHunter = false
 	/** The target's hull is hidden from our gun but its turret is not: lay on the turret. */
 	private aimTurret = false
+	/** The last line-of-fire probe: its target, age (s), result and, when blocked, what blocks it. */
+	private sightFor: Tank | null = null
+	private sightAge = Infinity
+	private sight: GunSight | null = null
+	private blocker: HoldFire = 'los-terrain'
 	private aimErr = { x: 0, y: 0, z: 0 }
 	private aimErrTimer = 0
 	private reaction = 0
@@ -68,6 +73,7 @@ export class BotGunner {
 	tick(dt: number) {
 		this.aimErrTimer -= dt
 		this.reaction -= dt
+		this.sightAge += dt
 	}
 
 	resetRound() {
@@ -256,12 +262,22 @@ export class BotGunner {
 		return null
 	}
 
+	/** Line of fire to the target: probed a few times a second, not every frame (a probe is a terrain and building walk). */
+	private watchSight(w: WorldRefs, t: Tank) {
+		if (t === this.sightFor && this.sightAge < BOT_AI.gunner.sightInterval) return
+		this.sightFor = t
+		this.sightAge = 0
+		this.sight = gunSight(w, this.me, t)
+		if (!this.sight) this.blocker = losBlocker(w, this.me, t)
+	}
+
 	/** Direct fire: our muzzle to the target through buildings or terrain = no shot; no friends in the line. */
 	private lineOfFireHold(w: WorldRefs, t: Tank, d: number, facing: number, dt: number): HoldFire | null {
 		const me = this.me
-		const sight = gunSight(w, me, t)
+		this.watchSight(w, t)
+		const sight = this.sight
 		this.noLosTimer = sight ? 0 : this.noLosTimer + dt
-		if (!sight) return losBlocker(w, me, t)
+		if (!sight) return this.blocker
 		// The visible part changed (the target went hull-down, or came out): lay on it before shooting
 		const turret = sight === 'turret'
 		if (turret !== this.aimTurret) {
