@@ -5,7 +5,7 @@ import type { Role } from './types'
 export const COMBAT = {
 	penRng: 0.25, // ±25 % on penetration
 	dmgRng: 0.25, // ±25 % on damage
-	overmatch: 3, // caliber ≥ 3 × plate thickness: no ricochet, no slope bonus
+	overmatch: 3, // caliber ≥ 3 × plate thickness: no ricochet, stronger normalisation (the slope still counts)
 	heNonPenFactor: 0.5, // HE that fails to penetrate: dmg × 0.5 − armour × heArmorFactor
 	heArmorFactor: 1.1, // each mm of armour takes this much off a blast (non-penetrating HE and splash)
 	minSlopeCos: 0.2, // cap on the slope multiplier of effective armour (1 / 0.2 = 5×)
