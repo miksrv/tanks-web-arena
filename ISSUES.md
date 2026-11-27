@@ -83,7 +83,7 @@ Audit of 159 maps (150 random seeds and the 9 named ones). Any fix of the first 
 - [x] ~~**[A]** A falling tree re-uploads whole instance buffers every frame for ~1.1 s; use `addUpdateRange`. `src/world/props/meshes.ts:217-224`~~
 - [ ] **[A]** Adaptive resolution compares the frame time with 60 fps, not with the display rate: on a 30 Hz display (Safari Low Power Mode, TV) the scale drops to the minimum and shadow quality is lowered for the whole session. `src/render/adaptiveResolution.ts:36-57`
 - [ ] **[A]** One main-thread hitch (round start, map upload) can count as GPU slowness and drop the scale. `src/render/adaptiveResolution.ts:36-45`
-- [ ] **[A]** The frame pacer skips a frame periodically on displays slightly above 60 Hz (60.5 Hz: every 2 s, 61 Hz: every second). `src/render/framePacer.ts:12-17`
+- [x] ~~**[A]** The frame pacer skips a frame periodically on displays slightly above 60 Hz (60.5 Hz: every 2 s, 61 Hz: every second). `src/render/framePacer.ts:12-17`~~
 - [ ] **[A]** The full scene renders while nothing changes: 60 fps in a paused battle, 30 fps in the garage under a 90 % opaque overlay. `src/game/game.ts:363-382`
 - [x] ~~**[A]** Every `resize` event re-renders all garage portrait cards (~13 WebGL renders per event); debounce. `src/hud/garage.ts:248-250,355-362`~~
 - [x] ~~**[A]** Small per-frame HUD costs: `Array.from(ring.children)` (`src/hud/reticle.ts:129`), `tanks.filter` twice (`src/hud/statusPanel.ts:157`), popup styles written unconditionally (`src/hud/notifications.ts:99-105`).~~
