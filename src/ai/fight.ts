@@ -142,6 +142,8 @@ export class Fighter {
 		// Back on the spot early enough for the reticle to settle before the gun is loaded
 		const wayBack =
 			Math.hypot(back.x - cover.x, back.z - cover.z) / BOT_AI.fight.reverseSpeed + 0.5 + me.def.gun.aimTime * 0.7
+		// Out of sight on purpose: no reason to look for another firing spot once back on this one
+		this.gunner.noLosTimer = 0
 		if (me.reload > wayBack) {
 			if (this.dist(cover) > 3) reverseTo(me, cmd, cover)
 			else faceToward(me, cmd, t.pos)

@@ -100,6 +100,11 @@ export class BotGunner {
 			this.why = 'stealth'
 			return
 		}
+		if (!g.howitzer) {
+			// The hidden-target timer runs whatever the gun is doing: a bot reloading behind a house moves on too
+			this.watchSight(w, target)
+			this.noLosTimer = this.sight ? 0 : this.noLosTimer + dt
+		}
 		if (g.howitzer) {
 			const hold = this.artilleryHold(w, target, d)
 			if (hold) {
@@ -116,7 +121,7 @@ export class BotGunner {
 		}
 		const facing = facingArmor(me, target, this.aimTurret)
 		if (!g.howitzer) this.chooseAmmo(facing)
-		const hold = this.readiness() ?? (g.howitzer ? null : this.lineOfFireHold(w, target, d, facing, dt))
+		const hold = this.readiness() ?? (g.howitzer ? null : this.lineOfFireHold(w, target, d, facing))
 		if (hold) {
 			this.why = hold
 			return
@@ -272,11 +277,9 @@ export class BotGunner {
 	}
 
 	/** Direct fire: our muzzle to the target through buildings or terrain = no shot; no friends in the line. */
-	private lineOfFireHold(w: WorldRefs, t: Tank, d: number, facing: number, dt: number): HoldFire | null {
+	private lineOfFireHold(w: WorldRefs, t: Tank, d: number, facing: number): HoldFire | null {
 		const me = this.me
-		this.watchSight(w, t)
 		const sight = this.sight
-		this.noLosTimer = sight ? 0 : this.noLosTimer + dt
 		if (!sight) return this.blocker
 		// The visible part changed (the target went hull-down, or came out): lay on it before shooting
 		const turret = sight === 'turret'
