@@ -128,7 +128,8 @@ export class Reticle {
 	 */
 	private updateReloadRing(player: Tank, reticlePx: number, dt: number, aiming: boolean) {
 		const ring = $('ring')
-		const [track, arc] = Array.from(ring.children)
+		const track = ring.children[0]
+		const arc = ring.children[1]
 		const loading = player.reload > 0
 		this.ringReady = loading ? R.readyFlash : Math.max(0, this.ringReady - dt)
 		const visible = aiming && (loading || this.ringReady > 0)
