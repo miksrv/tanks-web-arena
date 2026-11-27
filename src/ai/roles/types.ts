@@ -25,6 +25,8 @@ export interface Bot {
 	readonly capturing: boolean
 	/** Taking a base or sent to defend one: no joining fights on the way, no moving off. */
 	readonly onObjective: boolean
+	/** Following the player's order, until it runs out. */
+	readonly onOrder: boolean
 	/** On an objective and inside its circle: it must not leave it. */
 	readonly holdingCircle: boolean
 	setPath(path: Pt[], holdSpot: Pt | null): void
