@@ -75,6 +75,7 @@ export const MORTAR = {
 	fellRadius: 1.3, // × the blast radius: trees, haystacks and fences inside go down
 	trailStep: 0.03, // s between the smoke puffs behind the rocket
 	shake: 0.9, // camera shake of the shot for the player
+	shellLife: 12, // s of flight: the slow round (153 m/s) still crosses the whole map
 }
 
 /** Hulls against walls, props and each other. */

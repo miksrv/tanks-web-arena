@@ -27,7 +27,7 @@ export const HUD = {
 		linePx: 2, // px, the reticle's line: the reload ring runs along its middle
 		artyRingPx: 48, // px, the reload ring in the artillery view
 		readyFlash: 0.45, // s of the green "loaded" flash
-		traceTime: { direct: 4, howitzer: 12 }, // s of flight the dispersion circle is traced over
+		traceTime: { direct: 4, howitzer: 12, mortar: 9 }, // s of flight the dispersion circle is traced over
 	},
 	minimap: {
 		size: 220, // minimap size in canvas pixels

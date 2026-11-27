@@ -90,7 +90,7 @@ export class Shells {
 			splash: p.splash,
 			howitzer: p.howitzer,
 			gravity: p.howitzer ? HOWITZER.gravity : GRAVITY,
-			life: p.howitzer ? COMBAT.howitzerShellLife : COMBAT.shellLife,
+			life: p.howitzer ? COMBAT.howitzerShellLife : p.shock ? MORTAR.shellLife : COMBAT.shellLife,
 			dist: 0,
 			bomb: false,
 			shock: p.shock,
