@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3
+
+### Patch Changes
+
+- Bug fixes and optimisation: smarter bots, splash damage, base capture draws, smoother frame rate
+
 ## 0.2.2
 
 ### Patch Changes
