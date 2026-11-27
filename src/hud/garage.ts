@@ -245,8 +245,13 @@ export class Garage {
 			// Enter on a focused button is that button's click, not «В бой» (To battle)
 			else if (e.code === 'Enter' && !(e.target instanceof HTMLButtonElement)) this.onGo?.()
 		})
+		// Dragging the window edge fires a stream of resizes: redraw the cards (a WebGL render each) once it settles
+		let resizeTimer = 0
 		window.addEventListener('resize', () => {
-			if (this.isOpen) this.drawAll()
+			clearTimeout(resizeTimer)
+			resizeTimer = window.setTimeout(() => {
+				if (this.isOpen) this.drawAll()
+			}, HUD.garage.resizeDelay * 1000)
 		})
 	}
 

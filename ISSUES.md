@@ -85,7 +85,7 @@ Audit of 159 maps (150 random seeds and the 9 named ones). Any fix of the first 
 - [ ] **[A]** One main-thread hitch (round start, map upload) can count as GPU slowness and drop the scale. `src/render/adaptiveResolution.ts:36-45`
 - [ ] **[A]** The frame pacer skips a frame periodically on displays slightly above 60 Hz (60.5 Hz: every 2 s, 61 Hz: every second). `src/render/framePacer.ts:12-17`
 - [ ] **[A]** The full scene renders while nothing changes: 60 fps in a paused battle, 30 fps in the garage under a 90 % opaque overlay. `src/game/game.ts:363-382`
-- [ ] **[A]** Every `resize` event re-renders all garage portrait cards (~13 WebGL renders per event); debounce. `src/hud/garage.ts:248-250,355-362`
+- [x] ~~**[A]** Every `resize` event re-renders all garage portrait cards (~13 WebGL renders per event); debounce. `src/hud/garage.ts:248-250,355-362`~~
 - [ ] **[A]** Small per-frame HUD costs: `Array.from(ring.children)` (`src/hud/reticle.ts:129`), `tanks.filter` twice (`src/hud/statusPanel.ts:157`), popup styles written unconditionally (`src/hud/notifications.ts:99-105`).
 - [ ] **[A]** Small per-frame garbage in the simulation: `hitBoxes` tuples (`src/combat/armor.ts:74-78`), `hullPose` closure and objects (`src/tank/suspension.ts:22,65`), `collideWithWorld` array (`src/tank/collisions.ts:23`), `resupplyAll` `.map` (`src/tank/ammo.ts:95`). Low priority: GC is 3 ms per 10 s.
 - [ ] **[A]** Tank world matrices are updated twice per frame (`src/game/game.ts:332` and the renderer). Negligible.

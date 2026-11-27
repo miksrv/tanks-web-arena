@@ -70,6 +70,7 @@ export const HUD = {
 	},
 	garage: {
 		statMax: { hp: 1400, speed: 16, pen: 200, dmg: 2100, armor: 200 }, // bar scale maxima for the vehicle cards
+		resizeDelay: 0.15, // s: the portrait cards are redrawn once the window has stopped changing size
 	},
 	/** Battle log colours. */
 	logColors: {
