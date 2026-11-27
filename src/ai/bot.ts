@@ -158,7 +158,7 @@ export class BotBrain implements Bot {
 
 		const cmd = this.drive(w, time)
 		this.evade(dt, cmd)
-		const reroute = this.avoidance.update(w, dt, this.path, this.wp)
+		const reroute = this.avoidance.update(w, dt, this.path, this.wp, cmd.throttle)
 		if (reroute) this.setPath(reroute, this.holdSpot)
 		this.avoidance.apply(dt, cmd)
 		me.throttle = cmd.throttle
