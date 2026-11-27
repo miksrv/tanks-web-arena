@@ -12,6 +12,15 @@ import { wheelGeometry, wheelLayout, type Wheel } from './model/wheels'
 
 const { wreckColor, blownUp, blownOut, recoilPerMm, recoilLimits, recoilTime } = TANK_VIEW
 
+/** Road wheel geometry by disc colour: one per nation and season, shared by every tank and never disposed. */
+const wheels = new Map<string, THREE.BufferGeometry>()
+function sharedWheel(color: THREE.ColorRepresentation): THREE.BufferGeometry {
+	const key = new THREE.Color(color).getHexString()
+	let g = wheels.get(key)
+	if (!g) wheels.set(key, (g = wheelGeometry(new THREE.Color(color))))
+	return g
+}
+
 /**
  * Procedural WW2 tank: hull from a side profile, turret or casemate, gun, running gear, nation paint and markings.
  * Scene graph: group (hull, casemate) → turret (yaws; on a casemate only the gun's pivot) → gun (pitches).
@@ -111,8 +120,7 @@ export class TankView {
 
 		if (layout.track) this.group.add(this.buildTracks(layout.track, s.hullW / 2 - dims.trackW / 2, dims.trackW))
 		this.wheelList = layout.wheels
-		const wheel = wheelGeometry(new THREE.Color(TANK_PAINT.schemes[nation][season].base))
-		this.owned.push(wheel)
+		const wheel = sharedWheel(TANK_PAINT.schemes[nation][season].base)
 		// No shadow of their own: they sit inside the hull's and the tracks' shadow
 		this.wheels = new THREE.InstancedMesh(wheel, this.wheelMaterial, this.wheelList.length)
 		this.group.add(this.wheels)
