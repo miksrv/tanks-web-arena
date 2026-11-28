@@ -2,6 +2,7 @@ import { AUDIO_FX, GUN_SOUND, type EngineId } from '../config'
 import { makeImpulse, makeNoise } from './audioBuffers'
 import { EngineMix, type EngineSource } from './engineMix'
 import type { EngineState, NoiseKind } from './engineSound'
+import { chainVoice, layerStart, releaseLayer, type Out, type Voice } from './oneShot'
 
 /** Where a sound comes from on the map; `null` is the listener's own tank (centred, full volume). */
 export type SoundAt = { x: number; z: number } | null
@@ -26,23 +27,6 @@ export interface GunVoice {
 	howitzer: boolean // a short barrel and a small charge: a boom with little crack
 }
 
-/**
- * A one-shot's entry point: gain-adjusted volume `v`, how far toward the edge of its reach it is (0…1), and how
- * late it arrives (s): every layer of the sound starts that much later.
- */
-interface Voice {
-	node: AudioNode
-	v: number
-	far: number
-	lag: number
-	/** The chain's own nodes, let go of when the last of its `layers` has played out. */
-	chain: AudioNode[]
-	layers: number
-}
-
-/** Where a layer of sound goes: a world voice, or straight into a node (the mix, a cockpit filter). */
-type Out = Voice | AudioNode
-
 // Procedural sound: engines and tracks (each vehicle in the voice of its own engine, see `ENGINES`), layered
 // gunfire voiced by the gun, armour hits, ricochets, explosions. No assets.
 // One-shots are built from noise layers (crack, blast, rumble) and sine partials (sub thump, metal ring),
@@ -62,6 +46,10 @@ export class Audio {
 	muted = storedMute()
 	/** Simulation paused: the context is suspended and stays so until `setPaused(false)`. */
 	private paused = false
+	/** The context should run: sound on, the battle not paused and the tab in view. */
+	private get live(): boolean {
+		return !this.paused && !this.muted && !document.hidden
+	}
 	private readonly ear = { x: 0, z: 0, yaw: 0 }
 
 	constructor() {
@@ -85,16 +73,18 @@ export class Audio {
 			if (!this.ctx) return
 			if (document.hidden) this.ctx.suspend().catch(() => undefined)
 			// Whatever the state says: a suspend still under way after a quick switch would otherwise win
-			else if (!this.paused) this.ctx.resume().catch(() => undefined)
+			else if (this.live) this.ctx.resume().catch(() => undefined)
 		})
 	}
 
 	private ensure() {
 		if (this.ctx) {
-			if (this.ctx.state === 'suspended' && !this.paused) this.ctx.resume().catch(() => undefined)
+			if (this.ctx.state === 'suspended' && this.live) this.ctx.resume().catch(() => undefined)
 			return
 		}
 		const ctx = (this.ctx = new AudioContext())
+		// Muted: the context sleeps, nothing is processed
+		if (this.muted) ctx.suspend().catch(() => undefined)
 		this.buffers = { white: makeNoise(ctx, 'white'), brown: makeNoise(ctx, 'brown') }
 		// mix → compressor (several booms at once must not clip) → master (mute) → speakers
 		this.master = ctx.createGain()
@@ -157,7 +147,7 @@ export class Audio {
 	 * their crack), panning, and a reverb send that grows with distance. `null` when it is too far to hear.
 	 */
 	private voice(at: SoundAt, reach: number, travels = false): Voice | null {
-		if (!this.ctx || !this.mix || !this.reverb) return null
+		if (!this.ctx || !this.mix || !this.reverb || this.muted) return null
 		const ctx = this.ctx
 		const [v, pan, d] = this.place(at, reach)
 		if (v <= 0.01) return null
@@ -172,28 +162,7 @@ export class Audio {
 		air.connect(send).connect(this.reverb)
 		// Sound takes its time over the field: the flash comes first, the report after it
 		const lag = travels ? Math.min(GUN_SOUND.maxLag, d / GUN_SOUND.sound) : 0
-		return Audio.chain({ node: air, v, far, lag: lag < 0.05 ? 0 : lag, chain, layers: 0 })
-	}
-
-	/** A voice let go of once its layers end; one that got no layer at all (all too quiet) is let go of at once. */
-	private static chain(voice: Voice): Voice {
-		queueMicrotask(() => voice.layers === 0 && voice.chain.forEach((n) => n.disconnect()))
-		return voice
-	}
-
-	/** A layer's source and nodes are disconnected when it ends, and its voice's chain after the last layer. */
-	private static release(out: Out, src: AudioScheduledSourceNode, nodes: AudioNode[]) {
-		const voice = out instanceof AudioNode ? null : out
-		if (voice) voice.layers++
-		src.onended = () => {
-			for (const n of nodes) n.disconnect()
-			if (voice && --voice.layers === 0) voice.chain.forEach((n) => n.disconnect())
-		}
-	}
-
-	/** The node a layer connects to and the time it starts at, `delay` seconds after the sound's own lag. */
-	private static at(ctx: AudioContext, out: Out, delay: number): [AudioNode, number] {
-		return out instanceof AudioNode ? [out, ctx.currentTime + delay] : [out.node, ctx.currentTime + out.lag + delay]
+		return chainVoice({ node: air, v, far, lag: lag < 0.05 ? 0 : lag, chain, layers: 0 })
 	}
 
 	/** Filtered noise with a fast attack and exponential decay; the filter can sweep to `freqEnd`. */
@@ -209,8 +178,8 @@ export class Audio {
 		q = 0.7,
 		attack = 0.002,
 	) {
-		if (!this.ctx || !this.buffers || gain <= 0) return
-		const [node, t] = Audio.at(this.ctx, out, delay)
+		if (!this.ctx || !this.buffers || gain <= 0 || this.muted) return
+		const [node, t] = layerStart(this.ctx, out, delay)
 		const src = this.ctx.createBufferSource()
 		src.buffer = this.buffers[kind]
 		src.loop = true
@@ -227,7 +196,7 @@ export class Audio {
 		src.connect(f).connect(g).connect(node)
 		src.start(t, Math.random() * 1.5)
 		src.stop(t + dur + 0.05)
-		Audio.release(out, src, [src, f, g])
+		releaseLayer(out, src, [src, f, g])
 	}
 
 	/** One oscillator partial; `slide` is the pitch ratio reached at the end. */
@@ -241,8 +210,8 @@ export class Audio {
 		type: OscillatorType = 'sine',
 		attack = 0.002,
 	) {
-		if (!this.ctx || gain <= 0) return
-		const [node, t] = Audio.at(this.ctx, out, delay)
+		if (!this.ctx || gain <= 0 || this.muted) return
+		const [node, t] = layerStart(this.ctx, out, delay)
 		const o = this.ctx.createOscillator()
 		o.type = type
 		o.frequency.setValueAtTime(freq, t)
@@ -254,7 +223,7 @@ export class Audio {
 		o.connect(g).connect(node)
 		o.start(t)
 		o.stop(t + dur + 0.05)
-		Audio.release(out, o, [o, g])
+		releaseLayer(out, o, [o, g])
 	}
 
 	/** A struck steel plate: inharmonic partials, the higher ones dying first. */
@@ -445,12 +414,12 @@ export class Audio {
 	}
 	/** The player's tank is on fire: two pulses of a muffled buzzer. */
 	alarm() {
-		if (!this.ctx || !this.mix) return
+		if (!this.ctx || !this.mix || this.muted) return
 		const lp = this.ctx.createBiquadFilter()
 		lp.type = 'lowpass'
 		lp.frequency.value = 900
 		lp.connect(this.mix)
-		const buzzer = Audio.chain({ node: lp, v: 1, far: 0, lag: 0, chain: [lp], layers: 0 })
+		const buzzer = chainVoice({ node: lp, v: 1, far: 0, lag: 0, chain: [lp], layers: 0 })
 		for (const d of [0, 0.2]) {
 			this.partial(buzzer, d, 220, 0.12, 0.15, 1, 'square', 0.01)
 			this.partial(buzzer, d, 277, 0.08, 0.15, 1, 'square', 0.01)
@@ -459,20 +428,24 @@ export class Audio {
 
 	/** Per frame: the listener's own engine, in the voice of `id`. */
 	engine(id: EngineId, state: EngineState) {
-		this.engines?.own(id, state)
+		if (!this.muted) this.engines?.own(id, state)
 	}
 
 	/** Per frame: the other vehicles whose engines may be heard around the listener. */
 	traffic(sources: readonly EngineSource[]) {
-		this.engines?.traffic(sources, this.ear)
+		if (!this.muted) this.engines?.traffic(sources, this.ear)
 	}
 
 	/** Pause: everything falls silent (engine included) and resumes where it stopped. */
 	setPaused(on: boolean) {
 		if (this.paused === on) return
 		this.paused = on
+		this.wake()
+	}
+	/** The context runs only while it is heard (see `live`). */
+	private wake() {
 		if (!this.ctx) return
-		const r = on ? this.ctx.suspend() : this.ctx.resume()
+		const r = this.live ? this.ctx.resume() : this.ctx.suspend()
 		r.catch(() => undefined)
 	}
 	toggleMute(): boolean {
@@ -483,6 +456,7 @@ export class Audio {
 			/* storage blocked: the choice lasts for the session */
 		}
 		if (this.master) this.master.gain.value = this.muted ? 0 : 1
+		this.wake()
 		return this.muted
 	}
 }

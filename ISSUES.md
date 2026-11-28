@@ -96,7 +96,7 @@ Audit of 159 maps (150 random seeds and the 9 named ones). Any fix of the first 
 
 - [x] ~~**[A]** Audio is never suspended when the tab is hidden: engines and rain keep playing; suspend on `visibilitychange`. `src/fx/audio.ts:66-69`~~
 - [x] ~~**[A]** A DelayNode (1.6 s buffer) per distant sound, one per rocket of a salvo; pass the lag to `noise()`/`partial()` instead. `src/fx/audio.ts:154-156`~~
-- [ ] **[A]** Mute only zeroes the master gain: every node is still created and processed. `src/fx/audio.ts:458-466`
+- [x] ~~**[A]** Mute only zeroes the master gain: every node is still created and processed. `src/fx/audio.ts:458-466`~~
 - [x] ~~**[A]** Engine graphs are re-automated every frame even when silent (~53 `setTargetAtTime` per frame in battle, 11 in the garage). `src/fx/engineSound.ts:188-209`, `src/fx/engineMix.ts:71-74`, `src/game/engineAudio.ts:46-49`~~
 - [x] ~~**[A]** The audio context can stay suspended if the first key is not an activating gesture (Esc): keep the start listeners until the context runs. `src/fx/audio.ts:58-64`~~
 - [x] ~~**[A]** One-shot audio chains are never disconnected (they rely on node GC). `src/fx/audio.ts:144-157`~~
