@@ -99,6 +99,13 @@ export const BOT_AI = {
 		artyPitchTolerance: 0.006,
 		scoutFinishHp: 0.25, // scouts give their position away for a target this weak: it may die
 		sideOn: 0.75, // |cos| of our bearing off the target's heading below which its side (and running gear) faces us
+		/**
+		 * The reticle never closes on the move: a bot with a shot lined up stops for up to `haltTime` s to let it
+		 * settle, fires and drives on; the next halt waits `haltGap` s after that one began.
+		 */
+		haltTime: 2.5,
+		haltGap: 6,
+		haltSpeed: 1, // m/s: slower than this the bot is standing anyway
 	},
 	roles: {
 		common: {

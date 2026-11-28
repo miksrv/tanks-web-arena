@@ -26,7 +26,7 @@ Measured baseline (production build, headless Chrome): steady 60 fps, JS about 6
 ## 2. Bots
 
 - [x] ~~**[V]** Throttle magnitude is ignored, only its sign is used: every "slow down" (0.3 in a sharp turn, 0.35–0.55 in traffic, 0.4 swerving, 0.6–0.85 approaching a spot) is full speed. Bots circle a near point they cannot reach, miss the swerve around a building, ram friends. Fix: scale the target speed by `|throttle|`. `src/tank/drive.ts:35-36`~~
-- [ ] **[A]** Bots never fire on the move: bloom at cruise speed (4–14) is far above their firing threshold (0.33–0.65), so defenders, capturers and retreating bots take fire without answering. Needs a short halt to shoot. `src/ai/gunner.ts:244`, `src/tank/gunnery.ts:105-111`
+- [x] ~~**[A]** Bots never fire on the move: bloom at cruise speed (4–14) is far above their firing threshold (0.33–0.65), so defenders, capturers and retreating bots take fire without answering. Needs a short halt to shoot. `src/ai/gunner.ts:244`, `src/tank/gunnery.ts:105-111`~~
 - [ ] **[A]** "Too close, back off" fights the 5 m leash to the firing position: the bot jerks back and forth, never opens the range and cannot settle its aim; the reverse steering there is not mirrored. `src/ai/fight.ts:73,108-112`
 - [x] ~~**[V]** The «Защищайте базу!» (Defend the base!) signal is undone within 0.4 s: `defendBases` clears the defenders whenever no capture is in progress. `src/ai/team.ts:123`, `src/game/teamSignals.ts:87`~~
 - [x] ~~**[V]** `stuckEvents` never resets on progress: "third stuck in a row" is the third of the whole battle. `src/ai/avoidance.ts:216`~~

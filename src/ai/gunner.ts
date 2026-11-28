@@ -63,6 +63,9 @@ export class BotGunner {
 	private aimErr = { x: 0, y: 0, z: 0 }
 	private aimErrTimer = 0
 	private reaction = 0
+	/** s left of a short halt for a shot, and until the next one may begin. */
+	private haltLeft = 0
+	private haltGap = 0
 
 	constructor(
 		private readonly me: Tank,
@@ -74,17 +77,35 @@ export class BotGunner {
 		this.aimErrTimer -= dt
 		this.reaction -= dt
 		this.sightAge += dt
+		this.haltLeft -= dt
+		this.haltGap -= dt
+	}
+
+	/** A shot is lined up but the moving hull keeps the reticle open: the driver stops for it. */
+	get halting(): boolean {
+		return this.haltLeft > 0
+	}
+
+	/** Loaded, the target in the line of fire, only the motion in the way: ask for a short halt. */
+	private haltForShot(hold: HoldFire) {
+		const cfg = BOT_AI.gunner
+		if (hold !== 'bloom' || !this.sight || this.haltGap > 0) return
+		if (Math.abs(this.me.speed) < cfg.haltSpeed && Math.abs(this.me.yawRate) < 0.2) return
+		this.haltLeft = cfg.haltTime
+		this.haltGap = cfg.haltGap
 	}
 
 	resetRound() {
 		this.fireSpot = null
 		this.elevTimer = 0
 		this.aimTurret = false
+		this.haltLeft = this.haltGap = 0
 	}
 
 	update(w: WorldRefs, shells: Shells, target: Tank | null, dt: number) {
 		if (!target) {
 			this.reaction = Math.max(this.reaction, BOT_AI.gunner.minReaction)
+			this.haltLeft = 0
 			this.why = 'no-target'
 			this.noLosTimer = 0
 			this.elevTimer = 0
@@ -124,6 +145,7 @@ export class BotGunner {
 		const hold = this.readiness() ?? (g.howitzer ? null : this.lineOfFireHold(w, target, d, facing))
 		if (hold) {
 			this.why = hold
+			if (!g.howitzer) this.haltForShot(hold)
 			return
 		}
 		// The turret must actually be on target
@@ -152,6 +174,7 @@ export class BotGunner {
 			shells.fire(me, shot)
 			this.fireSpot = { x: me.pos.x, z: me.pos.z }
 			this.shots++
+			this.haltLeft = 0
 		}
 	}
 

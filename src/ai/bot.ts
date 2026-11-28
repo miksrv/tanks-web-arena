@@ -179,6 +179,8 @@ export class BotBrain implements Bot {
 		// A detour only matters to a bot on its route: one holding or fighting keeps its spot
 		if (reroute && this.followsPath) this.setPath(reroute, this.holdSpot)
 		this.avoidance.apply(dt, cmd)
+		// A short halt for a lined-up shot (the reticle never closes on the move); not while fleeing or backing away
+		if (this.gunner.halting && this.mode !== 'retreat' && this.evadeTimer <= 0) cmd.throttle = cmd.steer = 0
 		me.throttle = cmd.throttle
 		me.steer = cmd.steer
 
