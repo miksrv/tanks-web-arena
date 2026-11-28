@@ -92,5 +92,10 @@ export function resupply(t: Tank, dt: number, base: { x: number; z: number }): b
 
 /** Every tank at its own base takes on shells and consumables; true while the first one (the player) does. */
 export function resupplyAll(tanks: Tank[], bases: readonly { x: number; z: number }[], dt: number): boolean {
-	return tanks.map((t) => resupply(t, dt, bases[t.team]))[0] ?? false
+	let first = false
+	for (let i = 0; i < tanks.length; i++) {
+		const at = resupply(tanks[i], dt, bases[tanks[i].team])
+		if (i === 0) first = at
+	}
+	return first
 }

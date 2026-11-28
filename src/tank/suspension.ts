@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { SUSPENSION } from '../config'
-import type { Terrain } from '../world/terrain'
+import type { Crossing, Terrain } from '../world/terrain'
 
 export interface HullPose {
 	pitch: number
@@ -17,12 +17,17 @@ const { maxRoll, trackSamples, trackInset, sink } = SUSPENSION
  * the two track lines: pitch from their mean slope, roll from the difference of their centre heights. A bridge
  * deck counts only while the hull centre is on it (then it is flat), so approaching a bridge never lifts one side.
  */
-export function hullPose(t: Terrain, x: number, z: number, fx: number, fz: number, L: number, W: number): HullPose {
+export function hullPose(
+	t: Terrain,
+	x: number,
+	z: number,
+	fx: number,
+	fz: number,
+	L: number,
+	W: number,
+	out: HullPose = { pitch: 0, roll: 0, y: 0 },
+): HullPose {
 	const deck = t.deckAt(x, z)
-	const hAt = (px: number, pz: number) => {
-		const g = t.ground(px, pz)
-		return deck && deck.h > g ? deck.h : g
-	}
 	const lx = fz
 	const lz = -fx // left vector (+x of the model is the hull's left side)
 	let cL = 0
@@ -31,23 +36,31 @@ export function hullPose(t: Terrain, x: number, z: number, fx: number, fz: numbe
 	for (const side of SIDES) {
 		const sx = x + lx * side * W * trackInset
 		const sz = z + lz * side * W * trackInset
-		const line = fitLine(hAt, sx, sz, fx, fz, L)
+		fitLine(t, deck, sx, sz, fx, fz, L)
 		if (side > 0) cL = line.c
 		else cR = line.c
 		slope += line.s / 2
 	}
-	return {
-		pitch: Math.atan(slope),
-		// Positive roll (rotation about the forward axis) lifts the left side
-		roll: THREE.MathUtils.clamp(Math.atan2(cL - cR, W * trackInset * 2), -maxRoll, maxRoll),
-		y: Math.max(hAt(x, z) - sink, (cL + cR) / 2),
-	}
+	out.pitch = Math.atan(slope)
+	// Positive roll (rotation about the forward axis) lifts the left side
+	out.roll = THREE.MathUtils.clamp(Math.atan2(cL - cR, W * trackInset * 2), -maxRoll, maxRoll)
+	out.y = Math.max(groundAt(t, deck, x, z) - sink, (cL + cR) / 2)
+	return out
 }
 
 const SIDES = [-1, 1] as const
 
-/** Least-squares line h = c + s·u through samples at u = −0.4L … 0.4L along the track. */
-function fitLine(h: (x: number, z: number) => number, sx: number, sz: number, fx: number, fz: number, L: number) {
+/** What the tracks ride on at (x, z): the ground, or the bridge deck the hull centre is on where it is higher. */
+function groundAt(t: Terrain, deck: Crossing | null, x: number, z: number): number {
+	const g = t.ground(x, z)
+	return deck && deck.h > g ? deck.h : g
+}
+
+/** The last fitted track line (reused: the suspension runs for every tank every frame). */
+const line = { s: 0, c: 0 }
+
+/** Least-squares line h = c + s·u through samples at u = −0.4L … 0.4L along the track, into `line`. */
+function fitLine(t: Terrain, deck: Crossing | null, sx: number, sz: number, fx: number, fz: number, L: number) {
 	let su = 0
 	let sh = 0
 	let suu = 0
@@ -56,12 +69,12 @@ function fitLine(h: (x: number, z: number) => number, sx: number, sz: number, fx
 	const n = trackSamples
 	for (let i = 0; i < n; i++) {
 		const u = (i / (n - 1) - 0.5) * L * 0.8
-		const v = h(sx + fx * u, sz + fz * u)
+		const v = groundAt(t, deck, sx + fx * u, sz + fz * u)
 		su += u
 		sh += v
 		suu += u * u
 		suh += u * v
 	}
-	const s = (n * suh - su * sh) / (n * suu - su * su)
-	return { s, c: (sh - s * su) / n }
+	line.s = (n * suh - su * sh) / (n * suu - su * su)
+	line.c = (sh - line.s * su) / n
 }

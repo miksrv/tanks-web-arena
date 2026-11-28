@@ -57,6 +57,8 @@ export interface HitResult {
 const n = { x: 0, y: 0, z: 0 }
 
 /** Segment vs the tank's hull, turret and cupola boxes: the earliest entry, or null. No armour rolls. */
+const PARTS: readonly BoxHit['part'][] = ['hull', 'turret', 'cupola']
+
 export function hitBoxes(
 	tank: Tank,
 	ax: number,
@@ -71,12 +73,8 @@ export function hitBoxes(
 	let nx = 0
 	let ny = 0
 	let nz = 0
-	const boxes: [OBB | null, BoxHit['part']][] = [
-		[tank.hullBox, 'hull'],
-		[tank.turretBox, 'turret'],
-		[tank.cupolaBox, 'cupola'],
-	]
-	for (const [box, p] of boxes) {
+	for (const p of PARTS) {
+		const box = p === 'hull' ? tank.hullBox : p === 'turret' ? tank.turretBox : tank.cupolaBox
 		const t = box ? box.raySegment(ax, ay, az, bx, by, bz, n) : -1
 		if (t < 0 || (best >= 0 && t >= best)) continue
 		best = t
