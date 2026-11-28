@@ -111,10 +111,11 @@ export class TeamTactics {
 			const capturers = w.tanks.filter((t) => t.alive && t.team === z.capturing && inZone(z, t.pos.x, t.pos.z))
 			const want = Math.max(BOT_AI.team.defenders[mode], capturers.length + 1)
 			const urgent = defence || z.points > BOT_AI.team.defendUrgent
-			const sent = members.filter((m) => this.defenders.has(m.tank) && m.tank.alive).length
+			// A defender that fell back hurt or sits on a broken track is not on its way: another one goes
+			const sent = members.filter((m) => this.defenders.has(m.tank) && onTheWay(m)).length
 			const free = members
-				.filter((m) => m.tank.alive && !this.defenders.has(m.tank) && m.tank.def.role !== 'spg')
-				.filter((m) => m.mode !== 'retreat' && (urgent || m.mode !== 'engage'))
+				.filter((m) => onTheWay(m) && !this.defenders.has(m.tank) && m.tank.def.role !== 'spg')
+				.filter((m) => urgent || m.mode !== 'engage')
 				// By time to get there, not distance: a nearby medium goes before a slow heavy
 				.sort((a, b) => zoneDist(z, a.tank) / a.tank.def.speed - zoneDist(z, b.tank) / b.tank.def.speed)
 			for (const m of free.slice(0, Math.max(0, want - sent))) {
@@ -303,4 +304,9 @@ export class TeamTactics {
 		const z = enemy.z * (1 - k) + pz * side
 		return scatterNear(w.terrain, x, z, 60, half)
 	}
+}
+
+/** A defender still heading for (or holding) the base: alive, not falling back, not on a broken track. */
+function onTheWay(m: Member): boolean {
+	return m.tank.alive && m.mode !== 'retreat' && m.tank.tracked <= 0
 }
