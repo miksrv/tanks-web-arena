@@ -83,7 +83,8 @@ function restore(raw: unknown): TankRecord | null {
 	return rec.battles ? rec : null
 }
 
-function load(): Records {
+/** What is stored; `null` when the storage is blocked or the entry is broken. */
+function load(): Records | null {
 	const out: Records = {}
 	try {
 		const data = JSON.parse(localStorage.getItem(STORE_KEY) ?? 'null') as { v?: number; tanks?: unknown } | null
@@ -93,17 +94,33 @@ function load(): Records {
 			if (rec) out[id] = rec
 		}
 	} catch {
-		/* storage blocked or the entry is broken: start empty */
+		return null
 	}
 	return out
 }
 
-/** The player's battle history per vehicle, kept in `localStorage` (per browser). */
+/**
+ * The player's battle history per vehicle, kept in `localStorage` (per browser). Several tabs share it: each battle
+ * is added to what is stored right now, and a battle saved in another tab shows up here too.
+ */
 export class TankRecords {
-	readonly all: Records = load()
+	readonly all: Records = load() ?? {} // storage blocked or broken: start empty
+
+	constructor() {
+		window.addEventListener('storage', (e) => e.key === STORE_KEY && this.reload())
+	}
+
+	/** Take what is stored (the same object stays shared with the garage); unreadable storage keeps the session's. */
+	private reload() {
+		const stored = load()
+		if (!stored) return
+		for (const id of Object.keys(this.all)) delete this.all[id]
+		Object.assign(this.all, stored)
+	}
 
 	/** Add the battle that has just ended to the player's vehicle. */
 	add(player: Tank, match: Match, medals: readonly Medal[], shooting: ShotTotals) {
+		this.reload()
 		const rec = (this.all[player.def.id] ??= fresh())
 		const damage = Math.round(player.damageDealt)
 		rec.battles++
