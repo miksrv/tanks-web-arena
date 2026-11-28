@@ -69,6 +69,8 @@ export class Game {
 
 	private last = performance.now()
 	private readonly pacer = new FramePacer()
+	/** The view last drawn while paused (empty while the battle runs). */
+	private pausedView = ''
 	private time = 0
 	private timeScale: number
 	private readonly fps = new FpsCounter()
@@ -243,7 +245,7 @@ export class Game {
 
 	private readonly frame = (now: number) => {
 		requestAnimationFrame(this.frame)
-		// Frame cap: 60 fps in battle on any refresh rate; the garage backdrop runs at half rate
+		// Frame cap: 60 fps in battle on any refresh rate; the garage backdrop runs at a low rate
 		const targetFps = this.match.phase === 'garage' ? RENDER.garageFps : RENDER.maxFps
 		if (!this.pacer.shouldRender(now, targetFps)) return
 		if (this.opts.debug) this.debugLog(now)
@@ -253,7 +255,8 @@ export class Game {
 		const dt = paused ? 0 : Math.min(RENDER.maxStep, raw) * this.timeScale
 		this.last = now
 		this.time += dt
-		this.resolution.update(raw, Math.min(targetFps, this.pacer.refreshRate))
+		// A paused frame draws nothing (see `render`) and says nothing about the GPU
+		if (!paused) this.resolution.update(raw, Math.min(targetFps, this.pacer.refreshRate))
 		this.fps.count(raw)
 		this.audio.setPaused(paused)
 
@@ -343,6 +346,12 @@ export class Game {
 		this.particles.update(dt)
 	}
 
+	/** What the picture of a paused frame depends on: the camera and the drawing buffer. */
+	private viewKey(): string {
+		const { width, height } = this.renderer.domElement
+		return `${width}x${height} ${this.rig.camera.matrixWorld.elements.join(',')} ${this.rig.camera.fov}`
+	}
+
 	/** The player's side as the signals see it. */
 	private squad(): Squad {
 		const team = this.player.team
@@ -365,7 +374,11 @@ export class Game {
 		this.precip.setScale(bufferHeight, rig.camera.fov)
 		this.precip.update(dt, rig.camera, rig.mode === 'arty')
 		playEngines(this.audio, this.match.phase === 'garage', player, this.tanks)
-		this.renderer.render(this.env.scene, rig.camera)
+		// A paused battle stands still: the picture is drawn again only when the view changes (a shake settling, a
+		// resize, another render scale)
+		const view = paused ? this.viewKey() : ''
+		if (!paused || view !== this.pausedView) this.renderer.render(this.env.scene, rig.camera)
+		this.pausedView = view
 		this.hud.update({
 			dt,
 			time: this.time,
