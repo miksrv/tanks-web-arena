@@ -211,8 +211,8 @@ export class Shells {
 		const ex = ax + (bx - ax) * k
 		const ey = ay + (by - ay) * k
 		const ez = az + (bz - az) * k
-		if (k > 0 && w.props.blocksSegment(ax, ay, az, ex, ey, ez))
-			best = { t: k * 0.5, kind: 'building', tank: null, hit: null }
+		const tr = k > 0 ? w.props.rockContact(ax, ay, az, ex, ey, ez) : -1
+		if (tr >= 0) best = { t: k * tr, kind: 'building', tank: null, hit: null }
 		return best
 	}
 
