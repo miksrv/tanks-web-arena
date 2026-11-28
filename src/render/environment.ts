@@ -4,6 +4,11 @@ import { ENVIRONMENT, SKY, WEATHER, WEATHER_LOOK, type Weather } from '../config
 import type { Season } from '../world/terrain'
 
 const tint = new THREE.Color()
+const UP = new THREE.Vector3(0, 1, 0)
+const lightX = new THREE.Vector3()
+const lightY = new THREE.Vector3()
+const lightZ = new THREE.Vector3()
+const snapped = new THREE.Vector3()
 
 /** Scene root with the sky light, the shadow-casting sun and the fog of the season and the weather. */
 export class Environment {
@@ -75,8 +80,25 @@ export class Environment {
 		this.fog.near += (want.near - this.fog.near) * k
 		this.fog.far += (want.far - this.fog.far) * k
 		const o = this.sunOffset
-		this.sun.position.set(target.x + o.x, o.y, target.z + o.z)
-		this.sun.target.position.set(target.x, 0, target.z)
+		const at = this.snapToTexels(snapped.set(target.x, 0, target.z))
+		this.sun.position.set(at.x + o.x, at.y + o.y, at.z + o.z)
+		this.sun.target.position.copy(at)
 		this.sun.target.updateMatrixWorld()
+	}
+
+	/**
+	 * Moves `p` across the sun's view to a whole number of shadow-map texels, so the shadow camera slides in texel
+	 * steps as the target moves: the shadow edges stay put instead of crawling.
+	 */
+	private snapToTexels(p: THREE.Vector3): THREE.Vector3 {
+		const texel = (2 * ENVIRONMENT.shadowHalfSize) / this.sun.shadow.mapSize.x
+		// The shadow camera's own axes (as `lookAt` builds them): z toward the sun, x and y across its view
+		lightZ.copy(this.sunOffset).normalize()
+		lightX.crossVectors(UP, lightZ).normalize()
+		lightY.crossVectors(lightZ, lightX)
+		const a = p.dot(lightX)
+		const b = p.dot(lightY)
+		p.addScaledVector(lightX, Math.round(a / texel) * texel - a)
+		return p.addScaledVector(lightY, Math.round(b / texel) * texel - b)
 	}
 }

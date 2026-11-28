@@ -79,7 +79,7 @@ Audit of 159 maps (150 random seeds and the 9 named ones). Any fix of the first 
 
 - [x] ~~**[A]** Tank wheels (InstancedMesh) share a material with plain meshes: three.js re-resolves the program every frame (~15 % of main-thread work). Give wheels their own material and drop their shadow (up to 14 fewer shadow draw calls). `src/tank/tankView.ts:109-110,137`~~
 - [ ] **[A]** Static scenery is never culled and is fully redrawn into the shadow map every frame: one InstancedMesh per prop kind and one merged building mesh span the map, the shadow box covers ~6 % of it (100–150k wasted triangles). Split trees, bushes, rocks by sector and buildings by settlement. `src/world/props/meshes.ts:68-73,153-165`, `src/world/buildings/buildings.ts:44-46`
-- [ ] **[A]** The shadow camera follows the target without texel snapping: shadow edges may crawl while moving (from code, not observed). `src/render/environment.ts:78-80`
+- [x] ~~**[A]** The shadow camera follows the target without texel snapping: shadow edges may crawl while moving (from code, not observed). `src/render/environment.ts:78-80`~~
 - [x] ~~**[A]** A falling tree re-uploads whole instance buffers every frame for ~1.1 s; use `addUpdateRange`. `src/world/props/meshes.ts:217-224`~~
 - [x] ~~**[A]** Adaptive resolution compares the frame time with 60 fps, not with the display rate: on a 30 Hz display (Safari Low Power Mode, TV) the scale drops to the minimum and shadow quality is lowered for the whole session. `src/render/adaptiveResolution.ts:36-57`~~
 - [x] ~~**[A]** One main-thread hitch (round start, map upload) can count as GPU slowness and drop the scale. `src/render/adaptiveResolution.ts:36-45`~~
