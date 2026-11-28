@@ -211,7 +211,9 @@ export class Avoidance {
 		const moved = Math.hypot(me.pos.x - this.lastPos.x, me.pos.z - this.lastPos.z)
 		// Stuck: under 30 % of the speed asked for (a part throttle in traffic really is slow), capped at 4 m/s
 		const asked = Math.abs(me.throttle) * (me.throttle > 0 ? me.def.speed : me.def.reverse)
-		if (Math.abs(me.throttle) > 0.3 && moved < 0.3 * dt * Math.min(4, asked)) this.stuckTimer += dt
+		// A broken track holds the tank where it is: that is not being stuck, and backing out would not move it either
+		if (me.tracked > 0) this.stuckTimer = 0
+		else if (Math.abs(me.throttle) > 0.3 && moved < 0.3 * dt * Math.min(4, asked)) this.stuckTimer += dt
 		else this.stuckTimer = 0
 		const away = Math.hypot(me.pos.x - this.stuckAt.x, me.pos.z - this.stuckAt.z)
 		if (this.reverseTimer <= 0 && away > BOT_AI.avoidance.stuckClearDistance) this.stuckEvents = 0

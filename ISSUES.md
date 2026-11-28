@@ -30,7 +30,7 @@ Measured baseline (production build, headless Chrome): steady 60 fps, JS about 6
 - [ ] **[A]** "Too close, back off" fights the 5 m leash to the firing position: the bot jerks back and forth, never opens the range and cannot settle its aim; the reverse steering there is not mirrored. `src/ai/fight.ts:73,108-112`
 - [x] ~~**[V]** The «Защищайте базу!» (Defend the base!) signal is undone within 0.4 s: `defendBases` clears the defenders whenever no capture is in progress. `src/ai/team.ts:123`, `src/game/teamSignals.ts:87`~~
 - [x] ~~**[V]** `stuckEvents` never resets on progress: "third stuck in a row" is the third of the whole battle. `src/ai/avoidance.ts:216`~~
-- [ ] **[A]** A broken track counts as stuck (an event every 2.5 s, a reroute every 7.5 s), and the reroute is applied in any mode: in `hold` the bot can stay parked until an enemy appears. `src/ai/avoidance.ts:203`, `src/ai/bot.ts:153-154`
+- [x] ~~**[A]** A broken track counts as stuck (an event every 2.5 s, a reroute every 7.5 s), and the reroute is applied in any mode: in `hold` the bot can stay parked until an enemy appears. `src/ai/avoidance.ts:203`, `src/ai/bot.ts:153-154`~~
 - [x] ~~**[A]** The "target hidden" timer runs only with the gun loaded and settled: an IS-2 whose target went behind a house waits ~14 s before it moves. `src/ai/gunner.ts:113,253`~~
 - [ ] **[A]** The group "front" counts tanks no longer in the push (retreated, defending, resupplying): healthy tanks stop to regroup for up to 25 s of every 40 s. `src/ai/team.ts:201-205`
 - [x] ~~**[A]** A bot on the player's order («Атакую!» Attacking!, «Нужна помощь!» Need help!) still stops to regroup. `src/ai/roles/strike.ts:85,105`~~

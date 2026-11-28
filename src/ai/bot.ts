@@ -176,7 +176,8 @@ export class BotBrain implements Bot {
 		const cmd = this.drive(w, time)
 		this.evade(dt, cmd)
 		const reroute = this.avoidance.update(w, dt, this.path, this.wp, cmd.throttle)
-		if (reroute) this.setPath(reroute, this.holdSpot)
+		// A detour only matters to a bot on its route: one holding or fighting keeps its spot
+		if (reroute && this.followsPath) this.setPath(reroute, this.holdSpot)
 		this.avoidance.apply(dt, cmd)
 		me.throttle = cmd.throttle
 		me.steer = cmd.steer
@@ -401,13 +402,19 @@ export class BotBrain implements Bot {
 		if (waiting) return cmd
 		if (this.role.drive?.(this, w, cmd)) return cmd
 		const m = this.mode
-		if (m === 'advance' || m === 'retreat' || m === 'relocate' || m === 'hunt') this.followPath(w, cmd)
+		if (this.followsPath) this.followPath(w, cmd)
 		else if (m === 'engage' && this.target) {
 			const late = this.tactics.late
 			const holdBack = !late && (this.role.aheadBy?.(this, w, true) ?? -Infinity) > 0
 			this.fighter.engage(w, cmd, this.target, time, holdBack, late)
 		} else if (m === 'hold') this.hold(w, cmd, time)
 		return cmd
+	}
+
+	/** The modes that drive along `path`. */
+	private get followsPath(): boolean {
+		const m = this.mode
+		return m === 'advance' || m === 'retreat' || m === 'relocate' || m === 'hunt'
 	}
 
 	private followPath(w: WorldRefs, cmd: DriveCommand) {
