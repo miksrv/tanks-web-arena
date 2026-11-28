@@ -16,6 +16,10 @@ export interface Member {
 	readonly defending: boolean
 	/** On the player's order (it holds for a while whatever the team decides). */
 	readonly onOrder: boolean
+	/** Fell back hurt this round. */
+	readonly fellBack: boolean
+	/** Gone back to its base for shells. */
+	readonly resupplying: boolean
 }
 
 const pick = <T>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)]
@@ -214,7 +218,9 @@ export class TeamTactics {
 		this.fronts = this.groupLanes.map(() => [])
 		for (const m of members) {
 			const g = this.groupOf.get(m.tank)
-			if (g === undefined || !m.tank.alive || m.mode === 'retreat') continue
+			// Only the tanks still in the push: not those fallen back hurt, defending a base or gone for shells
+			if (g === undefined || !m.tank.alive || m.mode === 'retreat' || m.fellBack) continue
+			if (m.defending || m.resupplying) continue
 			this.fronts[g].push({ tank: m.tank, progress: this.progress(w, m.tank.pos.x, m.tank.pos.z) })
 		}
 	}

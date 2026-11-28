@@ -32,7 +32,7 @@ Measured baseline (production build, headless Chrome): steady 60 fps, JS about 6
 - [x] ~~**[V]** `stuckEvents` never resets on progress: "third stuck in a row" is the third of the whole battle. `src/ai/avoidance.ts:216`~~
 - [x] ~~**[A]** A broken track counts as stuck (an event every 2.5 s, a reroute every 7.5 s), and the reroute is applied in any mode: in `hold` the bot can stay parked until an enemy appears. `src/ai/avoidance.ts:203`, `src/ai/bot.ts:153-154`~~
 - [x] ~~**[A]** The "target hidden" timer runs only with the gun loaded and settled: an IS-2 whose target went behind a house waits ~14 s before it moves. `src/ai/gunner.ts:113,253`~~
-- [ ] **[A]** The group "front" counts tanks no longer in the push (retreated, defending, resupplying): healthy tanks stop to regroup for up to 25 s of every 40 s. `src/ai/team.ts:201-205`
+- [x] ~~**[A]** The group "front" counts tanks no longer in the push (retreated, defending, resupplying): healthy tanks stop to regroup for up to 25 s of every 40 s. `src/ai/team.ts:201-205`~~
 - [x] ~~**[A]** A bot on the player's order («Атакую!» Attacking!, «Нужна помощь!» Need help!) still stops to regroup. `src/ai/roles/strike.ts:85,105`~~
 - [x] ~~**[A]** Bots change shell at the only moment it costs 2.5 s (gun loaded); `facingArmor` has no hysteresis, so a turning target causes repeated swaps. `src/ai/gunner.ts:231`, `src/ai/targeting.ts:27-31`~~
 - [ ] **[A]** Cover spots and the reverse into them ignore buildings: the bot backs into a wall and grinds on it. `src/ai/positions.ts:114-136`, `src/ai/steering.ts:16-24`

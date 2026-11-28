@@ -68,7 +68,7 @@ export class BotBrain implements Bot {
 	/** The base circle this bot is on its way to take (or taking), until a fight or a retreat takes over. */
 	private captureZone: CaptureZone | null = null
 	/** Driving back to the base for shells, or taking them on there. */
-	private resupplying = false
+	private restocking = false
 	/** The circle this bot was last sent to defend (counts while the team keeps it among its defenders). */
 	private defendZone: CaptureZone | null = null
 
@@ -130,7 +130,7 @@ export class BotBrain implements Bot {
 		this.gunner.resetRound()
 		this.evadeTimer = 0
 		this.fighter.reset()
-		this.resupplying = false
+		this.restocking = false
 		this.fellBack = false
 		const p = this.role.plan(w, this)
 		this.mode = p.mode
@@ -242,6 +242,11 @@ export class BotBrain implements Bot {
 	}
 
 	/** On the way to a base circle or in it. */
+	/** On its way to (or standing at) its own base for shells. */
+	get resupplying() {
+		return this.restocking
+	}
+
 	get capturing() {
 		return this.captureZone !== null
 	}
@@ -285,21 +290,21 @@ export class BotBrain implements Bot {
 	private resupply(w: WorldRefs): boolean {
 		const me = this.tank
 		const busy = this.onObjective || this.defending
-		if (this.resupplying) {
+		if (this.restocking) {
 			// Sent elsewhere on the way (a capture, a base to defend, an order), or the last enemy turned up: that first
 			if (busy || (this.hunting && me.ammoShare > 0)) {
-				this.resupplying = false
+				this.restocking = false
 				return false
 			}
 			if (me.ammoShare < BOT_AI.core.resupplyDone) return true
-			this.resupplying = false
+			this.restocking = false
 			const p = this.role.plan(w, this)
 			this.mode = p.mode
 			this.setPath(p.path, p.holdSpot)
 			return false
 		}
 		if (me.ammoShare >= AMMO_LOAD.lowShare || this.hunting || busy) return false
-		this.resupplying = true
+		this.restocking = true
 		const base = w.terrain.bases[me.team]
 		this.goTo(w, w.terrain.findSpot(base.x, base.z, BOT_AI.core.resupplySpot))
 		return true
