@@ -182,8 +182,15 @@ export class TeamTactics {
 
 	update(w: WorldRefs, members: readonly Member[], time: number, dt: number) {
 		for (const o of w.tanks) {
-			if (o.team !== this.team && o.alive && o.spottedBy[this.team])
-				this.seen.set(o, { x: o.pos.x, z: o.pos.z, t: time })
+			if (o.team !== this.team && o.alive && o.spottedBy[this.team]) {
+				const s = this.seen.get(o)
+				if (!s) this.seen.set(o, { x: o.pos.x, z: o.pos.z, t: time })
+				else {
+					s.x = o.pos.x
+					s.z = o.pos.z
+					s.t = time
+				}
+			}
 		}
 		this.timer -= dt
 		if (this.timer > 0) return

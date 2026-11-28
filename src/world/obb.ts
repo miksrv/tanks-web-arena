@@ -103,30 +103,15 @@ export class OBB {
 		const dx = lbx - lax
 		const dy = by - ay
 		const dz = lbz - laz
-		let t0 = 0
-		let t1 = 1
-		let axis = -1
-		let sign = 0
-		const slab = (p: number, d: number, lo: number, hi: number, ax: number) => {
-			if (Math.abs(d) < 1e-9) return p >= lo && p <= hi
-			let ta = (lo - p) / d
-			let tb = (hi - p) / d
-			let s = -1
-			if (ta > tb) {
-				;[ta, tb] = [tb, ta]
-				s = 1
-			}
-			if (ta > t0) {
-				t0 = ta
-				axis = ax
-				sign = s
-			}
-			if (tb < t1) t1 = tb
-			return t0 <= t1
-		}
+		const c = clip
+		c.t0 = 0
+		c.t1 = 1
+		c.axis = -1
+		c.sign = 0
 		if (!slab(lax, dx, -this.hw, this.hw, 0)) return -1
 		if (!slab(ay, dy, this.y0, this.y1, 1)) return -1
 		if (!slab(laz, dz, -this.hd, this.hd, 2)) return -1
+		const { t0, t1, axis, sign } = c
 		if (t0 > 1 || t1 < 0) return -1
 		if (n) {
 			if (axis === 0) {
@@ -150,4 +135,28 @@ export class OBB {
 		}
 		return Math.max(0, t0)
 	}
+}
+
+/** The segment's clip against the slabs so far: entry and exit parameters, and the axis and side it entered by. */
+const clip = { t0: 0, t1: 1, axis: -1, sign: 0 }
+
+/** Clip `clip` by one slab lo…hi of the axis `ax` (p and d: the segment's start and run along it); false: a miss. */
+function slab(p: number, d: number, lo: number, hi: number, ax: number): boolean {
+	if (Math.abs(d) < 1e-9) return p >= lo && p <= hi
+	let ta = (lo - p) / d
+	let tb = (hi - p) / d
+	let s = -1
+	if (ta > tb) {
+		const swap = ta
+		ta = tb
+		tb = swap
+		s = 1
+	}
+	if (ta > clip.t0) {
+		clip.t0 = ta
+		clip.axis = ax
+		clip.sign = s
+	}
+	if (tb < clip.t1) clip.t1 = tb
+	return clip.t0 <= clip.t1
 }

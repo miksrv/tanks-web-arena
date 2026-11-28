@@ -57,6 +57,14 @@ export interface HitResult {
 const n = { x: 0, y: 0, z: 0 }
 
 /** Segment vs the tank's hull, turret and cupola boxes: the earliest entry, or null. No armour rolls. */
+const fwdTmp = { x: 0, z: 0 }
+/** The hull's heading as a reused vector. */
+function hullForward(t: Tank) {
+	fwdTmp.x = t.fx
+	fwdTmp.z = t.fz
+	return fwdTmp
+}
+
 const PARTS: readonly BoxHit['part'][] = ['hull', 'turret', 'cupola']
 
 export function hitBoxes(
@@ -94,7 +102,8 @@ export function hitBoxes(
  */
 function faceOf(tank: Tank, h: BoxHit): Face {
 	if (h.ny > ZONES.topNormalY) return 'top'
-	const fwd = h.part === 'hull' || !tank.def.shape.turret ? { x: tank.fx, z: tank.fz } : tank.turretForward()
+	const hull = h.part === 'hull' || !tank.def.shape.turret
+	const fwd = hull ? hullForward(tank) : tank.turretForward(fwdTmp)
 	const d = h.nx * fwd.x + h.nz * fwd.z
 	return d > ZONES.frontDot ? 'front' : d < -ZONES.frontDot ? 'rear' : 'side'
 }

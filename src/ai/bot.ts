@@ -9,7 +9,7 @@ import { Fighter } from './fight'
 import { BotGunner, type HoldFire } from './gunner'
 import { gunHasLos } from './lineOfFire'
 import { vantage } from './positions'
-import { createRoleAi, type Bot, type RoleAi } from './roles'
+import { createRoleAi, type Bot, type Frame, type RoleAi } from './roles'
 import { routeAcross } from './routes'
 import { driveToSpot, faceToward, friendSpots, occupied, steerTo } from './steering'
 import { inReach, nearestEnemyDist, pickTarget } from './targeting'
@@ -34,6 +34,15 @@ export class BotBrain implements Bot {
 	readonly fighter: Fighter
 	private readonly role: RoleAi
 	private readonly avoidance: Avoidance
+	/** This frame's drive command and role frame, reused (every bot, every frame). */
+	private readonly cmd: DriveCommand = { throttle: 0, steer: 0 }
+	private readonly frame: Frame = {
+		w: null as unknown as WorldRefs,
+		dt: 0,
+		time: 0,
+		enemyNear: Infinity,
+		hurt: false,
+	}
 	private team: TeamTactics | null = null
 	/** s until the target is picked again; spread at the start so the bots do not all retarget on one frame. */
 	private retarget = Math.random() * BOT_AI.core.retarget
@@ -146,7 +155,15 @@ export class BotBrain implements Bot {
 		const enemyNear = nearestEnemyDist(w, me, time)
 		if (this.mode === 'advance' && this.pathDone) this.mode = this.holdSpot ? 'hold' : 'engage'
 		const resupplying = this.resupply(w)
-		if (!resupplying) this.role.think(this, { w, dt, time, enemyNear, hurt })
+		if (!resupplying) {
+			const f = this.frame
+			f.w = w
+			f.dt = dt
+			f.time = time
+			f.enemyNear = enemyNear
+			f.hurt = hurt
+			this.role.think(this, f)
+		}
 		if (this.mode === 'engage' && !this.target) this.fightOver()
 		if (!resupplying) this.shiftWhenBlind(w)
 		if (this.mode === 'engage' || this.mode === 'retreat' || this.mode === 'relocate') this.captureZone = null
@@ -378,7 +395,8 @@ export class BotBrain implements Bot {
 	// ---------------------------------------------------------------- driving
 
 	private drive(w: WorldRefs, time: number): DriveCommand {
-		const cmd: DriveCommand = { throttle: 0, steer: 0 }
+		const cmd = this.cmd
+		cmd.throttle = cmd.steer = 0
 		const waiting = this.mode === 'advance' && time < this.departAt && !this.target // the row ahead clears the base
 		if (waiting) return cmd
 		if (this.role.drive?.(this, w, cmd)) return cmd

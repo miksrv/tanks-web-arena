@@ -89,12 +89,11 @@ export class Avoidance {
 	/** Terrain, buildings and rocks. */
 	private probe(w: WorldRefs) {
 		const L = this.me.def.shape.hullL
-		const hard = (ang: number, len: number) => this.hardAt(w, ang, len)
-		const ahead = hard(0, L * 1.5) || hard(0, L * 2.5)
-		const left = hard(0.5, L * 1.8)
-		const right = hard(-0.5, L * 1.8)
+		const ahead = this.hardAt(w, 0, L * 1.5) || this.hardAt(w, 0, L * 2.5)
+		const left = this.hardAt(w, 0.5, L * 1.8)
+		const right = this.hardAt(w, -0.5, L * 1.8)
 		this.steer = 0
-		if (ahead) this.steer = this.pickSide(!hard(1.0, L * 1.6), !hard(-1.0, L * 1.6))
+		if (ahead) this.steer = this.pickSide(!this.hardAt(w, 1.0, L * 1.6), !this.hardAt(w, -1.0, L * 1.6))
 		else if (left && !right) this.steer = -0.6
 		else if (right && !left) this.steer = 0.6
 	}

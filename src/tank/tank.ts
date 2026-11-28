@@ -221,9 +221,11 @@ export class Tank {
 	get loadingStalled(): boolean {
 		return !!this.def.gun.mortar && this.reload > 0 && Math.abs(this.speed) > MORTAR.standSpeed
 	}
-	turretForward() {
+	turretForward(out = { x: 0, z: 0 }) {
 		const a = this.worldTurretYaw
-		return { x: Math.sin(a), z: Math.cos(a) }
+		out.x = Math.sin(a)
+		out.z = Math.cos(a)
+		return out
 	}
 	/** Eye point for spotting checks (commander's cupola). */
 	eye(out: THREE.Vector3) {

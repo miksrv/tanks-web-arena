@@ -47,7 +47,7 @@ Measured baseline (production build, headless Chrome): steady 60 fps, JS about 6
 - [x] ~~**[A]** Full line-of-fire check every frame for every loaded bot that cannot shoot, plus `losBlocker` computed only for the debug label; check at 5–10 Hz. `src/ai/gunner.ts:252-254`~~
 - [x] ~~**[A]** All bots retarget on the same frame (`retarget` starts at 0 for everyone). `src/ai/bot.ts:38,308-311`~~
 - [x] ~~**[A]** Obstacle probes and the traffic scan run for bots that are not driving. `src/ai/avoidance.ts:52-55`~~
-- [ ] **[A]** Per-frame garbage in bot code: an object per visible enemy (`team.ts:180`), per bot (`bot.ts:141,373`), a closure per bot (`avoidance.ts:82`), a `slab` closure per `raySegment` (`src/world/obb.ts:113`), `turretForward()` (`tank.ts:222`). Low impact.
+- [x] ~~**[A]** Per-frame garbage in bot code: an object per visible enemy (`team.ts:180`), per bot (`bot.ts:141,373`), a closure per bot (`avoidance.ts:82`), a `slab` closure per `raySegment` (`src/world/obb.ts:113`), `turretForward()` (`tank.ts:222`). Low impact.~~
 
 ## 3. Map generation
 
