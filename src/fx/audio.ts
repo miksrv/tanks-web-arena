@@ -26,12 +26,19 @@ export interface GunVoice {
 	howitzer: boolean // a short barrel and a small charge: a boom with little crack
 }
 
-/** A one-shot's entry point: gain-adjusted volume `v` and how far toward the edge of its reach it is (0…1). */
+/**
+ * A one-shot's entry point: gain-adjusted volume `v`, how far toward the edge of its reach it is (0…1), and how
+ * late it arrives (s): every layer of the sound starts that much later.
+ */
 interface Voice {
 	node: AudioNode
 	v: number
 	far: number
+	lag: number
 }
+
+/** Where a layer of sound goes: a world voice, or straight into a node (the mix, a cockpit filter). */
+type Out = Voice | AudioNode
 
 // Procedural sound: engines and tracks (each vehicle in the voice of its own engine, see `ENGINES`), layered
 // gunfire voiced by the gun, armour hits, ricochets, explosions. No assets.
@@ -158,18 +165,19 @@ export class Audio {
 		const send = ctx.createGain()
 		send.gain.value = 0.15 + 0.6 * far
 		air.connect(send).connect(this.reverb)
-		const lag = travels ? Math.min(GUN_SOUND.maxLag, d / GUN_SOUND.sound) : 0
-		if (lag < 0.05) return { node: air, v, far }
 		// Sound takes its time over the field: the flash comes first, the report after it
-		const late = ctx.createDelay(GUN_SOUND.maxLag)
-		late.delayTime.value = lag
-		late.connect(air)
-		return { node: late, v, far }
+		const lag = travels ? Math.min(GUN_SOUND.maxLag, d / GUN_SOUND.sound) : 0
+		return { node: air, v, far, lag: lag < 0.05 ? 0 : lag }
+	}
+
+	/** The node a layer connects to and the time it starts at, `delay` seconds after the sound's own lag. */
+	private static at(ctx: AudioContext, out: Out, delay: number): [AudioNode, number] {
+		return out instanceof AudioNode ? [out, ctx.currentTime + delay] : [out.node, ctx.currentTime + out.lag + delay]
 	}
 
 	/** Filtered noise with a fast attack and exponential decay; the filter can sweep to `freqEnd`. */
 	private noise(
-		out: AudioNode,
+		out: Out,
 		kind: NoiseKind,
 		delay: number,
 		gain: number,
@@ -181,7 +189,7 @@ export class Audio {
 		attack = 0.002,
 	) {
 		if (!this.ctx || !this.buffers || gain <= 0) return
-		const t = this.ctx.currentTime + delay
+		const [node, t] = Audio.at(this.ctx, out, delay)
 		const src = this.ctx.createBufferSource()
 		src.buffer = this.buffers[kind]
 		src.loop = true
@@ -195,14 +203,14 @@ export class Audio {
 		g.gain.setValueAtTime(silent, t)
 		g.gain.linearRampToValueAtTime(gain, t + attack)
 		g.gain.exponentialRampToValueAtTime(silent, t + dur)
-		src.connect(f).connect(g).connect(out)
+		src.connect(f).connect(g).connect(node)
 		src.start(t, Math.random() * 1.5)
 		src.stop(t + dur + 0.05)
 	}
 
 	/** One oscillator partial; `slide` is the pitch ratio reached at the end. */
 	private partial(
-		out: AudioNode,
+		out: Out,
 		delay: number,
 		freq: number,
 		gain: number,
@@ -212,7 +220,7 @@ export class Audio {
 		attack = 0.002,
 	) {
 		if (!this.ctx || gain <= 0) return
-		const t = this.ctx.currentTime + delay
+		const [node, t] = Audio.at(this.ctx, out, delay)
 		const o = this.ctx.createOscillator()
 		o.type = type
 		o.frequency.setValueAtTime(freq, t)
@@ -221,13 +229,13 @@ export class Audio {
 		g.gain.setValueAtTime(silent, t)
 		g.gain.linearRampToValueAtTime(gain, t + attack)
 		g.gain.exponentialRampToValueAtTime(silent, t + dur)
-		o.connect(g).connect(out)
+		o.connect(g).connect(node)
 		o.start(t)
 		o.stop(t + dur + 0.05)
 	}
 
 	/** A struck steel plate: inharmonic partials, the higher ones dying first. */
-	private ring(out: AudioNode, delay: number, base: number, gain: number, dur: number) {
+	private ring(out: Out, delay: number, base: number, gain: number, dur: number) {
 		plate.forEach((r, i) => {
 			const f = base * r * (0.98 + Math.random() * 0.04)
 			this.partial(out, delay, f, gain / (1 + i * 0.8), dur / (1 + i * 0.7))
@@ -273,7 +281,7 @@ export class Audio {
 		const near = 1 - s.far
 		const long = auto ? 0.5 : 1 + 0.25 * boom
 		this.noise(
-			s.node,
+			s,
 			'white',
 			0,
 			(0.2 + 0.55 * crack) * v * near,
@@ -285,44 +293,22 @@ export class Audio {
 			0.001,
 		)
 		const top = ((2500 - 900 * boom + 700 * crack) / Math.pow(k, 0.8)) * vary
-		this.noise(s.node, 'brown', 0, 1.1 * v, (0.3 + 0.38 * k) * long, 'lowpass', top, 105, 0.6, 0.002)
+		this.noise(s, 'brown', 0, 1.1 * v, (0.3 + 0.38 * k) * long, 'lowpass', top, 105, 0.6, 0.002)
 		if (brake)
-			this.noise(
-				s.node,
-				'white',
-				0.004,
-				0.32 * v,
-				0.08 + 0.05 * k,
-				'bandpass',
-				950 / Math.sqrt(k),
-				420,
-				0.9,
-				0.001,
-			)
+			this.noise(s, 'white', 0.004, 0.32 * v, 0.08 + 0.05 * k, 'bandpass', 950 / Math.sqrt(k), 420, 0.9, 0.001)
 		const thump = ((95 - 22 * boom) / Math.sqrt(k)) * vary
-		this.partial(s.node, 0, thump, (0.85 + 0.2 * boom) * v, (0.24 + 0.22 * k) * long, 0.35)
-		if (k > 1.2) this.partial(s.node, 0.01, thump * 0.52, 0.45 * v, 0.5 + 0.25 * k, 0.5)
+		this.partial(s, 0, thump, (0.85 + 0.2 * boom) * v, (0.24 + 0.22 * k) * long, 0.35)
+		if (k > 1.2) this.partial(s, 0.01, thump * 0.52, 0.45 * v, 0.5 + 0.25 * k, 0.5)
 		if (auto) return
-		this.noise(s.node, 'brown', 0.12, 0.35 * v, 1.0 + 0.7 * k, 'lowpass', 380, 90, 0.5, 0.15)
+		this.noise(s, 'brown', 0.12, 0.35 * v, 1.0 + 0.7 * k, 'lowpass', 380, 90, 0.5, 0.15)
 		// The report coming back off the hills and the tree lines
-		this.noise(
-			s.node,
-			'brown',
-			0.3 + Math.random() * 0.15,
-			0.16 * v,
-			0.5 + 0.3 * k,
-			'lowpass',
-			650 / k,
-			140,
-			0.6,
-			0.03,
-		)
+		this.noise(s, 'brown', 0.3 + Math.random() * 0.15, 0.16 * v, 0.5 + 0.3 * k, 'lowpass', 650 / k, 140, 0.6, 0.03)
 		if (at) return
 		const steel = 1 / Math.sqrt(k)
-		this.ring(s.node, 0.04, 170 * steel, 0.07, 0.35)
-		this.ring(s.node, 0.02, 520 * steel * vary, 0.035 * (0.5 + 0.5 * crack), 0.5)
-		this.noise(s.node, 'white', 0.05, 0.12, 0.05, 'bandpass', 2600, 2600, 2)
-		this.noise(s.node, 'brown', 0.09, 0.3, 0.12, 'lowpass', 500 * steel, 160, 0.8, 0.002)
+		this.ring(s, 0.04, 170 * steel, 0.07, 0.35)
+		this.ring(s, 0.02, 520 * steel * vary, 0.035 * (0.5 + 0.5 * crack), 0.5)
+		this.noise(s, 'white', 0.05, 0.12, 0.05, 'bandpass', 2600, 2600, 2)
+		this.noise(s, 'brown', 0.09, 0.3, 0.12, 'lowpass', 500 * steel, 160, 0.8, 0.002)
 		// The spent case drops out of the breech and rolls on the floor
 		const drop = 0.5 + 0.12 * k
 		for (const [dt, g] of [
@@ -330,8 +316,8 @@ export class Audio {
 			[0.13, 0.55],
 			[0.22, 0.3],
 		] as const) {
-			this.ring(s.node, drop + dt, 1250 * steel * (0.96 + Math.random() * 0.08), 0.045 * g, 0.22)
-			this.noise(s.node, 'white', drop + dt, 0.05 * g, 0.03, 'bandpass', 3400, 3400, 2, 0.001)
+			this.ring(s, drop + dt, 1250 * steel * (0.96 + Math.random() * 0.08), 0.045 * g, 0.22)
+			this.noise(s, 'white', drop + dt, 0.05 * g, 0.03, 'bandpass', 3400, 3400, 2, 0.001)
 		}
 	}
 
@@ -340,9 +326,9 @@ export class Audio {
 		const s = this.voice(at, 800, true)
 		if (!s) return
 		const v = s.v
-		this.noise(s.node, 'white', 0, 0.35 * v * (1 - s.far), 0.05, 'highpass', 2000, 2000, 0.5, 0.001)
-		this.noise(s.node, 'white', 0, 0.45 * v, 1.0, 'bandpass', 2600, 600, 1.1, 0.03)
-		this.noise(s.node, 'brown', 0, 0.6 * v, 0.9, 'lowpass', 500, 120, 0.6, 0.02)
+		this.noise(s, 'white', 0, 0.35 * v * (1 - s.far), 0.05, 'highpass', 2000, 2000, 0.5, 0.001)
+		this.noise(s, 'white', 0, 0.45 * v, 1.0, 'bandpass', 2600, 600, 1.1, 0.03)
+		this.noise(s, 'brown', 0, 0.6 * v, 0.9, 'lowpass', 500, 120, 0.6, 0.02)
 	}
 
 	hit(at: SoundAt, penetrated: boolean, ricochet: boolean) {
@@ -351,23 +337,23 @@ export class Audio {
 		const v = s.v
 		if (ricochet) {
 			// A glancing ping and the shell whirring off
-			this.noise(s.node, 'white', 0, 0.3 * v, 0.04, 'bandpass', 3500, 3500, 1.5, 0.001)
-			this.ring(s.node, 0, 760, 0.16 * v, 0.4)
-			this.noise(s.node, 'white', 0.02, 0.25 * v, 0.45, 'bandpass', 3800, 900, 7, 0.03)
+			this.noise(s, 'white', 0, 0.3 * v, 0.04, 'bandpass', 3500, 3500, 1.5, 0.001)
+			this.ring(s, 0, 760, 0.16 * v, 0.4)
+			this.noise(s, 'white', 0.02, 0.25 * v, 0.45, 'bandpass', 3800, 900, 7, 0.03)
 			return
 		}
 		if (penetrated) {
 			// Dull, heavy crunch of a shell going through
-			this.noise(s.node, 'brown', 0, 1.0 * v, 0.45, 'lowpass', 1400, 140, 0.8, 0.002)
-			this.partial(s.node, 0, 80, 0.7 * v, 0.3, 0.45)
-			this.noise(s.node, 'white', 0, 0.35 * v, 0.22, 'bandpass', 1300, 500, 0.8, 0.002)
-			this.ring(s.node, 0.01, 130, 0.22 * v, 0.5)
+			this.noise(s, 'brown', 0, 1.0 * v, 0.45, 'lowpass', 1400, 140, 0.8, 0.002)
+			this.partial(s, 0, 80, 0.7 * v, 0.3, 0.45)
+			this.noise(s, 'white', 0, 0.35 * v, 0.22, 'bandpass', 1300, 500, 0.8, 0.002)
+			this.ring(s, 0.01, 130, 0.22 * v, 0.5)
 			return
 		}
 		// Bounced off the armour: a hard clang that rings on
-		this.noise(s.node, 'white', 0, 0.45 * v, 0.05, 'bandpass', 2800, 2800, 1, 0.001)
-		this.noise(s.node, 'brown', 0, 0.6 * v, 0.18, 'lowpass', 900, 200, 0.7, 0.002)
-		this.ring(s.node, 0, 240, 0.32 * v, 0.8)
+		this.noise(s, 'white', 0, 0.45 * v, 0.05, 'bandpass', 2800, 2800, 1, 0.001)
+		this.noise(s, 'brown', 0, 0.6 * v, 0.18, 'lowpass', 900, 200, 0.7, 0.002)
+		this.ring(s, 0, 240, 0.32 * v, 0.8)
 	}
 
 	/** A shell striking the ground: a thud, and for big HE a blast with dirt raining down. */
@@ -376,14 +362,14 @@ export class Audio {
 		if (!s) return
 		const v = s.v
 		if (!big) {
-			this.noise(s.node, 'brown', 0, 0.5 * v, 0.3, 'lowpass', 800, 150, 0.7, 0.002)
-			this.noise(s.node, 'white', 0, 0.15 * v, 0.06, 'bandpass', 1800, 1800, 1, 0.001)
+			this.noise(s, 'brown', 0, 0.5 * v, 0.3, 'lowpass', 800, 150, 0.7, 0.002)
+			this.noise(s, 'white', 0, 0.15 * v, 0.06, 'bandpass', 1800, 1800, 1, 0.001)
 			return
 		}
-		this.noise(s.node, 'white', 0, 0.4 * v * (1 - s.far), 0.08, 'highpass', 1200, 1200, 0.5, 0.001)
-		this.noise(s.node, 'brown', 0, 1.1 * v, 1.0, 'lowpass', 1600, 90, 0.6, 0.002)
-		this.partial(s.node, 0, 65, 0.8 * v, 0.6, 0.4)
-		this.noise(s.node, 'white', 0.1, 0.1 * v, 0.7, 'highpass', 1500, 3000, 0.5, 0.15)
+		this.noise(s, 'white', 0, 0.4 * v * (1 - s.far), 0.08, 'highpass', 1200, 1200, 0.5, 0.001)
+		this.noise(s, 'brown', 0, 1.1 * v, 1.0, 'lowpass', 1600, 90, 0.6, 0.002)
+		this.partial(s, 0, 65, 0.8 * v, 0.6, 0.4)
+		this.noise(s, 'white', 0.1, 0.1 * v, 0.7, 'highpass', 1500, 3000, 0.5, 0.15)
 	}
 
 	/** A tank brewing up: blast, the ammunition going a beat later, scattering debris. */
@@ -391,16 +377,16 @@ export class Audio {
 		const s = this.voice(at, 1400, true)
 		if (!s) return
 		const v = s.v
-		this.noise(s.node, 'white', 0, 0.5 * v * (1 - s.far), 0.12, 'highpass', 1000, 1000, 0.5, 0.001)
-		this.noise(s.node, 'brown', 0, 1.3 * v, 2.2, 'lowpass', 1800, 70, 0.6, 0.003)
-		this.partial(s.node, 0, 60, 1.0 * v, 1.4, 0.35)
-		this.noise(s.node, 'brown', 0.2, 0.8 * v, 1.6, 'lowpass', 900, 60, 0.6, 0.01)
-		this.partial(s.node, 0.2, 48, 0.6 * v, 1.0, 0.4)
-		this.ring(s.node, 0.35, 160, 0.12 * v, 0.9)
+		this.noise(s, 'white', 0, 0.5 * v * (1 - s.far), 0.12, 'highpass', 1000, 1000, 0.5, 0.001)
+		this.noise(s, 'brown', 0, 1.3 * v, 2.2, 'lowpass', 1800, 70, 0.6, 0.003)
+		this.partial(s, 0, 60, 1.0 * v, 1.4, 0.35)
+		this.noise(s, 'brown', 0.2, 0.8 * v, 1.6, 'lowpass', 900, 60, 0.6, 0.01)
+		this.partial(s, 0.2, 48, 0.6 * v, 1.0, 0.4)
+		this.ring(s, 0.35, 160, 0.12 * v, 0.9)
 		for (let i = 0; i < 6; i++) {
 			const d = 0.3 + Math.random() * 1.2
 			const f = 1500 + Math.random() * 2000
-			this.noise(s.node, 'white', d, 0.12 * v * Math.random(), 0.04, 'bandpass', f, f, 2)
+			this.noise(s, 'white', d, 0.12 * v * Math.random(), 0.04, 'bandpass', f, f, 2)
 		}
 	}
 
