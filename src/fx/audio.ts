@@ -35,6 +35,9 @@ interface Voice {
 	v: number
 	far: number
 	lag: number
+	/** The chain's own nodes, let go of when the last of its `layers` has played out. */
+	chain: AudioNode[]
+	layers: number
 }
 
 /** Where a layer of sound goes: a world voice, or straight into a node (the mix, a cockpit filter). */
@@ -140,11 +143,12 @@ export class Audio {
 	}
 
 	/** The node a sound connects to: through a stereo panner when off-centre. */
-	private panned(ctx: AudioContext, out: AudioNode, pan: number): AudioNode {
+	private panned(ctx: AudioContext, out: AudioNode, pan: number, chain: AudioNode[]): AudioNode {
 		if (Math.abs(pan) < 0.01) return out
 		const p = ctx.createStereoPanner()
 		p.pan.value = pan
 		p.connect(out)
+		chain.push(p)
 		return p
 	}
 
@@ -161,13 +165,30 @@ export class Audio {
 		const air = ctx.createBiquadFilter()
 		air.type = 'lowpass'
 		air.frequency.value = 16000 * Math.pow(airFar, Math.sqrt(far))
-		air.connect(this.panned(ctx, this.mix, pan))
 		const send = ctx.createGain()
+		const chain: AudioNode[] = [air, send]
+		air.connect(this.panned(ctx, this.mix, pan, chain))
 		send.gain.value = 0.15 + 0.6 * far
 		air.connect(send).connect(this.reverb)
 		// Sound takes its time over the field: the flash comes first, the report after it
 		const lag = travels ? Math.min(GUN_SOUND.maxLag, d / GUN_SOUND.sound) : 0
-		return { node: air, v, far, lag: lag < 0.05 ? 0 : lag }
+		return Audio.chain({ node: air, v, far, lag: lag < 0.05 ? 0 : lag, chain, layers: 0 })
+	}
+
+	/** A voice let go of once its layers end; one that got no layer at all (all too quiet) is let go of at once. */
+	private static chain(voice: Voice): Voice {
+		queueMicrotask(() => voice.layers === 0 && voice.chain.forEach((n) => n.disconnect()))
+		return voice
+	}
+
+	/** A layer's source and nodes are disconnected when it ends, and its voice's chain after the last layer. */
+	private static release(out: Out, src: AudioScheduledSourceNode, nodes: AudioNode[]) {
+		const voice = out instanceof AudioNode ? null : out
+		if (voice) voice.layers++
+		src.onended = () => {
+			for (const n of nodes) n.disconnect()
+			if (voice && --voice.layers === 0) voice.chain.forEach((n) => n.disconnect())
+		}
 	}
 
 	/** The node a layer connects to and the time it starts at, `delay` seconds after the sound's own lag. */
@@ -206,6 +227,7 @@ export class Audio {
 		src.connect(f).connect(g).connect(node)
 		src.start(t, Math.random() * 1.5)
 		src.stop(t + dur + 0.05)
+		Audio.release(out, src, [src, f, g])
 	}
 
 	/** One oscillator partial; `slide` is the pitch ratio reached at the end. */
@@ -232,6 +254,7 @@ export class Audio {
 		o.connect(g).connect(node)
 		o.start(t)
 		o.stop(t + dur + 0.05)
+		Audio.release(out, o, [o, g])
 	}
 
 	/** A struck steel plate: inharmonic partials, the higher ones dying first. */
@@ -427,9 +450,10 @@ export class Audio {
 		lp.type = 'lowpass'
 		lp.frequency.value = 900
 		lp.connect(this.mix)
+		const buzzer = Audio.chain({ node: lp, v: 1, far: 0, lag: 0, chain: [lp], layers: 0 })
 		for (const d of [0, 0.2]) {
-			this.partial(lp, d, 220, 0.12, 0.15, 1, 'square', 0.01)
-			this.partial(lp, d, 277, 0.08, 0.15, 1, 'square', 0.01)
+			this.partial(buzzer, d, 220, 0.12, 0.15, 1, 'square', 0.01)
+			this.partial(buzzer, d, 277, 0.08, 0.15, 1, 'square', 0.01)
 		}
 	}
 
