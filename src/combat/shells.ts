@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { COMBAT, CREW, CREW_ROLES, GRAVITY, MORTAR } from '../config'
 import type { ShotParams, Tank, WorldRefs } from '../tank/tank'
-import { testShell, type HitResult, type ShellSpec } from './armor'
+import { hitBoxes, testShell, type HitResult, type ShellSpec } from './armor'
 import { HOWITZER } from './ballistics'
 
 interface Shell {
@@ -155,6 +155,8 @@ export class Shells {
 		by: number,
 		bz: number,
 	) {
+		// Only the tank actually hit rolls for penetration, damage and modules
+		if (c.kind === 'tank' && c.tank && !c.hit) c.hit = testShell(c.tank, ax, ay, az, bx, by, bz, s.spec)
 		this.count(c)
 		if (c.kind === 'tank' && c.tank && c.hit) this.applyHit(s, c.tank, c.hit)
 		const imp: Impact = {
@@ -169,7 +171,7 @@ export class Shells {
 		if (s.he && s.splash > 0) this.splash(imp, s, w, c.tank)
 	}
 
-	/** The earliest tank or wreck on the step a → b (earlier than `best`, if given). */
+	/** The earliest tank or wreck on the step a → b (earlier than `best`, if given); boxes only, no dice yet. */
 	private sweepTanks(
 		s: Shell,
 		w: WorldRefs,
@@ -183,8 +185,8 @@ export class Shells {
 	): Contact | null {
 		for (const t of w.tanks) {
 			if (t === s.owner || !t.nearSegment(ax, az, bx, bz)) continue
-			const h = testShell(t, ax, ay, az, bx, by, bz, s.spec)
-			if (h && h.t < (best?.t ?? 2)) best = { t: h.t, kind: t.alive ? 'tank' : 'wreck', tank: t, hit: h }
+			const h = hitBoxes(t, ax, ay, az, bx, by, bz)
+			if (h && h.t < (best?.t ?? 2)) best = { t: h.t, kind: t.alive ? 'tank' : 'wreck', tank: t, hit: null }
 		}
 		return best
 	}
