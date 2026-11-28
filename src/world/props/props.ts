@@ -169,7 +169,13 @@ export class Props {
 				if (off >= r) continue
 				const above = ay + (by - ay) * t - this.terrain.height(x, z)
 				if (above > PROPS.rockTopMax || above >= rockTop(rk)) continue
-				const enter = len > 0 ? Math.max(0, t - Math.sqrt(r * r - off * off) / len) : 0
+				// Entry into the circle from the unclamped closest point (its distance across the line, not to the end)
+				const along = len2 > 0 ? ((rk.x - ax) * dx + (rk.z - az) * dz) / len2 : 0
+				const across = len > 0 ? Math.abs((rk.x - ax) * dz - (rk.z - az) * dx) / len : off
+				const enter =
+					len > 0
+						? Math.min(1, Math.max(0, along - Math.sqrt(Math.max(0, r * r - across * across)) / len))
+						: 0
 				if (any) return enter
 				if (best < 0 || enter < best) best = enter
 			}

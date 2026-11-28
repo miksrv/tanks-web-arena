@@ -110,8 +110,15 @@ export class TankRecords {
 		window.addEventListener('storage', (e) => e.key === STORE_KEY && this.reload())
 	}
 
-	/** Take what is stored (the same object stays shared with the garage); unreadable storage keeps the session's. */
+	/** The last save failed (storage full or read-only): what is stored is older than what is in memory. */
+	private unsaved = false
+
+	/**
+	 * Take what is stored (the same object stays shared with the garage); unreadable storage, or storage that could
+	 * not take the last save, keeps the session's.
+	 */
 	private reload() {
+		if (this.unsaved) return
 		const stored = load()
 		if (!stored) return
 		for (const id of Object.keys(this.all)) delete this.all[id]
@@ -147,7 +154,9 @@ export class TankRecords {
 	private save() {
 		try {
 			localStorage.setItem(STORE_KEY, JSON.stringify({ v: VERSION, tanks: this.all }))
+			this.unsaved = false
 		} catch {
+			this.unsaved = true
 			/* storage blocked or full: the history lasts for the session */
 		}
 	}

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { DRIVE } from '../config'
-import { howitzerSolve, rangeSpeedScale, solveElevation, speedForRange } from '../combat/ballistics'
+import { howitzerSolve, howitzerSpeed, solveElevation } from '../combat/ballistics'
 import { AXIS_Y, wrapAngle } from '../core/math'
 import { disperse, scatter } from './dispersion'
 import type { Tank } from './tank'
@@ -33,12 +33,7 @@ export function launch(me: Tank): ShotParams {
 		const range = Math.max(5, Math.hypot(me.aimTarget.x - origin.x, me.aimTarget.z - origin.z))
 		const s = scatter(sigma * range)
 		dir.applyAxisAngle(AXIS_Y, s.across / range)
-		// The speed is worked out for the elevation the barrel really has: at short range the solution can be steeper
-		// than the gun lifts (the barrel stops at `elevMax`), and the solved speed would carry the shell long
-		const elev = Math.asin(dir.y)
-		speed =
-			speedForRange(elev, dy, range + s.along) ??
-			(howitzerSolve(range, dy)?.speed ?? 100) * rangeSpeedScale(elev, dy, range, range + s.along)
+		speed = howitzerSpeed(me.pitchWant > g.elevMax, Math.asin(dir.y), dy, range, range + s.along)
 	} else disperse(dir, sigma)
 	me.bloom += g.bloomShot ?? DRIVE.bloomShot
 	return {

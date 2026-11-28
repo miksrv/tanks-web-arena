@@ -91,8 +91,8 @@ export class BotGunner {
 		const cfg = BOT_AI.gunner
 		if (hold !== 'bloom' || !this.sight || this.haltGap > 0) return
 		if (Math.abs(this.me.speed) < cfg.haltSpeed && Math.abs(this.me.yawRate) < 0.2) return
-		this.haltLeft = cfg.haltTime
-		this.haltGap = cfg.haltGap
+		this.haltLeft = cfg.haltTime + cfg.haltAim * this.me.def.gun.aimTime * this.me.crew.aim
+		this.haltGap = this.haltLeft + cfg.haltGap
 	}
 
 	resetRound() {

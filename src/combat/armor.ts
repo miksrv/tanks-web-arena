@@ -56,7 +56,6 @@ export interface HitResult {
 
 const n = { x: 0, y: 0, z: 0 }
 
-/** Segment vs the tank's hull, turret and cupola boxes: the earliest entry, or null. No armour rolls. */
 const fwdTmp = { x: 0, z: 0 }
 /** The hull's heading as a reused vector. */
 function hullForward(t: Tank) {
@@ -67,6 +66,7 @@ function hullForward(t: Tank) {
 
 const PARTS: readonly BoxHit['part'][] = ['hull', 'turret', 'cupola']
 
+/** Segment vs the tank's hull, turret and cupola boxes: the earliest entry, or null. No armour rolls. */
 export function hitBoxes(
 	tank: Tank,
 	ax: number,

@@ -28,7 +28,7 @@ export class BotBrain implements Bot {
 	readonly skill: number
 	mode: BotMode = 'advance'
 	target: Tank | null = null
-	holdSpot: Pt | null = null
+	private spot: Pt | null = null
 	fellBack = false
 	readonly gunner: BotGunner
 	readonly fighter: Fighter
@@ -208,7 +208,6 @@ export class BotBrain implements Bot {
 		this.path = path
 		this.wp = 0
 		this.holdSpot = holdSpot
-		claimSpot(this.tank, holdSpot)
 	}
 
 	/** Drive to `spot` and stop there; a role's move like this replaces any capture plan. */
@@ -244,12 +243,21 @@ export class BotBrain implements Bot {
 		return true
 	}
 
-	/** On the way to a base circle or in it. */
+	/** Where the bot stops to hold; teammates keep clear of it (see `claimSpot`). */
+	get holdSpot(): Pt | null {
+		return this.spot
+	}
+	set holdSpot(p: Pt | null) {
+		this.spot = p
+		claimSpot(this.tank, p)
+	}
+
 	/** On its way to (or standing at) its own base for shells. */
 	get resupplying() {
 		return this.restocking
 	}
 
+	/** On the way to a base circle or in it. */
 	get capturing() {
 		return this.captureZone !== null
 	}

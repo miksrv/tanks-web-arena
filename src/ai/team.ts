@@ -115,7 +115,10 @@ export class TeamTactics {
 			const capturers = w.tanks.filter((t) => t.alive && t.team === z.capturing && inZone(z, t.pos.x, t.pos.z))
 			const want = Math.max(BOT_AI.team.defenders[mode], capturers.length + 1)
 			const urgent = defence || z.points > BOT_AI.team.defendUrgent
-			// A defender that fell back hurt or sits on a broken track is not on its way: another one goes
+			// A defender that fell back hurt or sits on a broken track is not on its way: it is let go and another one
+			// goes (kept, it would stay a defender after the repair, next to its replacement)
+			for (const m of members)
+				if (this.defenders.has(m.tank) && !onTheWay(m) && !m.onOrder) this.defenders.delete(m.tank)
 			const sent = members.filter((m) => this.defenders.has(m.tank) && onTheWay(m)).length
 			const free = members
 				.filter((m) => onTheWay(m) && !this.defenders.has(m.tank) && m.tank.def.role !== 'spg')

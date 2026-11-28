@@ -113,7 +113,7 @@ Each map takes only a limited set out of the thirteen species and four new build
 
 ## Performance
 
-- Frame cap: 60 in battle, 30 in the garage (`RENDER` in `src/config/render.ts`); frames are scheduled with a 1/60 s step, so on 75–240 Hz displays the result is an even 60 fps (`src/render/framePacer.ts`).
+- Frame cap: 60 in battle, 10 in the garage (`RENDER` in `src/config/render.ts`); frames are scheduled with a 1/60 s step, so on 75–240 Hz displays the result is an even 60 fps (`src/render/framePacer.ts`). A paused battle redraws the picture only when the view changes (a shake settling, a resize).
 - Render resolution is adaptive: scale 0.75–1.25 × devicePixelRatio (not above 1.25). If over a second the frames are on average 30 % longer than the target (1/60 s; on 60 Hz that is ≈ 30 % of vsyncs missed) — the scale drops by 0.125; if the overshoot is < 5 % — it rises after a pause (6 s, doubled on every rollback). The current scale is shown in the `P` overlay. Particle size accounts for the render scale and does not change along with it.
 - Shadows PCF 2048², the terrain casts no shadows (only receives them). The next map is generated during the result screen, shaders are compiled at startup.
 - The HUD writes only changed values to the DOM; the minimap updates 20 times a second, the scoreboard (Tab) — 4 times.
