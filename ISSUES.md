@@ -90,7 +90,7 @@ Audit of 159 maps (150 random seeds and the 9 named ones). Any fix of the first 
 - [ ] **[A]** Small per-frame garbage in the simulation: `hitBoxes` tuples (`src/combat/armor.ts:74-78`), `hullPose` closure and objects (`src/tank/suspension.ts:22,65`), `collideWithWorld` array (`src/tank/collisions.ts:23`), `resupplyAll` `.map` (`src/tank/ammo.ts:95`). Low priority: GC is 3 ms per 10 s.
 - [ ] **[A]** Tank world matrices are updated twice per frame (`src/game/game.ts:332` and the renderer). Negligible.
 - [x] ~~**[A]** Wheel geometry is built per tank instead of cached per shape (round-start cost only). `src/tank/tankView.ts:107`~~
-- [ ] **[V]** The bundle is one 895 KB chunk (261 KB gzip); Vite warns about the size.
+- [x] ~~**[V]** The bundle is one 895 KB chunk (261 KB gzip); Vite warns about the size.~~
 
 ## 6. Audio
 
