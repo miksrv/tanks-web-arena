@@ -20,8 +20,6 @@ interface Shell {
 	life: number
 	/** Distance flown, for the tracer length. */
 	dist: number
-	/** An aircraft bomb: drawn as a bomb by the plane view, not as a tracer. */
-	bomb: boolean
 	/** Rocket mortar round: leaves a smoke trail and bursts with a shock wave. */
 	shock: boolean
 	/** s until the next puff of its trail. */
@@ -92,38 +90,11 @@ export class Shells {
 			gravity: p.howitzer ? HOWITZER.gravity : GRAVITY,
 			life: p.howitzer ? COMBAT.howitzerShellLife : p.shock ? MORTAR.shellLife : COMBAT.shellLife,
 			dist: 0,
-			bomb: false,
 			shock: p.shock,
 			trail: 0,
 			from: p.breech,
 		})
 		this.onFire?.(owner, p)
-	}
-
-	/** A bomb released from the player's plane: it falls from `at` with the plane's velocity (no muzzle effects). */
-	drop(owner: Tank, at: THREE.Vector3, vel: THREE.Vector3, spec: ShellSpec, splash: number, life: number) {
-		if (this.list.length >= COMBAT.maxShells) this.list.shift()
-		this.stats.fired++
-		this.list.push({
-			x: at.x,
-			y: at.y,
-			z: at.z,
-			vx: vel.x,
-			vy: vel.y,
-			vz: vel.z,
-			owner,
-			spec,
-			he: spec.ammo.he,
-			splash,
-			howitzer: false,
-			gravity: GRAVITY,
-			life,
-			dist: 0,
-			bomb: true,
-			shock: false,
-			trail: 0,
-			from: null,
-		})
 	}
 
 	update(dt: number, w: WorldRefs) {
@@ -338,7 +309,6 @@ export class Shells {
 		let k = 0
 		for (const s of this.list) {
 			if (k >= COMBAT.maxShells) break
-			if (s.bomb) continue
 			const v = Math.hypot(s.vx, s.vy, s.vz) || 1
 			const tl = Math.min(COMBAT.tracerLen, s.dist)
 			const o = k * 6

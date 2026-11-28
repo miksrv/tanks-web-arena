@@ -1,8 +1,7 @@
 import type * as THREE from 'three'
 import type { CameraRig, CamMode } from '../camera'
-import { HUD, PLANE } from '../config'
+import { HUD } from '../config'
 import type { Records } from '../game/records'
-import type { Plane } from '../plane/plane'
 import type { Tank, WorldRefs } from '../tank/tank'
 import type { Terrain } from '../world/terrain'
 import { CaptureBar } from './captureBar'
@@ -48,8 +47,6 @@ export interface HudFrame {
 	canLeave: boolean
 	/** The player's tank is taking on shells at its base. */
 	resupplying: boolean
-	/** The player's plane while it flies. */
-	plane: Plane | null
 	/** Artillery view: the planned arc is blocked short of the aim point. */
 	artyBlocked: boolean
 	stats: HudStats
@@ -182,8 +179,7 @@ export class Hud {
 		this.status.update(f.dt, f.player, f.tanks, f.roundLeft, f.resupplying)
 		this.ribbons.update(f.dt, f.player)
 		this.captureBar.update(f.world.zones, f.player)
-		this.reticle.update(f.dt, f.player, f.rig, f.world, f.locked && !f.plane, f.mode, f.artyBlocked)
-		this.updatePlane(f.plane, f.locked)
+		this.reticle.update(f.dt, f.player, f.rig, f.world, f.locked, f.mode, f.artyBlocked)
 		show($('freeLook'), f.freeLook)
 		if (this.centerTimer > 0 && (this.centerTimer -= f.dt) <= 0) {
 			this.overlay('center', this.centerLater)
@@ -204,19 +200,6 @@ export class Hud {
 		this.minimap.update(f.dt, f.player, f.tanks, f.world.zones, f.rig.yaw, f.time)
 		this.scoreboard.update(f.dt, f.showScores, f.tanks, f.player)
 		this.updateFps(f.stats)
-	}
-
-	/** Flight readout and the course cross while the plane flies. */
-	private updatePlane(plane: Plane | null, locked: boolean) {
-		show($('planeHud'), !!plane)
-		show($('planeCross'), !!plane && locked)
-		if (!plane) return
-		const bombs = '●'.repeat(plane.bombs) + '○'.repeat(PLANE.bomb.max - plane.bombs)
-		setHtml(
-			$('planeHud'),
-			`<b>Самолёт</b> высота ${Math.round(plane.altitude)} м · ${Math.round(plane.speed * 3.6)} км/ч · газ ${Math.round(plane.throttle * 100)} %` +
-				`<br>бомбы <span class="bombs">${bombs}</span>`,
-		)
 	}
 
 	private updateFps(s: HudStats) {

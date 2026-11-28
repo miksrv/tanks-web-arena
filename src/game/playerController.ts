@@ -4,7 +4,6 @@ import type { Shells } from '../combat/shells'
 import type { Audio } from '../fx/audio'
 import type { Hud } from '../hud'
 import type { Input } from '../input'
-import type { Plane } from '../plane/plane'
 import type { Tank } from '../tank/tank'
 import type { Phase } from './match'
 import { COLOR, SPECTATE_HTML, wreckHtml } from './messages'
@@ -25,8 +24,7 @@ const MENU_KEY = 'KeyQ'
 
 /**
  * Keyboard and mouse → the player's tank, camera modes and consumables; after death a few seconds on the player's
- * own wreck, then spectating teammates (Enter leaves the battle); the plane
- * (V calls it in and back) while it flies.
+ * own wreck, then spectating teammates (Enter leaves the battle).
  */
 export class PlayerController {
 	/** The teammate the camera follows once the player is dead. */
@@ -54,11 +52,9 @@ export class PlayerController {
 		private readonly hud: Hud,
 		private readonly audio: Audio,
 		private readonly shells: Shells,
-		private readonly plane: Plane,
 	) {}
 
 	resetRound() {
-		this.plane.reset()
 		this.spectating = null
 		this.wreckView = 0
 		this.dead = false
@@ -79,15 +75,8 @@ export class PlayerController {
 		const menu = this.signalMenu(player, phase)
 		if (!this.input.locked) {
 			player.throttle = player.steer = 0
-			this.plane.throttleAxis = 0
 			return
 		}
-		if (this.plane.active) {
-			this.fly(player, phase)
-			return
-		}
-		// The plane has crashed or gone back: the camera returns to the tank
-		if (this.rig.mode === 'plane') this.rig.setMode('chase', player)
 		if (!player.alive) {
 			this.queuedShot = false
 			this.spectate(player, tanks)
@@ -105,8 +94,6 @@ export class PlayerController {
 		if (phase === 'battle')
 			for (const [key, sig] of SIGNAL_KEYS) if (this.input.justPressed(key)) this.onSignal?.(sig)
 		if (!menu) this.trigger(player, phase)
-		// The strike plane is switched off for now (it may come back as a game mechanic of its own); see `callPlane`
-		// if (this.input.justPressed('KeyV')) this.callPlane(player, phase)
 	}
 
 	/**
@@ -116,7 +103,7 @@ export class PlayerController {
 	private signalMenu(player: Tank, phase: Phase): boolean {
 		const { input } = this
 		const menu = this.hud.radial
-		const can = phase === 'battle' && player.alive && input.locked && !this.plane.active
+		const can = phase === 'battle' && player.alive && input.locked
 		if (can && input.down(MENU_KEY)) {
 			if (!menu.isOpen) menu.open()
 			menu.move(input.mouseDx, input.mouseDy)
@@ -167,40 +154,6 @@ export class PlayerController {
 			this.hud.sixthSense()
 		}
 		this.seen = seen
-	}
-
-	// Switched off with its key above. V in battle: the plane appears above the tank; the tank stands still until the player comes back.
-	// private callPlane(player: Tank, phase: Phase) {
-	// 	const { plane, rig, hud } = this
-	// 	if (phase !== 'battle') return
-	// 	if (plane.cooldown > 0) {
-	// 		hud.log(`Самолёт будет готов через ${Math.ceil(plane.cooldown)} с`, COLOR.warn)
-	// 		return
-	// 	}
-	// 	this.queuedShot = false
-	// 	plane.launch(player, rig.yaw, player.def.nation)
-	// 	rig.setMode('plane', null)
-	// 	rig.pitch = 0.15
-	// 	hud.log('Самолёт в воздухе: мышь — курс, W / S — газ, ЛКМ или пробел — бомба, V — назад в танк', COLOR.good)
-	// }
-
-	/** Flying: the mouse sets the course, W / S the throttle, LMB or Space drops a bomb, V returns to the tank. */
-	private fly(player: Tank, phase: Phase) {
-		const { input, plane, rig } = this
-		player.throttle = player.steer = 0
-		rig.turn(input.mouseDx, input.mouseDy, input.wheel, null)
-		plane.aimYaw = rig.yaw
-		plane.aimPitch = -rig.pitch
-		plane.throttleAxis = (input.down('KeyW') ? 1 : 0) - (input.down('KeyS') ? 1 : 0)
-		if (input.leftClicked || input.justPressed('Space')) {
-			if (phase === 'battle' && plane.drop(player, this.shells)) this.audio.click()
-			else if (!plane.bombs) this.hud.log('Бомбы кончились — пополняются в полёте', COLOR.warn)
-		}
-		if (input.justPressed('KeyV')) {
-			plane.land()
-			rig.setMode(player.alive ? 'chase' : 'spectate', player)
-			if (player.alive) rig.yaw = player.yaw
-		}
 	}
 
 	private globalKeys() {
