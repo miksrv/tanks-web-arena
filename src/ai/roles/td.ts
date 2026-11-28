@@ -65,7 +65,8 @@ export class TankDestroyerAi implements RoleAi {
 	/** The group has moved on: a new spot `followBehind` behind its centre, watching the ground ahead of it. */
 	private followGroup(bot: Bot, f: Frame) {
 		const tac = bot.tactics
-		if (tac.late || bot.mode !== 'hold' || bot.target || bot.defending || bot.capturing) return
+		// A TD that fell back hurt stays in the cover it reached
+		if (tac.late || bot.mode !== 'hold' || bot.target || bot.defending || bot.capturing || bot.fellBack) return
 		this.followTimer -= f.dt
 		if (this.followTimer > 0) return
 		this.followTimer = cfg.followCheck

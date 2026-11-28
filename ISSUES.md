@@ -39,7 +39,7 @@ Measured baseline (production build, headless Chrome): steady 60 fps, JS about 6
 - [x] ~~**[A]** "Hurt" depends on the frame rate (`hp < lastHp − 1` per frame): fire damage triggers evade at 20 fps or with `?speed=3+`; use the `tank.hits` counter. `src/ai/bot.ts:135`~~
 - [x] ~~**[A]** `faceToward` does almost nothing for turreted tanks (threshold 144°): hulls stay side-on to the enemy while regrouping or in cover. `src/ai/steering.ts:29`~~
 - [x] ~~**[A]** Artillery picks targets it will not fire at (reach 1150 m, fire held beyond 0.95 of it and under 60 m). `src/ai/targeting.ts:13`, `src/ai/gunner.ts:200`~~
-- [ ] **[A]** The low-HP retreat is undone within seconds: a scout goes to the next lookout, a TD is pulled back to its group. `src/ai/roles/light.ts:83-87`, `src/ai/roles/td.ts:66-88`
+- [x] ~~**[A]** The low-HP retreat is undone within seconds: a scout goes to the next lookout, a TD is pulled back to its group. `src/ai/roles/light.ts:83-87`, `src/ai/roles/td.ts:66-88`~~
 - [x] ~~**[A]** A defender that drops out (retreat, broken track) is still counted as sent: no replacement, the capture runs on. `src/ai/team.ts:112-118`, `src/ai/roles/common.ts:14`~~
 - [ ] **[A]** Hit by an unseen enemy while holding, the bot backs ~10 m and returns to the same spot; SPGs do not react at all. `src/ai/bot.ts:361-366,400`
 - [ ] **[A]** A whole strike group picks its hold spot around one point; two bots choosing at once can take the same spot. `src/ai/roles/strike.ts:49-51`, `src/ai/steering.ts:47`
