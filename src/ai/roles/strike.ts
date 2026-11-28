@@ -48,7 +48,8 @@ export abstract class StrikeAi implements RoleAi {
 		const centre = lane[c]
 		const around = { x: before.x + (centre.x - before.x) * 0.75, z: before.z + (centre.z - before.z) * 0.75 }
 		const across = lane[Math.max(c + 1, lane.length - CENTRE_INDEX)] // just past the middle, on the enemy side
-		const holdSpot = vantage(w, around, 35, { watch: watchPoint(t, across) })
+		// Clear of the spots the group's earlier tanks have taken: they all pick around the same point
+		const holdSpot = vantage(w, around, 35, { watch: watchPoint(t, across), avoid: friendSpots(w, bot.tank) })
 		// An assault's defenders hold the middle: they never push on into the attackers' half
 		this.defence = t.mode === 'assault' && t.defender === bot.tank.team
 		this.attack = t.mode === 'assault' && !this.defence

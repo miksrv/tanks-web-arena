@@ -11,7 +11,7 @@ import { gunHasLos } from './lineOfFire'
 import { vantage } from './positions'
 import { createRoleAi, type Bot, type Frame, type RoleAi } from './roles'
 import { routeAcross } from './routes'
-import { driveToSpot, faceToward, friendSpots, occupied, steerTo } from './steering'
+import { claimSpot, driveToSpot, faceToward, friendSpots, occupied, steerTo } from './steering'
 import { inReach, nearestEnemyDist, pickTarget } from './targeting'
 import { inZone, type CaptureZone } from '../game/capture'
 import { spotInZone, type TeamTactics } from './team'
@@ -206,6 +206,7 @@ export class BotBrain implements Bot {
 		this.path = path
 		this.wp = 0
 		this.holdSpot = holdSpot
+		claimSpot(this.tank, holdSpot)
 	}
 
 	/** Drive to `spot` and stop there; a role's move like this replaces any capture plan. */

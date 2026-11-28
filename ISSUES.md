@@ -42,7 +42,7 @@ Measured baseline (production build, headless Chrome): steady 60 fps, JS about 6
 - [x] ~~**[A]** The low-HP retreat is undone within seconds: a scout goes to the next lookout, a TD is pulled back to its group. `src/ai/roles/light.ts:83-87`, `src/ai/roles/td.ts:66-88`~~
 - [x] ~~**[A]** A defender that drops out (retreat, broken track) is still counted as sent: no replacement, the capture runs on. `src/ai/team.ts:112-118`, `src/ai/roles/common.ts:14`~~
 - [ ] **[A]** Hit by an unseen enemy while holding, the bot backs ~10 m and returns to the same spot; SPGs do not react at all. `src/ai/bot.ts:361-366,400`
-- [ ] **[A]** A whole strike group picks its hold spot around one point; two bots choosing at once can take the same spot. `src/ai/roles/strike.ts:49-51`, `src/ai/steering.ts:47`
+- [x] ~~**[A]** A whole strike group picks its hold spot around one point; two bots choosing at once can take the same spot. `src/ai/roles/strike.ts:49-51`, `src/ai/steering.ts:47`~~
 - [ ] **[A]** Skilled bots hold fire on a "hopeless" plate and never move for a better angle. `src/ai/gunner.ts:263-270`
 - [x] ~~**[A]** Full line-of-fire check every frame for every loaded bot that cannot shoot, plus `losBlocker` computed only for the debug label; check at 5–10 Hz. `src/ai/gunner.ts:252-254`~~
 - [x] ~~**[A]** All bots retarget on the same frame (`retarget` starts at 0 for everyone). `src/ai/bot.ts:38,308-311`~~
