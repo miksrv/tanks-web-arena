@@ -60,7 +60,7 @@ export const pz4h: TankDef = {
 				[0, 0.6],
 			],
 			roofW: 0.72,
-			cupola: [0, -0.4],
+			cupola: [0, -0.37], // the box (0.3 m half-size) ends at the turret rear
 			stowage: true,
 			skirts: true,
 		},

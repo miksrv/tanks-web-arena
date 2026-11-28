@@ -59,7 +59,7 @@ export const pz3j: TankDef = {
 				[0.08, 1],
 			],
 			roofW: 0.75,
-			cupola: [0, -0.42],
+			cupola: [0, -0.36], // the box (0.3 m half-size) ends at the turret rear
 			stowage: true,
 		},
 		gunLook: {
