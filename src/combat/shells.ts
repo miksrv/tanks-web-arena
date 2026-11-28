@@ -216,12 +216,23 @@ export class Shells {
 		return best
 	}
 
-	/** First sample along the step that is under the ground (parameter 0..1), or −1. */
+	/**
+	 * Where the step first goes under the ground (parameter 0..1), or −1: sampled every `groundStep`, then the
+	 * crossing is narrowed down between the last sample above and the first below, so the burst is on the surface.
+	 */
 	private groundContact(w: WorldRefs, ax: number, ay: number, az: number, bx: number, by: number, bz: number) {
+		const below = (tt: number) => ay + (by - ay) * tt < w.terrain.height(ax + (bx - ax) * tt, az + (bz - az) * tt)
 		const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / COMBAT.groundStep))
 		for (let k = 1; k <= steps; k++) {
-			const tt = k / steps
-			if (ay + (by - ay) * tt < w.terrain.height(ax + (bx - ax) * tt, az + (bz - az) * tt)) return tt
+			if (!below(k / steps)) continue
+			let lo = (k - 1) / steps
+			let hi = k / steps
+			for (let i = 0; i < COMBAT.groundRefine; i++) {
+				const mid = (lo + hi) / 2
+				if (below(mid)) hi = mid
+				else lo = mid
+			}
+			return hi
 		}
 		return -1
 	}

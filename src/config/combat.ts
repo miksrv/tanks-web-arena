@@ -43,7 +43,8 @@ export const COMBAT = {
 	howitzerShellLife: 12, // s, howitzer shells fly longer arcs
 	tracerLen: 10, // m
 	maxShells: 128,
-	groundStep: 2.5, // m between ground samples along a shell's step
+	groundStep: 1, // m between ground samples along a shell's step (a crest narrower than this can be missed)
+	groundRefine: 6, // halvings of the sample gap that place a ground impact (1 m → 1.6 cm)
 	outOfWorld: 2000, // m from the centre: a shell this far out is dropped
 	longShot: 250, // m: a penetration from this far counts toward the sniper medal
 	swapReloadMax: 2.5, // s: changing shells costs at most this much reload
