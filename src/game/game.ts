@@ -330,7 +330,6 @@ export class Game {
 		const topUp = this.match.phase === 'battle' && resupplyAll(tanks, this.map.terrain.bases, dt)
 		if (this.resupplying && !topUp && this.player.ammoShare >= 1) this.hud.log('Пополнение завершено', COLOR.good)
 		this.resupplying = topUp
-		for (const t of tanks) t.view.group.updateMatrixWorld()
 		for (const t of tanks) {
 			const s = t.salvoTick(dt)
 			if (s) shells.fire(t, s)
@@ -364,6 +363,9 @@ export class Game {
 		const focus = camTarget.pos
 		this.audio.listen(focus.x, focus.z, rig.yaw)
 		rig.update(dt, camTarget, world)
+		// The reticle and the arty arc read the player's barrel now; every other tank's matrices are left to the
+		// renderer (a shot brings its own tank's up to date, see `launch`)
+		player.view.group.updateMatrixWorld()
 		this.artyView.update(rig.mode === 'arty' && player.alive, player, rig, world, this.shells)
 		// The satellite view looks at the aim point, far from the tank: light and shadows belong there
 		this.env.update(dt, rig.mode, rig.mode === 'arty' ? rig.artyPoint : focus)
