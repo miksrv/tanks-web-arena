@@ -14,7 +14,7 @@ Measured baseline (production build, headless Chrome): steady 60 fps, JS about 6
 - [x] ~~**[A]** Ground contact is sampled every 2.5 m: a shell buried in a crest 1–2 m in front of a hull often counts as a hull hit; the impact is drawn up to 2.5 m long and under the surface. `src/combat/shells.ts:203-210`~~
 - [x] ~~**[A]** A shell stopped by a rock bursts at the middle of the step (up to ~8 m short of the rock, often in mid-air), and splash is counted from there. `src/combat/shells.ts:197-198`, `src/world/props/props.ts:153`~~
 - [ ] **[A]** SU-57: the gun shield is drawn above the casemate hit box (`tH` 0.45, `mountY` 1.25), so shots at the shield pass through and the mantlet zone is ~2 cm; Marder III overhangs by ~0.2 m. `src/config/vehicles/ussr/su57.ts:33,60`
-- [ ] **[A]** Howitzers and rocket launchers overshoot at short range (under ~40 m for SPGs, ~57 m for BM-13 and Panzerwerfer): launch speed assumes the solved elevation, the barrel is clamped to `elevMax`. `src/tank/gunnery.ts:35`
+- [x] ~~**[A]** Howitzers and rocket launchers overshoot at short range (under ~40 m for SPGs, ~57 m for BM-13 and Panzerwerfer): launch speed assumes the solved elevation, the barrel is clamped to `elevMax`. `src/tank/gunnery.ts:35`~~
 - [x] ~~**[A]** Sturmtiger rounds vanish silently after ~900 m of flight (`shellLife` 6 s at 153 m/s); the dispersion trace stops at ~610 m. `src/config/combat.ts:42`, `src/config/hud.ts:30`~~
 - [x] ~~**[A]** Splash distance is XZ only: a burst on a cliff top or roof gives full splash to a tank directly below. `src/combat/shells.ts:271`~~
 - [x] ~~**[A]** Ramming has no team check: a fast bot closing on a slower friend damages it. `src/tank/collisions.ts:70-83`~~

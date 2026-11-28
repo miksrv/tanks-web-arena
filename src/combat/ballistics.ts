@@ -36,6 +36,17 @@ export function rangeSpeedScale(elev: number, dy: number, from: number, to: numb
 	if (a <= 0 || b <= 0 || to <= 0) return 1
 	return (to / from) * Math.sqrt(a / b)
 }
+/**
+ * Muzzle speed that carries a howitzer shell fired at elevation `elev` to `range` metres, `dy` above the muzzle:
+ * v² = g·R² / (2·cos²e·(R·tan e − dy)). Null when no speed does (the barrel points below the target).
+ */
+export function speedForRange(elev: number, dy: number, range: number): number | null {
+	const c = Math.cos(elev)
+	const rise = range * Math.tan(elev) - dy
+	if (rise <= 0 || c <= 1e-3) return null
+	return Math.sqrt((HOWITZER.gravity * range * range) / (2 * c * c * rise))
+}
+
 export interface HowitzerSolution {
 	elev: number
 	speed: number
