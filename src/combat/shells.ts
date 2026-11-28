@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { COMBAT, CREW, CREW_ROLES, GRAVITY, MORTAR } from '../config'
 import type { ShotParams, Tank, WorldRefs } from '../tank/tank'
-import { testShell, type HitResult, type ShellSpec } from './armor'
+import { hitBoxes, testShell, type HitResult, type ShellSpec } from './armor'
 import { HOWITZER } from './ballistics'
 
 interface Shell {
@@ -20,8 +20,6 @@ interface Shell {
 	life: number
 	/** Distance flown, for the tracer length. */
 	dist: number
-	/** An aircraft bomb: drawn as a bomb by the plane view, not as a tracer. */
-	bomb: boolean
 	/** Rocket mortar round: leaves a smoke trail and bursts with a shock wave. */
 	shock: boolean
 	/** s until the next puff of its trail. */
@@ -92,38 +90,11 @@ export class Shells {
 			gravity: p.howitzer ? HOWITZER.gravity : GRAVITY,
 			life: p.howitzer ? COMBAT.howitzerShellLife : p.shock ? MORTAR.shellLife : COMBAT.shellLife,
 			dist: 0,
-			bomb: false,
 			shock: p.shock,
 			trail: 0,
 			from: p.breech,
 		})
 		this.onFire?.(owner, p)
-	}
-
-	/** A bomb released from the player's plane: it falls from `at` with the plane's velocity (no muzzle effects). */
-	drop(owner: Tank, at: THREE.Vector3, vel: THREE.Vector3, spec: ShellSpec, splash: number, life: number) {
-		if (this.list.length >= COMBAT.maxShells) this.list.shift()
-		this.stats.fired++
-		this.list.push({
-			x: at.x,
-			y: at.y,
-			z: at.z,
-			vx: vel.x,
-			vy: vel.y,
-			vz: vel.z,
-			owner,
-			spec,
-			he: spec.ammo.he,
-			splash,
-			howitzer: false,
-			gravity: GRAVITY,
-			life,
-			dist: 0,
-			bomb: true,
-			shock: false,
-			trail: 0,
-			from: null,
-		})
 	}
 
 	update(dt: number, w: WorldRefs) {
@@ -184,6 +155,8 @@ export class Shells {
 		by: number,
 		bz: number,
 	) {
+		// Only the tank actually hit rolls for penetration, damage and modules
+		if (c.kind === 'tank' && c.tank && !c.hit) c.hit = testShell(c.tank, ax, ay, az, bx, by, bz, s.spec)
 		this.count(c)
 		if (c.kind === 'tank' && c.tank && c.hit) this.applyHit(s, c.tank, c.hit)
 		const imp: Impact = {
@@ -198,7 +171,7 @@ export class Shells {
 		if (s.he && s.splash > 0) this.splash(imp, s, w, c.tank)
 	}
 
-	/** The earliest tank or wreck on the step a → b (earlier than `best`, if given). */
+	/** The earliest tank or wreck on the step a → b (earlier than `best`, if given); boxes only, no dice yet. */
 	private sweepTanks(
 		s: Shell,
 		w: WorldRefs,
@@ -212,8 +185,8 @@ export class Shells {
 	): Contact | null {
 		for (const t of w.tanks) {
 			if (t === s.owner || !t.nearSegment(ax, az, bx, bz)) continue
-			const h = testShell(t, ax, ay, az, bx, by, bz, s.spec)
-			if (h && h.t < (best?.t ?? 2)) best = { t: h.t, kind: t.alive ? 'tank' : 'wreck', tank: t, hit: h }
+			const h = hitBoxes(t, ax, ay, az, bx, by, bz)
+			if (h && h.t < (best?.t ?? 2)) best = { t: h.t, kind: t.alive ? 'tank' : 'wreck', tank: t, hit: null }
 		}
 		return best
 	}
@@ -240,17 +213,28 @@ export class Shells {
 		const ex = ax + (bx - ax) * k
 		const ey = ay + (by - ay) * k
 		const ez = az + (bz - az) * k
-		if (k > 0 && w.props.blocksSegment(ax, ay, az, ex, ey, ez))
-			best = { t: k * 0.5, kind: 'building', tank: null, hit: null }
+		const tr = k > 0 ? w.props.rockContact(ax, ay, az, ex, ey, ez) : -1
+		if (tr >= 0) best = { t: k * tr, kind: 'building', tank: null, hit: null }
 		return best
 	}
 
-	/** First sample along the step that is under the ground (parameter 0..1), or −1. */
+	/**
+	 * Where the step first goes under the ground (parameter 0..1), or −1: sampled every `groundStep`, then the
+	 * crossing is narrowed down between the last sample above and the first below, so the burst is on the surface.
+	 */
 	private groundContact(w: WorldRefs, ax: number, ay: number, az: number, bx: number, by: number, bz: number) {
+		const below = (tt: number) => ay + (by - ay) * tt < w.terrain.height(ax + (bx - ax) * tt, az + (bz - az) * tt)
 		const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / COMBAT.groundStep))
 		for (let k = 1; k <= steps; k++) {
-			const tt = k / steps
-			if (ay + (by - ay) * tt < w.terrain.height(ax + (bx - ax) * tt, az + (bz - az) * tt)) return tt
+			if (!below(k / steps)) continue
+			let lo = (k - 1) / steps
+			let hi = k / steps
+			for (let i = 0; i < COMBAT.groundRefine; i++) {
+				const mid = (lo + hi) / 2
+				if (below(mid)) hi = mid
+				else lo = mid
+			}
+			return hi
 		}
 		return -1
 	}
@@ -338,7 +322,6 @@ export class Shells {
 		let k = 0
 		for (const s of this.list) {
 			if (k >= COMBAT.maxShells) break
-			if (s.bomb) continue
 			const v = Math.hypot(s.vx, s.vy, s.vz) || 1
 			const tl = Math.min(COMBAT.tracerLen, s.dist)
 			const o = k * 6

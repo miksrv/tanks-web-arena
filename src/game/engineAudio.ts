@@ -1,4 +1,3 @@
-import { PLANE } from '../config'
 import type { Audio } from '../fx/audio'
 import type { EngineSource } from '../fx/engineMix'
 import type { EngineState } from '../fx/engineSound'
@@ -33,24 +32,15 @@ export function engineSources(tanks: readonly Tank[], own: Tank | null): EngineS
 }
 
 /**
- * Per frame: the player's engine (or the strike plane's while it flies) and the vehicles around. Nothing is
+ * Per frame: the player's engine and the vehicles around. Nothing is
  * simulated in the garage: the tank's last throttle must not keep the engine roaring there.
  */
-export function playEngines(
-	audio: Audio,
-	garage: boolean,
-	plane: { throttle: number; speed: number } | null,
-	player: Tank,
-	tanks: readonly Tank[],
-) {
+export function playEngines(audio: Audio, garage: boolean, player: Tank, tanks: readonly Tank[]) {
 	if (garage) {
 		audio.engine(player.def.engine, ENGINE_OFF)
 		audio.traffic([])
 		return
 	}
-	if (plane) {
-		const flight = { throttle: plane.throttle, speed: plane.speed, maxSpeed: PLANE.maxSpeed, alive: true }
-		audio.engine('aero', { ...ENGINE_OFF, ...flight })
-	} else audio.engine(player.def.engine, engineState(player))
-	audio.traffic(engineSources(tanks, plane ? null : player))
+	audio.engine(player.def.engine, engineState(player))
+	audio.traffic(engineSources(tanks, player))
 }

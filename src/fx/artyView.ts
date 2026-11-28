@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { HOWITZER, howitzerSolve } from '../combat/ballistics'
+import { HOWITZER, howitzerSolve, howitzerSpeed, speedForRange, type HowitzerSolution } from '../combat/ballistics'
 import { traceShot } from '../combat/trace'
 import type { WorldRefs } from '../tank/tank'
 import { reticleClass } from '../combat/armor'
@@ -117,7 +117,7 @@ export class ArtyView {
 		const mx = aim.x - this.muzzle.x
 		const mz = aim.z - this.muzzle.z
 		const md = Math.max(5, Math.hypot(mx, mz))
-		const plan = howitzerSolve(md, aim.y - this.muzzle.y)
+		const plan = this.plannedArc(player, md, aim.y - this.muzzle.y)
 		this.arc.visible = plan !== null
 		this.blocked = false
 		if (plan) {
@@ -142,7 +142,9 @@ export class ArtyView {
 		this.arcMat.color.copy(this.blocked ? colors.red : arcColor)
 		this.arcMat.opacity = this.blocked ? 0.8 : 0.45
 		// Gun marker: the real fall of shot for the barrel's current lay (the turret and the gun lag behind the aim point)
-		traceShot(w, this.muzzle, this.muzzleDir, sol?.speed ?? 100, HOWITZER.gravity, 12, player, this.land)
+		const atStop = player.pitchWant > player.def.gun.elevMax
+		const speed = howitzerSpeed(atStop, Math.asin(this.muzzleDir.y), aim.y - this.muzzle.y, md)
+		traceShot(w, this.muzzle, this.muzzleDir, speed, HOWITZER.gravity, 12, player, this.land)
 		const gp = this.gunRing.geometry.attributes.position as THREE.BufferAttribute
 		const gr = Math.max(2, r * 0.25)
 		for (let i = 0; i <= gunSegments; i++) {
@@ -162,6 +164,20 @@ export class ArtyView {
 			m.scale.setScalar(Math.max(0.6, m.position.distanceTo(rig.camera.position) * 0.0045))
 		}
 		for (; k < markerCount; k++) this.markers[k].visible = false
+	}
+
+	/**
+	 * The arc a shot will fly to a point `range` m from the muzzle and `dy` above it: the solved one, or, with the
+	 * barrel at its stop below the solution (short range), the flatter one it really flies (see `howitzerSpeed`).
+	 */
+	private plannedArc(player: Tank, range: number, dy: number): HowitzerSolution | null {
+		const plan = howitzerSolve(range, dy)
+		if (!plan || player.pitchWant <= player.def.gun.elevMax) return plan
+		const elev = Math.asin(this.muzzleDir.y)
+		const v = speedForRange(elev, dy, range)
+		if (!v) return plan
+		const vx = v * Math.cos(elev)
+		return { elev, speed: v, time: range / vx, vx, vy: v * Math.sin(elev) }
 	}
 
 	/** A ring of radius `r` around (x, z) laid on the ground, `lift` m above it. */

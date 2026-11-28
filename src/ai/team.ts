@@ -16,6 +16,10 @@ export interface Member {
 	readonly defending: boolean
 	/** On the player's order (it holds for a while whatever the team decides). */
 	readonly onOrder: boolean
+	/** Fell back hurt this round. */
+	readonly fellBack: boolean
+	/** Gone back to its base for shells. */
+	readonly resupplying: boolean
 }
 
 const pick = <T>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)]
@@ -111,10 +115,14 @@ export class TeamTactics {
 			const capturers = w.tanks.filter((t) => t.alive && t.team === z.capturing && inZone(z, t.pos.x, t.pos.z))
 			const want = Math.max(BOT_AI.team.defenders[mode], capturers.length + 1)
 			const urgent = defence || z.points > BOT_AI.team.defendUrgent
-			const sent = members.filter((m) => this.defenders.has(m.tank) && m.tank.alive).length
+			// A defender that fell back hurt or sits on a broken track is not on its way: it is let go and another one
+			// goes (kept, it would stay a defender after the repair, next to its replacement)
+			for (const m of members)
+				if (this.defenders.has(m.tank) && !onTheWay(m) && !m.onOrder) this.defenders.delete(m.tank)
+			const sent = members.filter((m) => this.defenders.has(m.tank) && onTheWay(m)).length
 			const free = members
-				.filter((m) => m.tank.alive && !this.defenders.has(m.tank) && m.tank.def.role !== 'spg')
-				.filter((m) => m.mode !== 'retreat' && (urgent || m.mode !== 'engage'))
+				.filter((m) => onTheWay(m) && !this.defenders.has(m.tank) && m.tank.def.role !== 'spg')
+				.filter((m) => urgent || m.mode !== 'engage')
 				// By time to get there, not distance: a nearby medium goes before a slow heavy
 				.sort((a, b) => zoneDist(z, a.tank) / a.tank.def.speed - zoneDist(z, b.tank) / b.tank.def.speed)
 			for (const m of free.slice(0, Math.max(0, want - sent))) {
@@ -182,8 +190,15 @@ export class TeamTactics {
 
 	update(w: WorldRefs, members: readonly Member[], time: number, dt: number) {
 		for (const o of w.tanks) {
-			if (o.team !== this.team && o.alive && o.spottedBy[this.team])
-				this.seen.set(o, { x: o.pos.x, z: o.pos.z, t: time })
+			if (o.team !== this.team && o.alive && o.spottedBy[this.team]) {
+				const s = this.seen.get(o)
+				if (!s) this.seen.set(o, { x: o.pos.x, z: o.pos.z, t: time })
+				else {
+					s.x = o.pos.x
+					s.z = o.pos.z
+					s.t = time
+				}
+			}
 		}
 		this.timer -= dt
 		if (this.timer > 0) return
@@ -206,7 +221,9 @@ export class TeamTactics {
 		this.fronts = this.groupLanes.map(() => [])
 		for (const m of members) {
 			const g = this.groupOf.get(m.tank)
-			if (g === undefined || !m.tank.alive || m.mode === 'retreat') continue
+			// Only the tanks still in the push: not those fallen back hurt, defending a base or gone for shells
+			if (g === undefined || !m.tank.alive || m.mode === 'retreat' || m.fellBack) continue
+			if (m.defending || m.resupplying) continue
 			this.fronts[g].push({ tank: m.tank, progress: this.progress(w, m.tank.pos.x, m.tank.pos.z) })
 		}
 	}
@@ -296,4 +313,9 @@ export class TeamTactics {
 		const z = enemy.z * (1 - k) + pz * side
 		return scatterNear(w.terrain, x, z, 60, half)
 	}
+}
+
+/** A defender still heading for (or holding) the base: alive, not falling back, not on a broken track. */
+function onTheWay(m: Member): boolean {
+	return m.tank.alive && m.mode !== 'retreat' && m.tank.tracked <= 0
 }

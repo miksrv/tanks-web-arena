@@ -103,6 +103,15 @@ export class EngineSound {
 	private readonly squeal: GainNode
 	private readonly traverse: GainNode
 	private gear = 0
+	/** The state last handed to the audio thread: an unchanged one (idle, the garage, a wreck) is not re-sent. */
+	private readonly last: EngineState = {
+		throttle: NaN,
+		speed: NaN,
+		maxSpeed: NaN,
+		turn: NaN,
+		traverse: NaN,
+		alive: false,
+	}
 
 	constructor(
 		ctx: BaseAudioContext,
@@ -186,6 +195,22 @@ export class EngineSound {
 
 	/** Targets are handed to the audio thread as exponential approaches (no zipper noise). */
 	update(t: number, s: EngineState) {
+		const l = this.last
+		if (
+			l.throttle === s.throttle &&
+			l.speed === s.speed &&
+			l.maxSpeed === s.maxSpeed &&
+			l.turn === s.turn &&
+			l.traverse === s.traverse &&
+			l.alive === s.alive
+		)
+			return
+		l.throttle = s.throttle
+		l.speed = s.speed
+		l.maxSpeed = s.maxSpeed
+		l.turn = s.turn
+		l.traverse = s.traverse
+		l.alive = s.alive
 		const e = this.voice
 		const on = s.alive ? 1 : 0
 		const move = Math.min(1, Math.abs(s.speed) / s.maxSpeed)

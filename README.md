@@ -77,7 +77,6 @@ src/
   render/       renderer, environment, adaptive resolution
   hud/          garage, reticle, minimap, ribbons, scoreboard
   fx/           particles, ground marks, precipitation, procedural audio
-  plane/        the player's aircraft prototype (switched off: its key is commented out in playerController.ts)
 docs/mechanics/ the rules and numbers behind combat, tanks, the world, spotting and bots
 docs/TODO-*.md  deferred plans: progression and a client-server mode
 ```

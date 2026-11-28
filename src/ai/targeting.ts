@@ -6,6 +6,14 @@ import { Spotting } from '../game/spotting'
 import type { Tank, WorldRefs } from '../tank/tank'
 import { gunHasLos } from './lineOfFire'
 
+const fwdTmp = { x: 0, z: 0 }
+/** The hull's heading as a reused vector. */
+function hullForward(t: Tank) {
+	fwdTmp.x = t.fx
+	fwdTmp.z = t.fz
+	return fwdTmp
+}
+
 const distXZ = (a: Tank, b: Tank) => Math.hypot(a.pos.x - b.pos.x, a.pos.z - b.pos.z)
 
 /** How far a bot looks for targets: nearly the whole map for artillery. */
@@ -27,7 +35,7 @@ export function facingArmor(me: Tank, t: Tank, turret = false): number {
 	const dz = me.pos.z - t.pos.z
 	const l = Math.hypot(dx, dz) || 1
 	// A casemate's box turns with the hull, not with the gun's traverse
-	const f = turret && t.def.shape.turret ? t.turretForward() : { x: t.fx, z: t.fz }
+	const f = turret && t.def.shape.turret ? t.turretForward(fwdTmp) : hullForward(t)
 	const c = (dx * f.x + dz * f.z) / l // +1 = we are in front of it
 	const a = t.def.armor
 	const frontOrRear = c > 0.5 || c < -0.5

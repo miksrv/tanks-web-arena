@@ -10,6 +10,9 @@ export function resolveCollisions(me: Tank, w: WorldRefs, dt: number) {
 	for (const o of w.tanks) if (o !== me) collideWithTank(me, o, dt)
 }
 
+/** Where along the hull (share of its length from the centre) the world is probed: nose, centre, tail. */
+const PROBES = [0.33, 0, -0.33] as const
+
 /**
  * Three circles along the hull against buildings and props. The push-outs move the hull back out, which by itself
  * makes it slide along a wall; the speed is then damped by how head-on the contact is (cos² of the angle between the
@@ -20,7 +23,8 @@ function collideWithWorld(me: Tank, w: WorldRefs, dt: number) {
 	const r = s.hullW / 2 + COLLISION.hullPad
 	let nx = 0
 	let nz = 0
-	for (const o of [s.hullL * 0.33, 0, -s.hullL * 0.33]) {
+	for (const k of PROBES) {
+		const o = s.hullL * k
 		const px = me.pos.x + me.fx * o
 		const pz = me.pos.z + me.fz * o
 		if (w.buildings.collideCircle(px, pz, r, push)) {

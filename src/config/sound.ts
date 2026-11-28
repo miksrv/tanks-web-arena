@@ -232,21 +232,6 @@ export const ENGINES = {
 		gears: 1,
 		tracks: GERMAN_HEAVY_TRACKS,
 	},
-	/** Aircraft radial (the strike plane). */
-	aero: {
-		cylinders: 14,
-		idle: 110,
-		max: 270,
-		diesel: 0.25,
-		lope: 0.3,
-		body: [170, 600],
-		bright: 2600,
-		level: 1,
-		whine: 0,
-		whineRatio: 1,
-		gears: 1,
-		tracks: WHEELS,
-	},
 } satisfies Record<string, EngineVoice>
 
 export type EngineId = keyof typeof ENGINES

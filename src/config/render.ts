@@ -2,7 +2,7 @@ import type { Weather } from './weather'
 
 export const RENDER = {
 	maxFps: 60, // frame-rate cap on any refresh rate (high-refresh displays would otherwise multiply the GPU load and heat)
-	garageFps: 30, // nothing moves in the garage backdrop
+	garageFps: 10, // the garage backdrop barely moves (rain, snow) and is seen through a 90 % opaque overlay
 	maxScale: 1.25, // render scale ceiling (× devicePixelRatio capped here); the adaptive scaler works below it
 	minScale: 0.75,
 	earlySlack: 2, // ms: a frame may come this early and still count as on time (rAF stamps jitter)

@@ -69,7 +69,8 @@ export class LightAi implements RoleAi {
 		// It fights only when raiding, or to get at the enemy artillery
 		if (bot.target && (raid || bot.target.def.role === 'spg')) joinFight(bot, cfg.contactRange, true)
 		if (bot.mode === 'retreat' || bot.mode === 'hunt' || bot.mode === 'engage' || sent) return
-		if (raid) {
+		// Fallen back hurt: it stays where it found cover (it still slips away from fire), no raid, no new lookout
+		if (raid && !bot.fellBack) {
 			this.raid(bot, f)
 			return
 		}
@@ -80,7 +81,12 @@ export class LightAi implements RoleAi {
 			if (from || shot) this.slipAway(bot, w, from ? from.pos : this.enemyward(bot, w, -60))
 			return
 		}
-		if (!bot.pathDone && bot.mode !== 'hold') return
+		this.wander(bot, w, dt)
+	}
+
+	/** At a lookout (or holding): after a pause, on to the next one. */
+	private wander(bot: Bot, w: WorldRefs, dt: number) {
+		if (bot.fellBack || (!bot.pathDone && bot.mode !== 'hold')) return
 		this.pause -= dt
 		if (this.pause > 0) return
 		this.pause = cfg.pause[0] + Math.random() * (cfg.pause[1] - cfg.pause[0])

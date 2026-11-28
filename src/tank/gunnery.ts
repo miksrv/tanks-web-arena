@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { DRIVE } from '../config'
-import { howitzerSolve, rangeSpeedScale, solveElevation } from '../combat/ballistics'
+import { howitzerSolve, howitzerSpeed, solveElevation } from '../combat/ballistics'
 import { AXIS_Y, wrapAngle } from '../core/math'
 import { disperse, scatter } from './dispersion'
 import type { Tank } from './tank'
@@ -33,7 +33,7 @@ export function launch(me: Tank): ShotParams {
 		const range = Math.max(5, Math.hypot(me.aimTarget.x - origin.x, me.aimTarget.z - origin.z))
 		const s = scatter(sigma * range)
 		dir.applyAxisAngle(AXIS_Y, s.across / range)
-		speed = (howitzerSolve(range, dy)?.speed ?? 100) * rangeSpeedScale(Math.asin(dir.y), dy, range, range + s.along)
+		speed = howitzerSpeed(me.pitchWant > g.elevMax, Math.asin(dir.y), dy, range, range + s.along)
 	} else disperse(dir, sigma)
 	me.bloom += g.bloomShot ?? DRIVE.bloomShot
 	return {

@@ -89,12 +89,11 @@ export class Avoidance {
 	/** Terrain, buildings and rocks. */
 	private probe(w: WorldRefs) {
 		const L = this.me.def.shape.hullL
-		const hard = (ang: number, len: number) => this.hardAt(w, ang, len)
-		const ahead = hard(0, L * 1.5) || hard(0, L * 2.5)
-		const left = hard(0.5, L * 1.8)
-		const right = hard(-0.5, L * 1.8)
+		const ahead = this.hardAt(w, 0, L * 1.5) || this.hardAt(w, 0, L * 2.5)
+		const left = this.hardAt(w, 0.5, L * 1.8)
+		const right = this.hardAt(w, -0.5, L * 1.8)
 		this.steer = 0
-		if (ahead) this.steer = this.pickSide(!hard(1.0, L * 1.6), !hard(-1.0, L * 1.6))
+		if (ahead) this.steer = this.pickSide(!this.hardAt(w, 1.0, L * 1.6), !this.hardAt(w, -1.0, L * 1.6))
 		else if (left && !right) this.steer = -0.6
 		else if (right && !left) this.steer = 0.6
 	}
@@ -212,7 +211,9 @@ export class Avoidance {
 		const moved = Math.hypot(me.pos.x - this.lastPos.x, me.pos.z - this.lastPos.z)
 		// Stuck: under 30 % of the speed asked for (a part throttle in traffic really is slow), capped at 4 m/s
 		const asked = Math.abs(me.throttle) * (me.throttle > 0 ? me.def.speed : me.def.reverse)
-		if (Math.abs(me.throttle) > 0.3 && moved < 0.3 * dt * Math.min(4, asked)) this.stuckTimer += dt
+		// A broken track holds the tank where it is: that is not being stuck, and backing out would not move it either
+		if (me.tracked > 0) this.stuckTimer = 0
+		else if (Math.abs(me.throttle) > 0.3 && moved < 0.3 * dt * Math.min(4, asked)) this.stuckTimer += dt
 		else this.stuckTimer = 0
 		const away = Math.hypot(me.pos.x - this.stuckAt.x, me.pos.z - this.stuckAt.z)
 		if (this.reverseTimer <= 0 && away > BOT_AI.avoidance.stuckClearDistance) this.stuckEvents = 0

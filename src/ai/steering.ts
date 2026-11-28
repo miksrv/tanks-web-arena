@@ -48,7 +48,26 @@ export function driveToSpot(w: WorldRefs, me: Tank, cmd: DriveCommand, spot: Pt 
 	return true
 }
 
-/** Where `me`'s teammates stand (to keep from piling onto one spot). */
+/** The spot each bot is on its way to hold (see `claimSpot`). Tanks are made anew each round, and so are these. */
+const claims = new WeakMap<Tank, Pt>()
+
+/** `t` is heading for `spot` to hold it (null: nowhere in particular). */
+export function claimSpot(t: Tank, spot: Pt | null) {
+	if (spot) claims.set(t, spot)
+	else claims.delete(t)
+}
+
+/**
+ * Where `me`'s teammates stand and the spots they are heading for (to keep from piling onto one spot, also when two
+ * pick theirs at once).
+ */
 export function friendSpots(w: WorldRefs, me: Tank): Pt[] {
-	return w.tanks.filter((f) => f !== me && f.alive && f.team === me.team).map((f) => ({ x: f.pos.x, z: f.pos.z }))
+	const out: Pt[] = []
+	for (const f of w.tanks) {
+		if (f === me || !f.alive || f.team !== me.team) continue
+		out.push({ x: f.pos.x, z: f.pos.z })
+		const spot = claims.get(f)
+		if (spot) out.push(spot)
+	}
+	return out
 }

@@ -14,7 +14,6 @@ import { Input } from '../input'
 import { AdaptiveResolution } from '../render/adaptiveResolution'
 import { Environment } from '../render/environment'
 import { FpsCounter, FramePacer } from '../render/framePacer'
-import { Plane } from '../plane/plane'
 import { createRenderer, freezeShadows, onPixelRatioChange } from '../render/renderer'
 import { resupplyAll } from '../tank/ammo'
 import { type Tank, type WorldRefs } from '../tank/tank'
@@ -44,7 +43,6 @@ export class Game {
 	private readonly precip = new Precipitation()
 	private readonly artyView = new ArtyView()
 	private readonly shells = new Shells()
-	private readonly plane = new Plane()
 	private readonly spotting = new Spotting()
 	private readonly match = new Match()
 	private readonly resolution: AdaptiveResolution
@@ -71,6 +69,8 @@ export class Game {
 
 	private last = performance.now()
 	private readonly pacer = new FramePacer()
+	/** The view last drawn while paused (empty while the battle runs). */
+	private pausedView = ''
 	private time = 0
 	private timeScale: number
 	private readonly fps = new FpsCounter()
@@ -86,7 +86,7 @@ export class Game {
 			this.env.lowerShadowQuality(this.renderer),
 		)
 		this.input = new Input(this.renderer.domElement)
-		this.controller = new PlayerController(this.input, this.rig, this.hud, this.audio, this.shells, this.plane)
+		this.controller = new PlayerController(this.input, this.rig, this.hud, this.audio, this.shells)
 		this.feedback = new CombatFeedback({
 			hud: this.hud,
 			particles: this.particles,
@@ -110,7 +110,6 @@ export class Game {
 		scene.add(this.particles.points, this.particles.marks.rings, this.precip.points)
 		scene.add(this.artyView.group)
 		scene.add(this.shells.lines)
-		scene.add(this.plane.view.group)
 		scene.add(this.worldGroup)
 	}
 
@@ -246,7 +245,7 @@ export class Game {
 
 	private readonly frame = (now: number) => {
 		requestAnimationFrame(this.frame)
-		// Frame cap: 60 fps in battle on any refresh rate; the garage backdrop runs at half rate
+		// Frame cap: 60 fps in battle on any refresh rate; the garage backdrop runs at a low rate
 		const targetFps = this.match.phase === 'garage' ? RENDER.garageFps : RENDER.maxFps
 		if (!this.pacer.shouldRender(now, targetFps)) return
 		if (this.opts.debug) this.debugLog(now)
@@ -256,7 +255,8 @@ export class Game {
 		const dt = paused ? 0 : Math.min(RENDER.maxStep, raw) * this.timeScale
 		this.last = now
 		this.time += dt
-		this.resolution.update(raw, Math.min(targetFps, this.pacer.refreshRate))
+		// A paused frame draws nothing (see `render`) and says nothing about the GPU
+		if (!paused) this.resolution.update(raw, Math.min(targetFps, this.pacer.refreshRate))
 		this.fps.count(raw)
 		this.audio.setPaused(paused)
 
@@ -330,8 +330,6 @@ export class Game {
 		const topUp = this.match.phase === 'battle' && resupplyAll(tanks, this.map.terrain.bases, dt)
 		if (this.resupplying && !topUp && this.player.ammoShare >= 1) this.hud.log('Пополнение завершено', COLOR.good)
 		this.resupplying = topUp
-		if (this.plane.update(dt, world)) this.planeCrashed()
-		for (const t of tanks) t.view.group.updateMatrixWorld()
 		for (const t of tanks) {
 			const s = t.salvoTick(dt)
 			if (s) shells.fire(t, s)
@@ -340,12 +338,17 @@ export class Game {
 		this.feedback.flushMissMarker()
 		this.signals.watchCapture(this.player, this.world.zones)
 		this.spotting.update(dt, world, this.time)
-		this.plane.spot(tanks, this.player.team, this.time)
 		this.map.props.update(dt)
 		// Visibility: enemies are drawn only while the team sees them, and so are their dust, exhaust and fire
 		for (const t of tanks) t.view.group.visible = Spotting.visibleTo(this.player.team, t, this.time)
 		for (const t of tanks) if (t.view.group.visible) emitTankFx(this.particles, t, dt)
 		this.particles.update(dt)
+	}
+
+	/** What the picture of a paused frame depends on: the camera and the drawing buffer. */
+	private viewKey(): string {
+		const { width, height } = this.renderer.domElement
+		return `${width}x${height} ${this.rig.camera.matrixWorld.elements.join(',')} ${this.rig.camera.fov}`
 	}
 
 	/** The player's side as the signals see it. */
@@ -354,34 +357,30 @@ export class Game {
 		return { player: this.player, world: this.world, tactics: this.tactics[team], bots: this.teamBots[team] }
 	}
 
-	private planeCrashed() {
-		const { x, y, z } = this.plane.pos
-		this.particles.explosion(x, y, z)
-		this.audio.explosion(this.plane.pos)
-		this.rig.addShake(0.8)
-		this.hud.log('Самолёт разбит', COLOR.bad)
-	}
-
 	private render(dt: number, paused: boolean) {
-		const { rig, player, world, plane } = this
+		const { rig, player, world } = this
 		const camTarget = this.controller.cameraTarget(player)
-		const flying = plane.active
-		const focus = flying ? plane.pos : camTarget.pos
+		const focus = camTarget.pos
 		this.audio.listen(focus.x, focus.z, rig.yaw)
-		if (flying) rig.updatePlane(dt, plane.pos, world)
-		else rig.update(dt, camTarget, world)
+		rig.update(dt, camTarget, world)
+		// The reticle and the arty arc read the player's barrel now; every other tank's matrices are left to the
+		// renderer (a shot brings its own tank's up to date, see `launch`)
+		player.view.group.updateMatrixWorld()
 		this.artyView.update(rig.mode === 'arty' && player.alive, player, rig, world, this.shells)
-		plane.view.drawBombs(this.shells.list)
 		// The satellite view looks at the aim point, far from the tank: light and shadows belong there
-		this.env.update(dt, rig.mode, rig.mode === 'arty' && !flying ? rig.artyPoint : focus)
+		this.env.update(dt, rig.mode, rig.mode === 'arty' ? rig.artyPoint : focus)
 		freezeShadows(this.renderer, paused || this.match.phase === 'garage')
 		// Point sizes are in drawing-buffer pixels: scale by the render pixel ratio so particles keep their size
 		const bufferHeight = window.innerHeight * this.renderer.getPixelRatio()
 		this.particles.setScale(bufferHeight, rig.camera.fov)
 		this.precip.setScale(bufferHeight, rig.camera.fov)
 		this.precip.update(dt, rig.camera, rig.mode === 'arty')
-		playEngines(this.audio, this.match.phase === 'garage', flying ? plane : null, player, this.tanks)
-		this.renderer.render(this.env.scene, rig.camera)
+		playEngines(this.audio, this.match.phase === 'garage', player, this.tanks)
+		// A paused battle stands still: the picture is drawn again only when the view changes (a shake settling, a
+		// resize, another render scale)
+		const view = paused ? this.viewKey() : ''
+		if (!paused || view !== this.pausedView) this.renderer.render(this.env.scene, rig.camera)
+		this.pausedView = view
 		this.hud.update({
 			dt,
 			time: this.time,
@@ -393,8 +392,7 @@ export class Game {
 			showScores: this.input.down('Tab'),
 			locked: this.input.locked,
 			mode: rig.mode,
-			freeLook: player.alive && !flying && this.controller.freeLook,
-			plane: flying ? plane : null,
+			freeLook: player.alive && this.controller.freeLook,
 			artyBlocked: this.artyView.blocked,
 			paused,
 			canLeave: paused && this.match.phase === 'battle',
@@ -440,7 +438,6 @@ export class Game {
 			hud: this.hud,
 			particles: this.particles,
 			shells: this.shells,
-			plane: this.plane,
 			scene: this.env.scene,
 			renderer: this.renderer,
 			get bots() {

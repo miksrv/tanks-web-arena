@@ -1,9 +1,9 @@
 import * as THREE from 'three'
 import type { Tank, WorldRefs } from './tank/tank'
 import { hitBoxes } from './combat/armor'
-import { CAMERA, PLANE } from './config'
+import { CAMERA } from './config'
 
-export type CamMode = 'chase' | 'sniper' | 'arty' | 'spectate' | 'plane'
+export type CamMode = 'chase' | 'sniper' | 'arty' | 'spectate'
 
 /**
  * Third-person orbit camera with sniper zoom and the SPG satellite view. The reticle is always the screen centre;
@@ -45,16 +45,6 @@ export class CameraRig {
 	/** Mouse input for this frame. */
 	turn(dx: number, dy: number, wheel: number, tank: Tank | null) {
 		const notches = this.wheelNotches(wheel)
-		if (this.mode === 'plane') {
-			// The mouse sets the direction the plane flies toward; the wheel moves the camera in and out
-			this.yaw -= dx * this.sensitivity
-			this.pitch = THREE.MathUtils.clamp(this.pitch + dy * this.sensitivity, -1, 1.3)
-			if (wheel) {
-				const d = this.distance * (1 + wheel * 0.001)
-				this.distance = THREE.MathUtils.clamp(d, PLANE.camera.min, PLANE.camera.max)
-			}
-			return
-		}
 		if (this.mode === 'arty') {
 			this.dragArtyPoint(dx, dy)
 			// Wheel: height; one more notch out at the top returns to the chase view
@@ -140,8 +130,6 @@ export class CameraRig {
 			this.distance = CAMERA.artyHeight[2]
 		}
 		if (this.mode === 'arty' && m !== 'arty') this.distance = CAMERA.distance
-		if (this.mode === 'plane' && m !== 'plane') this.distance = CAMERA.distance
-		if (m === 'plane' && this.mode !== 'plane') this.distance = PLANE.camera.distance
 		if (m === 'sniper') {
 			this.zoomLevel = 0
 			this.pitch = THREE.MathUtils.clamp(this.pitch, -0.3, 0.35)
@@ -221,27 +209,6 @@ export class CameraRig {
 		this.camera.lookAt(this.look)
 		this.camera.updateMatrixWorld()
 		this.raycastAim(w, t)
-	}
-
-	/** Chase view behind the plane, looking where the mouse points (the plane turns to follow it). */
-	updatePlane(dt: number, at: THREE.Vector3, w: WorldRefs) {
-		this.shake = Math.max(0, this.shake - dt * 3)
-		const cp = Math.cos(this.pitch)
-		this.dir.set(Math.sin(this.yaw) * cp, -Math.sin(this.pitch), Math.cos(this.yaw) * cp)
-		this.pos.copy(at).addScaledVector(this.dir, -this.distance)
-		this.pos.y += PLANE.camera.height
-		const ground = w.terrain.height(this.pos.x, this.pos.z) + 1.5
-		if (this.pos.y < ground) this.pos.y = ground
-		const s = this.shake * 0.3
-		this.camera.position.set(
-			this.pos.x + (Math.random() - 0.5) * s,
-			this.pos.y + (Math.random() - 0.5) * s,
-			this.pos.z,
-		)
-		this.look.copy(this.camera.position).add(this.dir)
-		this.camera.lookAt(this.look)
-		this.camera.updateMatrixWorld()
-		this.aimedTank = null
 	}
 
 	/** Spectator orbit around another tank (same maths, no aiming). */

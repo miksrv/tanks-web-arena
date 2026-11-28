@@ -18,6 +18,9 @@ interface Neighbour {
 	gain: GainNode
 	air: BiquadFilterNode
 	pan: StereoPannerNode
+	/** Volume and pan last handed to the audio thread (a still pair is not re-sent every frame). */
+	v: number
+	side: number
 }
 
 /**
@@ -67,10 +70,14 @@ export class EngineMix {
 		for (const s of near) {
 			const n = this.neighbours.get(s.key) ?? this.join(s)
 			const [v, pan] = this.place(s, reach * 1.1)
-			const far = Math.sqrt(Math.min(1, s.d / reach))
-			n.gain.gain.setTargetAtTime(v * level, t, 0.15)
-			n.pan.pan.setTargetAtTime(pan, t, 0.1)
-			n.air.frequency.setTargetAtTime(9000 * Math.pow(AUDIO_FX.airFar * 2, far), t, 0.15)
+			if (v !== n.v || pan !== n.side) {
+				n.v = v
+				n.side = pan
+				const far = Math.sqrt(Math.min(1, s.d / reach))
+				n.gain.gain.setTargetAtTime(v * level, t, 0.15)
+				n.pan.pan.setTargetAtTime(pan, t, 0.1)
+				n.air.frequency.setTargetAtTime(9000 * Math.pow(AUDIO_FX.airFar * 2, far), t, 0.15)
+			}
 			n.sound.update(t, s)
 		}
 	}
@@ -86,7 +93,7 @@ export class EngineMix {
 		const gain = ctx.createGain()
 		gain.gain.value = 0
 		gain.connect(air)
-		const n = { sound: new EngineSound(ctx, gain, this.noise, s.engine), gain, air, pan }
+		const n = { sound: new EngineSound(ctx, gain, this.noise, s.engine), gain, air, pan, v: -1, side: 0 }
 		this.neighbours.set(s.key, n)
 		return n
 	}

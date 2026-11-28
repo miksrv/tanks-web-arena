@@ -142,24 +142,45 @@ export class Props {
 	 * Trees and bushes do not stop shells.
 	 */
 	blocksSegment(ax: number, ay: number, az: number, bx: number, by: number, bz: number): boolean {
+		return this.rockContact(ax, ay, az, bx, by, bz, true) >= 0
+	}
+
+	/**
+	 * Where along the segment (parameter 0..1) it first meets a rock, or −1: the point where it enters the rock's
+	 * circle. `any` returns the first rock found instead of the nearest.
+	 */
+	rockContact(ax: number, ay: number, az: number, bx: number, by: number, bz: number, any = false): number {
 		const dx = bx - ax
 		const dz = bz - az
 		const len2 = dx * dx + dz * dz
+		const len = Math.sqrt(len2)
+		let best = -1
 		// Samples only pick the rocks to test (each lookup covers 4 m around it); the test itself is against the
 		// segment, so a small obstacle between two samples still stops the shell
-		const n = Math.max(1, Math.ceil(Math.sqrt(len2) / 3))
+		const n = Math.max(1, Math.ceil(len / 3))
 		for (let i = 0; i <= n; i++) {
 			const s = i / n
 			for (const rk of this.rockGrid.near(ax + dx * s, az + dz * s, 4, this.scratch as Rock[])) {
 				const t = len2 > 0 ? Math.max(0, Math.min(1, ((rk.x - ax) * dx + (rk.z - az) * dz) / len2)) : 0
 				const x = ax + dx * t
 				const z = az + dz * t
-				if (Math.hypot(rk.x - x, rk.z - z) >= rk.r * 0.8) continue
+				const r = rk.r * 0.8
+				const off = Math.hypot(rk.x - x, rk.z - z)
+				if (off >= r) continue
 				const above = ay + (by - ay) * t - this.terrain.height(x, z)
-				if (above <= PROPS.rockTopMax && above < rockTop(rk)) return true
+				if (above > PROPS.rockTopMax || above >= rockTop(rk)) continue
+				// Entry into the circle from the unclamped closest point (its distance across the line, not to the end)
+				const along = len2 > 0 ? ((rk.x - ax) * dx + (rk.z - az) * dz) / len2 : 0
+				const across = len > 0 ? Math.abs((rk.x - ax) * dz - (rk.z - az) * dx) / len : off
+				const enter =
+					len > 0
+						? Math.min(1, Math.max(0, along - Math.sqrt(Math.max(0, r * r - across * across)) / len))
+						: 0
+				if (any) return enter
+				if (best < 0 || enter < best) best = enter
 			}
 		}
-		return false
+		return best
 	}
 
 	/** Is a rock within r of (x,z)? Bots probe this when steering (trees they just push over or stop at). */

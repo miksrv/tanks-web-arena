@@ -9,9 +9,9 @@ import { Fighter } from './fight'
 import { BotGunner, type HoldFire } from './gunner'
 import { gunHasLos } from './lineOfFire'
 import { vantage } from './positions'
-import { createRoleAi, type Bot, type RoleAi } from './roles'
+import { createRoleAi, type Bot, type Frame, type RoleAi } from './roles'
 import { routeAcross } from './routes'
-import { driveToSpot, faceToward, friendSpots, occupied, steerTo } from './steering'
+import { claimSpot, driveToSpot, faceToward, friendSpots, occupied, steerTo } from './steering'
 import { inReach, nearestEnemyDist, pickTarget } from './targeting'
 import { inZone, type CaptureZone } from '../game/capture'
 import { spotInZone, type TeamTactics } from './team'
@@ -28,12 +28,21 @@ export class BotBrain implements Bot {
 	readonly skill: number
 	mode: BotMode = 'advance'
 	target: Tank | null = null
-	holdSpot: Pt | null = null
+	private spot: Pt | null = null
 	fellBack = false
 	readonly gunner: BotGunner
 	readonly fighter: Fighter
 	private readonly role: RoleAi
 	private readonly avoidance: Avoidance
+	/** This frame's drive command and role frame, reused (every bot, every frame). */
+	private readonly cmd: DriveCommand = { throttle: 0, steer: 0 }
+	private readonly frame: Frame = {
+		w: null as unknown as WorldRefs,
+		dt: 0,
+		time: 0,
+		enemyNear: Infinity,
+		hurt: false,
+	}
 	private team: TeamTactics | null = null
 	/** s until the target is picked again; spread at the start so the bots do not all retarget on one frame. */
 	private retarget = Math.random() * BOT_AI.core.retarget
@@ -59,7 +68,7 @@ export class BotBrain implements Bot {
 	/** The base circle this bot is on its way to take (or taking), until a fight or a retreat takes over. */
 	private captureZone: CaptureZone | null = null
 	/** Driving back to the base for shells, or taking them on there. */
-	private resupplying = false
+	private restocking = false
 	/** The circle this bot was last sent to defend (counts while the team keeps it among its defenders). */
 	private defendZone: CaptureZone | null = null
 
@@ -121,7 +130,7 @@ export class BotBrain implements Bot {
 		this.gunner.resetRound()
 		this.evadeTimer = 0
 		this.fighter.reset()
-		this.resupplying = false
+		this.restocking = false
 		this.fellBack = false
 		const p = this.role.plan(w, this)
 		this.mode = p.mode
@@ -146,7 +155,15 @@ export class BotBrain implements Bot {
 		const enemyNear = nearestEnemyDist(w, me, time)
 		if (this.mode === 'advance' && this.pathDone) this.mode = this.holdSpot ? 'hold' : 'engage'
 		const resupplying = this.resupply(w)
-		if (!resupplying) this.role.think(this, { w, dt, time, enemyNear, hurt })
+		if (!resupplying) {
+			const f = this.frame
+			f.w = w
+			f.dt = dt
+			f.time = time
+			f.enemyNear = enemyNear
+			f.hurt = hurt
+			this.role.think(this, f)
+		}
 		if (this.mode === 'engage' && !this.target) this.fightOver()
 		if (!resupplying) this.shiftWhenBlind(w)
 		if (this.mode === 'engage' || this.mode === 'retreat' || this.mode === 'relocate') this.captureZone = null
@@ -159,8 +176,11 @@ export class BotBrain implements Bot {
 		const cmd = this.drive(w, time)
 		this.evade(dt, cmd)
 		const reroute = this.avoidance.update(w, dt, this.path, this.wp, cmd.throttle)
-		if (reroute) this.setPath(reroute, this.holdSpot)
+		// A detour only matters to a bot on its route: one holding or fighting keeps its spot
+		if (reroute && this.followsPath) this.setPath(reroute, this.holdSpot)
 		this.avoidance.apply(dt, cmd)
+		// A short halt for a lined-up shot (the reticle never closes on the move); not while fleeing or backing away
+		if (this.gunner.halting && this.mode !== 'retreat' && this.evadeTimer <= 0) cmd.throttle = cmd.steer = 0
 		me.throttle = cmd.throttle
 		me.steer = cmd.steer
 
@@ -223,6 +243,20 @@ export class BotBrain implements Bot {
 		return true
 	}
 
+	/** Where the bot stops to hold; teammates keep clear of it (see `claimSpot`). */
+	get holdSpot(): Pt | null {
+		return this.spot
+	}
+	set holdSpot(p: Pt | null) {
+		this.spot = p
+		claimSpot(this.tank, p)
+	}
+
+	/** On its way to (or standing at) its own base for shells. */
+	get resupplying() {
+		return this.restocking
+	}
+
 	/** On the way to a base circle or in it. */
 	get capturing() {
 		return this.captureZone !== null
@@ -267,21 +301,21 @@ export class BotBrain implements Bot {
 	private resupply(w: WorldRefs): boolean {
 		const me = this.tank
 		const busy = this.onObjective || this.defending
-		if (this.resupplying) {
+		if (this.restocking) {
 			// Sent elsewhere on the way (a capture, a base to defend, an order), or the last enemy turned up: that first
 			if (busy || (this.hunting && me.ammoShare > 0)) {
-				this.resupplying = false
+				this.restocking = false
 				return false
 			}
 			if (me.ammoShare < BOT_AI.core.resupplyDone) return true
-			this.resupplying = false
+			this.restocking = false
 			const p = this.role.plan(w, this)
 			this.mode = p.mode
 			this.setPath(p.path, p.holdSpot)
 			return false
 		}
 		if (me.ammoShare >= AMMO_LOAD.lowShare || this.hunting || busy) return false
-		this.resupplying = true
+		this.restocking = true
 		const base = w.terrain.bases[me.team]
 		this.goTo(w, w.terrain.findSpot(base.x, base.z, BOT_AI.core.resupplySpot))
 		return true
@@ -378,18 +412,25 @@ export class BotBrain implements Bot {
 	// ---------------------------------------------------------------- driving
 
 	private drive(w: WorldRefs, time: number): DriveCommand {
-		const cmd: DriveCommand = { throttle: 0, steer: 0 }
+		const cmd = this.cmd
+		cmd.throttle = cmd.steer = 0
 		const waiting = this.mode === 'advance' && time < this.departAt && !this.target // the row ahead clears the base
 		if (waiting) return cmd
 		if (this.role.drive?.(this, w, cmd)) return cmd
 		const m = this.mode
-		if (m === 'advance' || m === 'retreat' || m === 'relocate' || m === 'hunt') this.followPath(w, cmd)
+		if (this.followsPath) this.followPath(w, cmd)
 		else if (m === 'engage' && this.target) {
 			const late = this.tactics.late
 			const holdBack = !late && (this.role.aheadBy?.(this, w, true) ?? -Infinity) > 0
 			this.fighter.engage(w, cmd, this.target, time, holdBack, late)
 		} else if (m === 'hold') this.hold(w, cmd, time)
 		return cmd
+	}
+
+	/** The modes that drive along `path`. */
+	private get followsPath(): boolean {
+		const m = this.mode
+		return m === 'advance' || m === 'retreat' || m === 'relocate' || m === 'hunt'
 	}
 
 	private followPath(w: WorldRefs, cmd: DriveCommand) {

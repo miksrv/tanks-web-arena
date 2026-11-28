@@ -20,13 +20,15 @@ import { resolveCollisions } from './collisions'
 import { Crew, freshStats } from './crew'
 import { drive } from './drive'
 import { launch, layGun, updateBloom } from './gunnery'
-import { hullPose } from './suspension'
+import { hullPose, type HullPose } from './suspension'
 import { TankView } from './tankView'
 import type { ShotParams, WorldRefs } from './types'
 
 export type { ShotParams, WorldRefs } from './types'
 
 const { clamp } = THREE.MathUtils
+/** Scratch pose for `updatePose` (every tank, every frame). */
+const poseTmp: HullPose = { pitch: 0, roll: 0, y: 0 }
 
 let nextUid = 0
 
@@ -219,9 +221,11 @@ export class Tank {
 	get loadingStalled(): boolean {
 		return !!this.def.gun.mortar && this.reload > 0 && Math.abs(this.speed) > MORTAR.standSpeed
 	}
-	turretForward() {
+	turretForward(out = { x: 0, z: 0 }) {
 		const a = this.worldTurretYaw
-		return { x: Math.sin(a), z: Math.cos(a) }
+		out.x = Math.sin(a)
+		out.z = Math.cos(a)
+		return out
 	}
 	/** Eye point for spotting checks (commander's cupola). */
 	eye(out: THREE.Vector3) {
@@ -421,7 +425,7 @@ export class Tank {
 	/** Hull pitch, roll and height on the terrain, eased in, and the model's transform. */
 	private updatePose(t: Terrain, dt = 1 / 60) {
 		const s = this.def.shape
-		const pose = hullPose(t, this.pos.x, this.pos.z, this.fx, this.fz, s.hullL, s.hullW)
+		const pose = hullPose(t, this.pos.x, this.pos.z, this.fx, this.fz, s.hullL, s.hullW, poseTmp)
 		const k = Math.min(1, DRIVE.poseSmoothing * dt)
 		this.pitch += (pose.pitch - this.pitch) * k
 		this.roll += (pose.roll - this.roll) * k

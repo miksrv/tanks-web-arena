@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4
+
+### Patch Changes
+
+- Bug fixes and optimisation: bots shoot from short halts, more accurate shells, smoother sound and shadows
+
 ## 0.2.3
 
 ### Patch Changes
